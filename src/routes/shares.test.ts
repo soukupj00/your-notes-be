@@ -130,6 +130,35 @@ describe('Share Links', () => {
     expect(Problem.parse(notListed.json()).status).toBe(404);
   });
 
+  it("serves an image's thumbnail through the share too", async () => {
+    const [noteId, picture, thumbnail] = [randomUUID(), randomUUID(), randomUUID()];
+    const withThumbnail = { ...attachment(picture, noteId), thumbnailId: thumbnail };
+    await app.inject({
+      method: 'POST',
+      url: '/api/changes',
+      payload: {
+        notes: [
+          { id: noteId, state: 'active', attachments: [withThumbnail], createdAt: T, updatedAt: T },
+        ],
+        tags: [],
+        noteTags: [],
+        tombstones: [],
+      },
+      ...as(olga),
+    });
+    await app.inject({
+      method: 'PUT',
+      url: `/api/blobs/${thumbnail}`,
+      payload: BYTES,
+      headers: { 'content-type': 'image/webp' },
+      ...as(olga),
+    });
+    const { token } = Share.parse((await share(noteId)).json());
+    const response = await app.inject({ url: `/api/public/shares/${token}/blobs/${thumbnail}` });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toBe('image/webp');
+  });
+
   it('answers a revoked, an unknown and a trashed share with the same 404', async () => {
     const { noteId } = await noteWithPicture();
     const minted = Share.parse((await share(noteId)).json());

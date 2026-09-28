@@ -134,3 +134,38 @@ it('removes bytes no Note of their Account references for a day, and files witho
       .sort()
   ).toEqual([id(1), id(2)]);
 });
+
+it("keeps an image's thumbnail blob, referenced by thumbnailId", async () => {
+  const full = '00000000-0000-4000-8000-000000000011';
+  const thumb = '00000000-0000-4000-8000-000000000012';
+  for (const id of [full, thumb]) {
+    await store.put(id, Buffer.from('x'), 1);
+    db.insert(blobs)
+      .values({ id, accountId: 'a', size: 1, mime: 'image/png', createdAt: daysAgo(2) })
+      .run();
+  }
+  db.insert(notes)
+    .values({
+      accountId: 'a',
+      id: 'n',
+      rev: 1,
+      seq: 1,
+      state: 'active',
+      attachments: [
+        {
+          id: full,
+          thumbnailId: thumb,
+          noteId: 'n',
+          kind: 'image',
+          mime: 'image/png',
+          createdAt: NOW.toISOString(),
+          updatedAt: NOW.toISOString(),
+        },
+      ],
+      createdAt: '',
+      updatedAt: '',
+    })
+    .run();
+  await sweep(db, store, NOW, 90);
+  expect((await store.list()).sort()).toEqual([full, thumb]);
+});

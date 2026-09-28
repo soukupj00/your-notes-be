@@ -61,7 +61,8 @@ async function sweepBlobs(db: Db, store: BlobStore, now: Date): Promise<void> {
     where b.created_at < ${cutoff}
       and not exists (
         select 1 from notes n, json_each(n.attachments) a
-        where n.account_id = b.account_id and json_extract(a.value, '$.id') = b.id
+        where n.account_id = b.account_id
+          and b.id in (json_extract(a.value, '$.id'), json_extract(a.value, '$.thumbnailId'))
       )`);
   for (const { id } of unreferenced) {
     await store.delete(id);

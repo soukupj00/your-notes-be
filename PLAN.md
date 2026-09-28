@@ -70,7 +70,7 @@ Single-resource `GET`s exist as HAL link targets with an `ETag`; per-resource `P
 - Drizzle schema in `src/db/schema.ts`; `drizzle-kit` migrations committed under `drizzle/` and applied at startup.
 - Tables: `accounts` (with the Sequence counter), `sessions`, `codes`, `notes`, `tags`, `note_tags`, `tombstones`, `blobs`, `shares`.
 - Every synced row carries `rev` and `seq`; the feed is read from the rows, no change log (ADR 0002).
-- Attachment metadata is a JSON column on `notes`; `blobs` records ownership and existence (ADR 0003).
+- Attachment metadata is a JSON column on `notes`; `blobs` records ownership and existence (ADR 0003); an Attachment references its bytes by `id` and, for images, its thumbnail by `thumbnailId`, and the orphan sweep keeps both.
 - CLI `backup <dir>`: `VACUUM INTO` plus a copy of `blobs/`; no scheduler, the guide shows the cron line.
 
 ### Sync rules (`src/sync/`)

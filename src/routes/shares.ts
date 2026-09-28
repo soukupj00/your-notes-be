@@ -180,7 +180,7 @@ export const shareRoutes: FastifyPluginAsyncZod = async (app) => {
     handler: async (request, reply) => {
       const { token, id } = request.params;
       const note = sharedNote(token);
-      const listed = note?.attachments?.some((attachment) => attachment.id === id);
+      const listed = note?.attachments?.some((a) => a.id === id || a.thumbnailId === id);
       const row =
         note && listed
           ? app.db
