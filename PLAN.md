@@ -133,10 +133,11 @@ End-to-end encryption, sharing a Note into another Account, email, a WAF, a sing
 
 ## Slices
 
-- [ ] **B1 Skeleton**: toolchain, `config.ts`, `buildServer`, Drizzle and migrations, `BlobStore` with the contract test, hooks (auth, CSRF, headers, error shape), `/api/docs` and `docs/openapi.json`, the pipeline, Dockerfile with the frontend image stage, `compose.yml` and Caddyfile, `/health`.
+- [x] **B1 Skeleton**: toolchain, `config.ts`, `buildServer`, Drizzle and migrations, `BlobStore` with the contract test, hooks (auth, CSRF, headers, error shape), `/api/docs` and `docs/openapi.json`, the pipeline, Dockerfile with the frontend image stage, `compose.yml` and Caddyfile, `/health`.
   Done when `docker compose up` serves the PWA over TLS and `/api/docs` opens.
-- [ ] **B2 Accounts and Pairing**: `accounts`, `sessions`, `codes`; the first-run Pairing Link in the log; setup, session, devices and revoke, invites, password reset, CLI; rate limits.
+- [x] **B2 Accounts and Pairing**: `accounts`, `sessions`, `codes`; the first-run Pairing Link in the log; setup, session, devices and revoke, invites, password reset, CLI; rate limits.
   Done when a phone scans the log's QR and lands signed in, and the contract file is published for frontend slice 3.
+  Deviations: `PUBLIC_URL` added so the printed link names the right origin; the `setup` code has no clock expiry (ADR 0001).
 - [ ] **B3 The loop**: push with the rules above, feed pages with `ETag` and `410`, SSE hints, the tombstone sweep.
   Open before B3: the `id` a NoteTag Tombstone carries (the link has a composite key), to be fixed in the contract with the frontend.
   Done when frontend slice 4 runs against it and a conflict yields a Conflicted Copy on the Device.

@@ -31,6 +31,9 @@ To try the server alone on `http://localhost:3000` without Caddy:
 docker compose --profile local up younotes-local
 ```
 
+On first start the server log prints a Pairing Link and a QR code; open it on your phone to create the Owner.
+To reset a forgotten Owner password, run `docker compose exec younotes node dist/cli.js reset-owner-password`.
+
 A full setup guide is still to come; until then [`PLAN.md`](./PLAN.md) describes the deployment modes.
 
 ## More

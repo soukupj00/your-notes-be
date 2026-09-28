@@ -26,6 +26,8 @@ const ConfigSchema = z.object({
     .default(100 * MIB),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   TRUST_PROXY: bool.default(false),
+  /** The origin Devices open; printed Pairing Links point here. */
+  PUBLIC_URL: z.url().optional(),
 });
 
 export type Config = {
@@ -40,6 +42,7 @@ export type Config = {
   blobLimitBytes: number;
   logLevel: z.infer<typeof ConfigSchema>['LOG_LEVEL'];
   trustProxy: boolean;
+  publicUrl: string;
 };
 
 /** Reads the environment into a validated Config; throws listing every bad variable. */
@@ -66,5 +69,6 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     blobLimitBytes: c.BLOB_LIMIT_BYTES,
     logLevel: c.LOG_LEVEL,
     trustProxy: c.TRUST_PROXY,
+    publicUrl: c.PUBLIC_URL ?? `http://localhost:${c.PORT}`,
   };
 }

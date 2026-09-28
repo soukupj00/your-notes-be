@@ -5,10 +5,11 @@ src/
   contract/index.ts   the shared Zod contract; the frontend vendors this file
   config.ts           environment variables to a validated Config
   server.ts           buildServer(): the whole app, never listens
-  main.ts             opens the database, migrates, listens
-  cli.ts              backup <dir>
+  main.ts             opens the database, migrates, listens, prints the first-run Pairing Link
+  cli.ts              backup <dir>, reset-owner-password
   problem.ts          every error as application/problem+json
   hal.ts              _links and _embedded helpers
+  auth/               passwords (scrypt), sessions (cookie), codes (Pairing Codes)
   db/                 schema.ts, client.ts, migrate.ts
   blobs/              BlobStore interface, disk and memory stores, one contract test
   plugins/            auth, security (CSRF, headers, request id), docs, static (PWA)

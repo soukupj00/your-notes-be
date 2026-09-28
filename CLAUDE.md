@@ -30,6 +30,8 @@ pnpm check:ci       # biome ci .
 pnpm test           # vitest run
 pnpm openapi        # regenerate docs/openapi.json
 pnpm db:generate    # drizzle-kit generate (migrations are applied at startup)
+node dist/cli.js backup <dir>            # after pnpm build
+node dist/cli.js reset-owner-password    # prints a new Owner password once
 ```
 
 pnpm only; no npm, no yarn.

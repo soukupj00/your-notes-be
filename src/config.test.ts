@@ -15,6 +15,7 @@ describe('loadConfig', () => {
       blobLimitBytes: 100 * 1024 * 1024,
       logLevel: 'info',
       trustProxy: false,
+      publicUrl: 'http://localhost:3000',
     });
   });
 
@@ -24,8 +25,19 @@ describe('loadConfig', () => {
       PAGE_SIZE: '200',
       TRUST_PROXY: 'true',
       DATA_DIR: '/data',
+      PUBLIC_URL: 'https://notes.example',
     });
-    expect(config).toMatchObject({ port: 8080, pageSize: 200, trustProxy: true, dataDir: '/data' });
+    expect(config).toMatchObject({
+      port: 8080,
+      pageSize: 200,
+      trustProxy: true,
+      dataDir: '/data',
+      publicUrl: 'https://notes.example',
+    });
+  });
+
+  it('defaults the public URL to localhost on the configured port', () => {
+    expect(loadConfig({ PORT: '8080' }).publicUrl).toBe('http://localhost:8080');
   });
 
   it('treats an empty variable as unset', () => {

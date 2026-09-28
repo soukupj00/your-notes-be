@@ -124,9 +124,91 @@ export const RootResponse = z.object({
     health: Link,
     docs: Link,
     openapi: Link,
+    /** Present only while the server has no Owner. */
+    setup: Link.optional(),
+    session: Link,
+    devices: Link,
+    codes: Link,
+    accounts: Link,
   }),
 });
 export type RootResponse = z.infer<typeof RootResponse>;
+
+// ---------------------------------------------------------------------------
+// Accounts, Sessions and Pairing (ADR 0001)
+
+export const Username = z
+  .string()
+  .trim()
+  .min(1)
+  .max(64)
+  .regex(/^\S+$/, { message: 'A username has no spaces' });
+export const Password = z.string().min(8).max(256);
+export const DeviceName = z.string().trim().min(1).max(64);
+/** The secret behind a Pairing Link; the server only says whether it is good, never why not. */
+export const PairingCode = z.string().min(1).max(128);
+export const Role = z.enum(['owner', 'member']);
+export const CodeKind = z.enum(['device', 'invite']);
+
+/** Where a Pairing Link points; the server and the PWA build it the same way. */
+export function pairingLink(origin: string, code: string): string {
+  return `${origin.replace(/\/+$/, '')}/pair#${code}`;
+}
+
+export const SetupStatus = z.object({
+  needsSetup: z.literal(true),
+  _links: z.object({ self: Link }),
+});
+export type SetupStatus = z.infer<typeof SetupStatus>;
+
+/** Spends the printed setup code (`POST /api/setup`) or an Invite (`POST /api/accounts`). */
+export const CreateAccountRequest = z.object({
+  code: PairingCode,
+  username: Username,
+  password: Password,
+  deviceName: DeviceName,
+});
+export type CreateAccountRequest = z.infer<typeof CreateAccountRequest>;
+
+/** Sign in with a password, or with a `device` Pairing Code from an already signed-in Device. */
+export const SignInRequest = z.union([
+  z.object({ username: Username, password: Password, deviceName: DeviceName }),
+  z.object({ code: PairingCode, deviceName: DeviceName }),
+]);
+export type SignInRequest = z.infer<typeof SignInRequest>;
+
+export const SessionResponse = z.object({
+  account: z.object({ id: Id, username: z.string(), role: Role }),
+  device: z.object({ id: Id, name: z.string() }),
+  _links: z.object({ self: Link, devices: Link, codes: Link }),
+});
+export type SessionResponse = z.infer<typeof SessionResponse>;
+
+export const Device = z.object({
+  id: Id,
+  name: z.string(),
+  createdAt: IsoDateTime,
+  lastSeenAt: IsoDateTime,
+  /** The Device making the request. */
+  current: z.boolean(),
+  _links: z.object({ self: Link }),
+});
+export type Device = z.infer<typeof Device>;
+
+export const DevicesResponse = z.object({
+  _links: z.object({ self: Link }),
+  _embedded: z.object({ devices: z.array(Device) }),
+});
+export type DevicesResponse = z.infer<typeof DevicesResponse>;
+
+export const CodeRequest = z.object({ kind: CodeKind });
+export type CodeRequest = z.infer<typeof CodeRequest>;
+
+export const CodeResponse = z.object({ code: z.string(), kind: CodeKind, expiresAt: IsoDateTime });
+export type CodeResponse = z.infer<typeof CodeResponse>;
+
+export const PasswordRequest = z.object({ password: Password });
+export type PasswordRequest = z.infer<typeof PasswordRequest>;
 
 // ---------------------------------------------------------------------------
 // Responses

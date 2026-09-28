@@ -26,6 +26,8 @@ x-younotes: &younotes
     BLOB_LIMIT_BYTES: ${BLOB_LIMIT_BYTES:-104857600}
     LOG_LEVEL: ${LOG_LEVEL:-info}
     TRUST_PROXY: ${TRUST_PROXY:-true}
+    # Where the first-run Pairing Link points.
+    PUBLIC_URL: https://${YOUNOTES_HOST:-localhost}
 
 services:
   # No published port: only Caddy reaches it.

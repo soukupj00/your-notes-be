@@ -56,12 +56,16 @@ describe('meta routes', () => {
     expect(HealthResponse.parse(response.json())).toEqual({ status: 'ok', version: '0.0.0' });
   });
 
-  it('GET /api is a HAL root that links only to routes that answer', async () => {
+  it('GET /api is a HAL root that links only to routes that exist', async () => {
     const response = await app.inject('/api');
     expect(response.statusCode).toBe(200);
     const root = RootResponse.parse(response.json());
-    for (const { href } of Object.values(root._links)) {
-      expect((await app.inject(href)).statusCode, href).toBe(200);
+    expect(root._links.setup).toBeDefined();
+    // Some links are POST targets, and some answer 401 while signed out; none may be missing.
+    const postOnly = new Set(['codes', 'accounts']);
+    for (const [rel, { href }] of Object.entries(root._links)) {
+      const method = postOnly.has(rel) ? 'POST' : 'GET';
+      expect((await app.inject({ method, url: href, payload: {} })).statusCode, href).not.toBe(404);
     }
   });
 

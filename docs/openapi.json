@@ -21,6 +21,63 @@
                     "_links": {
                       "additionalProperties": false,
                       "properties": {
+                        "accounts": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "codes": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "devices": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
                         "docs": {
                           "additionalProperties": false,
                           "properties": {
@@ -96,13 +153,55 @@
                             "href"
                           ],
                           "type": "object"
+                        },
+                        "session": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "setup": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
                         "self",
                         "health",
                         "docs",
-                        "openapi"
+                        "openapi",
+                        "session",
+                        "devices",
+                        "codes",
+                        "accounts"
                       ],
                       "type": "object"
                     }
@@ -120,6 +219,1033 @@
         "summary": "The entry point: links to everything a client can do",
         "tags": [
           "meta"
+        ]
+      }
+    },
+    "/api/accounts": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "code": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "deviceName": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "password": {
+                    "maxLength": 256,
+                    "minLength": 8,
+                    "type": "string"
+                  },
+                  "username": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "pattern": "^\\S+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "username",
+                  "password",
+                  "deviceName"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "_links": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "codes": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "devices": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "self": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "self",
+                        "devices",
+                        "codes"
+                      ],
+                      "type": "object"
+                    },
+                    "account": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "role": {
+                          "enum": [
+                            "owner",
+                            "member"
+                          ],
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "username",
+                        "role"
+                      ],
+                      "type": "object"
+                    },
+                    "device": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "account",
+                    "device",
+                    "_links"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Spend an Invite: create a member Account and sign this Device in",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/accounts/{id}/password": {
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "password": {
+                    "maxLength": 256,
+                    "minLength": 8,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "password"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        },
+        "summary": "Replace an Account's password (Owner only); its Devices stay signed in",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/codes": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "device",
+                      "invite"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "expiresAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                      "type": "string"
+                    },
+                    "kind": {
+                      "enum": [
+                        "device",
+                        "invite"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "kind",
+                    "expiresAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Mint a Pairing Code; the PWA shows it as a Pairing Link and QR",
+        "tags": [
+          "codes"
+        ]
+      }
+    },
+    "/api/devices": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "_embedded": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "devices": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "_links": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "self": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "href": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "templated": {
+                                        "type": "boolean"
+                                      },
+                                      "title": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "href"
+                                    ],
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "self"
+                                ],
+                                "type": "object"
+                              },
+                              "createdAt": {
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                                "type": "string"
+                              },
+                              "current": {
+                                "type": "boolean"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "lastSeenAt": {
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "createdAt",
+                              "lastSeenAt",
+                              "current",
+                              "_links"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "devices"
+                      ],
+                      "type": "object"
+                    },
+                    "_links": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "self": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "self"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "_links",
+                    "_embedded"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "The signed-in Account's Devices",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/api/devices/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        },
+        "summary": "Revoke a Device: end its Session",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/api/session": {
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        },
+        "summary": "Sign this Device out",
+        "tags": [
+          "session"
+        ]
+      },
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "_links": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "codes": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "devices": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "self": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "self",
+                        "devices",
+                        "codes"
+                      ],
+                      "type": "object"
+                    },
+                    "account": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "role": {
+                          "enum": [
+                            "owner",
+                            "member"
+                          ],
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "username",
+                        "role"
+                      ],
+                      "type": "object"
+                    },
+                    "device": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "account",
+                    "device",
+                    "_links"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Who this Device is signed in as",
+        "tags": [
+          "session"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "properties": {
+                      "deviceName": {
+                        "maxLength": 64,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "password": {
+                        "maxLength": 256,
+                        "minLength": 8,
+                        "type": "string"
+                      },
+                      "username": {
+                        "maxLength": 64,
+                        "minLength": 1,
+                        "pattern": "^\\S+$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "username",
+                      "password",
+                      "deviceName"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "code": {
+                        "maxLength": 128,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "deviceName": {
+                        "maxLength": 64,
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "deviceName"
+                    ],
+                    "type": "object"
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "_links": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "codes": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "devices": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "self": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "self",
+                        "devices",
+                        "codes"
+                      ],
+                      "type": "object"
+                    },
+                    "account": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "role": {
+                          "enum": [
+                            "owner",
+                            "member"
+                          ],
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "username",
+                        "role"
+                      ],
+                      "type": "object"
+                    },
+                    "device": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "account",
+                    "device",
+                    "_links"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Sign this Device in with a password or a device Pairing Code",
+        "tags": [
+          "session"
+        ]
+      }
+    },
+    "/api/setup": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "_links": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "self": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "self"
+                      ],
+                      "type": "object"
+                    },
+                    "needsSetup": {
+                      "enum": [
+                        true
+                      ],
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "needsSetup",
+                    "_links"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Whether the server still needs its Owner",
+        "tags": [
+          "setup"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "code": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "deviceName": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "password": {
+                    "maxLength": 256,
+                    "minLength": 8,
+                    "type": "string"
+                  },
+                  "username": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "pattern": "^\\S+$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "username",
+                  "password",
+                  "deviceName"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "_links": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "codes": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "devices": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "self": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "self",
+                        "devices",
+                        "codes"
+                      ],
+                      "type": "object"
+                    },
+                    "account": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "role": {
+                          "enum": [
+                            "owner",
+                            "member"
+                          ],
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "username",
+                        "role"
+                      ],
+                      "type": "object"
+                    },
+                    "device": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "account",
+                    "device",
+                    "_links"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Spend the printed setup code: create the Owner and sign this Device in",
+        "tags": [
+          "setup"
         ]
       }
     },
