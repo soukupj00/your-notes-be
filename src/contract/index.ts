@@ -358,7 +358,8 @@ export const ChangesPage = z.object({
   noteTags: z.array(RevisionedNoteTag),
   tombstones: z.array(Tombstone),
   seq: z.number().int().min(0),
-  _links: z.object({ self: Link, next: Link.optional(), stream: Link }),
+  /** Follow `next` while present; keep `resume` as the cursor for the next sync. */
+  _links: z.object({ self: Link, next: Link.optional(), resume: Link, stream: Link }),
 });
 export type ChangesPage = z.infer<typeof ChangesPage>;
 

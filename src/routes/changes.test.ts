@@ -9,6 +9,7 @@ import {
   PushResponse,
 } from '../contract/index.ts';
 import type { Db } from '../db/client.ts';
+import { accounts } from '../db/schema.ts';
 import type { App } from '../server.ts';
 import { sweep } from '../sweep.ts';
 import {
@@ -254,11 +255,15 @@ describe('the feed', () => {
 
     const first = await pull(laptop);
     expect([first.notes.map((n) => n.id), first.tags.map((x) => x.id)]).toEqual([[a], [t]]);
-    expect(first._links.next?.href).toBe('/api/changes?since=2');
+    expect(first._links.next?.href).toBe('/api/changes?since=2&from=0');
+    expect(first._links.resume).toEqual(first._links.next);
     const second = await pull(laptop, 2);
     expect(second.notes.map((n) => n.id)).toEqual([b]);
     expect(second._links.next).toBeUndefined();
     expect(second.seq).toBe(3);
+    expect(second._links.resume.href).toBe('/api/changes?since=3');
+    const resumed = await app.inject({ url: second._links.resume.href, ...as(laptop) });
+    expect(ChangesPage.parse(resumed.json()).notes).toEqual([]);
   });
 
   it('answers a matching If-None-Match with 304, and a changed feed with 200', async () => {
@@ -290,8 +295,41 @@ describe('the feed', () => {
     const laptop = await owner();
     await push(laptop, { notes: [note(randomUUID())] });
     expect((await pull(laptop, 1)).notes).toEqual([]);
+    const { resume } = (await pull(laptop))._links;
+    expect(resume.href).toBe('/api/changes?since=1');
+    // A restore rewinds the Sequence below the kept cursor.
+    db.update(accounts).set({ seq: 0 }).run();
+    expect(
+      Problem.parse((await app.inject({ url: resume.href, ...as(laptop) })).json()).status
+    ).toBe(410);
     const ahead = await app.inject({ url: '/api/changes?since=2', ...as(laptop) });
     expect(Problem.parse(ahead.json())).toMatchObject({ status: 410 });
+  });
+
+  it('judges a paged resync by where it began, not by its current page', async () => {
+    await start({ PAGE_SIZE: '2' });
+    const laptop = await owner();
+    for (let i = 0; i < 5; i++) await push(laptop, { notes: [note(randomUUID())] });
+    // As if the sweep had removed Tombstones up to Sequence 4.
+    db.update(accounts).set({ prunedSeq: 4 }).run();
+
+    let href: string | undefined = '/api/changes';
+    const ids: string[] = [];
+    let pages = 0;
+    while (href) {
+      const response = await app.inject({ url: href, ...as(laptop) });
+      expect(response.statusCode, href).toBe(200);
+      const page = ChangesPage.parse(response.json());
+      ids.push(...page.notes.map((n) => n.id));
+      href = page._links.next?.href;
+      pages++;
+    }
+    expect([pages, ids.length]).toEqual([3, 5]);
+
+    const kept = await app.inject({ url: '/api/changes?since=3', ...as(laptop) });
+    expect(Problem.parse(kept.json()).status).toBe(410);
+    const passed = await app.inject({ url: '/api/changes?since=2&from=5', ...as(laptop) });
+    expect(passed.statusCode).toBe(200);
   });
 
   it('answers 410 to a cursor older than the swept Tombstones, but not to 0', async () => {

@@ -231,7 +231,11 @@ export const changeRoutes: FastifyPluginAsyncZod = async (app) => {
       schema: {
         summary: 'One page of the change feed after a Sequence; follow `next` until it is absent',
         tags: ['sync'],
-        querystring: z.object({ since: z.coerce.number().int().min(0).default(0) }),
+        querystring: z.object({
+          since: z.coerce.number().int().min(0).default(0),
+          /** Where the pull began; `next` links carry it so a paged resync is judged by its start. */
+          from: z.coerce.number().int().min(0).optional(),
+        }),
         response: {
           200: ChangesPage,
           304: z.undefined().describe('Not modified: the ETag matched'),
@@ -240,7 +244,8 @@ export const changeRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const { account } = sessionOf(request);
-      const { since } = request.query;
+      const { since, from } = request.query;
+      const origin = from ?? since;
       const { seq, prunedSeq } = app.db
         .select({ seq: accounts.seq, prunedSeq: accounts.prunedSeq })
         .from(accounts)
@@ -248,7 +253,7 @@ export const changeRoutes: FastifyPluginAsyncZod = async (app) => {
         .get() ?? { seq: 0, prunedSeq: 0 };
       // A Device starting from 0 holds nothing, so it cannot have missed a removed Tombstone.
       // A cursor past the Sequence was issued before a restore rewound the database.
-      if ((since > 0 && since < prunedSeq) || since > seq) {
+      if ((origin > 0 && origin < prunedSeq) || since > seq) {
         return sendProblem(reply, 410, 'Cursor is older than the tombstone window; resync');
       }
 
@@ -305,13 +310,17 @@ export const changeRoutes: FastifyPluginAsyncZod = async (app) => {
       for (const entry of entries) entry.put();
 
       const last = entries.at(-1);
+      const next =
+        entries.length === limit && last
+          ? link(`/api/changes?since=${last.seq}&from=${origin}`)
+          : null;
       const body = hal(
         { ...page, seq },
         {
-          self: link(`/api/changes?since=${since}`),
-          ...(entries.length === limit && last
-            ? { next: link(`/api/changes?since=${last.seq}`) }
-            : {}),
+          self: link(`/api/changes?since=${since}${from === undefined ? '' : `&from=${from}`}`),
+          ...(next ? { next } : {}),
+          // A short page delivered everything up to the Account's Sequence, so that is the cursor.
+          resume: next ?? link(`/api/changes?since=${seq}`),
           stream: link('/api/changes/stream'),
         }
       );

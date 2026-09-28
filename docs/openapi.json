@@ -926,6 +926,16 @@
               "minimum": 0,
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -939,6 +949,25 @@
                       "additionalProperties": false,
                       "properties": {
                         "next": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "resume": {
                           "additionalProperties": false,
                           "properties": {
                             "href": {
@@ -998,6 +1027,7 @@
                       },
                       "required": [
                         "self",
+                        "resume",
                         "stream"
                       ],
                       "type": "object"

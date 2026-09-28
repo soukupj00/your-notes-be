@@ -43,7 +43,7 @@ All under `/api`; everything else is the PWA with SPA fallback.
 | Pairing and Invites | `POST /api/codes` (kind `device` or `invite`), `POST /api/accounts` (spend an invite) |
 | Members | `GET /api/accounts` (Owner): every Account, with its password-reset link |
 | Password reset | `PUT /api/accounts/:id/password` (Owner); CLI `reset-owner-password` |
-| Feed | `GET /api/changes?since=<seq>`; `_links.next` is the cursor; `ETag` on pages; `410` when the cursor predates the tombstone window |
+| Feed | `GET /api/changes?since=<seq>`; `_links.next` pages and carries `from`, the pull's origin, which the 410 check judges; `_links.resume` is the cursor to keep; `ETag` on pages; `410` when the cursor predates the tombstone window |
 | Push | `POST /api/changes`: the batch, one transaction, per-row outcome `accepted`, `conflict`, `gone` |
 | Live Update | `GET /api/changes/stream`: SSE, `id:` is the Sequence, no payload |
 | Blobs | `PUT`, `GET`, `HEAD /api/blobs/:id` |
