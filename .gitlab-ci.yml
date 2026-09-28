@@ -9,7 +9,7 @@ variables:
   PNPM_STORE_PATH: .pnpm-store
   SECRET_DETECTION_ENABLED: "true"
   IMAGE: $CI_REGISTRY_IMAGE
-  FE_IMAGE: registry.gitlab.fit.cvut.cz/soukuj26/ni-dip-fe:latest
+  FE_IMAGE: gitlab.fit.cvut.cz:5050/soukuj26/ni-dip-fe:latest
 
 # --- Security (keep existing templates) ---
 include:

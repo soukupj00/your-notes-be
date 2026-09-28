@@ -1,5 +1,5 @@
 # The built PWA comes from the frontend's published image, pinned by tag (ADR 0004).
-ARG FE_IMAGE=registry.gitlab.fit.cvut.cz/soukuj26/ni-dip-fe:latest
+ARG FE_IMAGE=gitlab.fit.cvut.cz:5050/soukuj26/ni-dip-fe:latest
 FROM ${FE_IMAGE} AS pwa
 
 # Build: compile TypeScript and the native SQLite binding.

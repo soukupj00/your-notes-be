@@ -10,7 +10,7 @@
 name: younotes
 
 x-younotes: &younotes
-  image: registry.gitlab.fit.cvut.cz/soukuj26/ni-dip-be:${YOUNOTES_VERSION:-latest}
+  image: gitlab.fit.cvut.cz:5050/soukuj26/ni-dip-be:${YOUNOTES_VERSION:-latest}
   restart: unless-stopped
   read_only: true
   tmpfs:
