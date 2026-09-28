@@ -1,0 +1,67 @@
+# YouNotes: the server and Caddy in front of it (ADR 0004).
+# Settings come from `.env` next to this file; see `.env.example`.
+#
+#   docker compose up -d                      # the full stack over HTTPS
+#   docker compose --profile local up younotes-local   # just the server on http://localhost:3000
+
+x-younotes: &younotes
+  image: registry.gitlab.fit.cvut.cz/soukuj26/ni-dip-be:${YOUNOTES_VERSION:-latest}
+  build:
+    context: .
+    args:
+      FE_IMAGE: ${FE_IMAGE:-registry.gitlab.fit.cvut.cz/soukuj26/ni-dip-fe:latest}
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp
+  volumes:
+    - younotes-data:/data
+  environment:
+    # Every variable is optional; these are the defaults (src/config.ts).
+    PORT: 3000
+    PAGE_SIZE: ${PAGE_SIZE:-50}
+    TOMBSTONE_DAYS: ${TOMBSTONE_DAYS:-90}
+    SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-365}
+    BODY_LIMIT_BYTES: ${BODY_LIMIT_BYTES:-5242880}
+    BLOB_LIMIT_BYTES: ${BLOB_LIMIT_BYTES:-104857600}
+    LOG_LEVEL: ${LOG_LEVEL:-info}
+    TRUST_PROXY: ${TRUST_PROXY:-true}
+
+services:
+  # No published port: only Caddy reaches it.
+  younotes:
+    <<: *younotes
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - younotes
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      YOUNOTES_HOST: ${YOUNOTES_HOST:-localhost}
+      YOUNOTES_TLS: ${YOUNOTES_TLS:-auto}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+      # Tailscale mode: let Caddy fetch the tailnet certificate from the host's tailscaled.
+      # Uncomment, set YOUNOTES_HOST to the machine's *.ts.net name and YOUNOTES_TLS=auto.
+      # - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock
+
+  # The server alone on http://localhost:3000, for trying it out; never exposed with Caddy.
+  younotes-local:
+    <<: *younotes
+    profiles: [local]
+    environment:
+      TRUST_PROXY: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  younotes-data:
+  caddy-data:
+  caddy-config:

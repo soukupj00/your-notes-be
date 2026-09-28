@@ -1,19 +1,142 @@
-# You can override the included template(s) by including variable overrides
-# SAST customization: https://docs.gitlab.com/ee/user/application_security/sast/#customizing-the-sast-settings
-# Secret Detection customization: https://docs.gitlab.com/user/application_security/secret_detection/pipeline/configure
-# Dependency Scanning customization: https://docs.gitlab.com/ee/user/application_security/dependency_scanning/#customizing-the-dependency-scanning-settings
-# Container Scanning customization: https://docs.gitlab.com/ee/user/application_security/container_scanning/#customizing-the-container-scanning-settings
-# Note that environment variables can be set in several places
-# See https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence
 stages:
-- test
-- secret-detection
-sast:
-  stage: test
-include:
-- template: Security/SAST.gitlab-ci.yml
-- template: Security/Secret-Detection.gitlab-ci.yml
+  - quality
+  - test
+  - build
+  - publish
+  - secret-detection
+
 variables:
-  SECRET_DETECTION_ENABLED: 'true'
+  PNPM_STORE_PATH: .pnpm-store
+  SECRET_DETECTION_ENABLED: "true"
+  IMAGE: $CI_REGISTRY_IMAGE
+  FE_IMAGE: registry.gitlab.fit.cvut.cz/soukuj26/ni-dip-fe:latest
+
+# --- Security (keep existing templates) ---
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+
+sast:
+  stage: quality
+
 secret_detection:
   stage: secret-detection
+
+# --- Shared setup ---
+.pnpm-setup: &pnpm-setup
+  image: node:24-alpine
+  before_script:
+    # better-sqlite3 compiles from source when no prebuilt binary matches.
+    - apk add --no-cache git python3 make g++
+    - corepack enable
+    - pnpm config set store-dir "$PNPM_STORE_PATH"
+    - pnpm install --frozen-lockfile
+  cache:
+    key:
+      files:
+        - pnpm-lock.yaml
+    paths:
+      - .pnpm-store/
+    policy: pull-push
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+# --- Quality ---
+lint:
+  <<: *pnpm-setup
+  stage: quality
+  script:
+    - pnpm check:ci
+
+typecheck:
+  <<: *pnpm-setup
+  stage: quality
+  script:
+    - pnpm exec tsc --noEmit
+
+# Generated files must be committed: a stale OpenAPI document or a schema change
+# without its migration fails here.
+contract:
+  <<: *pnpm-setup
+  stage: quality
+  script:
+    - pnpm openapi
+    - git diff --exit-code docs/openapi.json
+    - pnpm db:generate
+    # A new migration is an untracked file, which `git diff` would not see.
+    - test -z "$(git status --porcelain drizzle/)" || { git status drizzle/; exit 1; }
+
+# --- Tests ---
+test:unit:
+  <<: *pnpm-setup
+  stage: test
+  script:
+    - pnpm test
+
+# --- Build ---
+# The frontend does not publish its image yet (its ADR 0006), so the FE_IMAGE
+# stage cannot be pulled and these two jobs may fail until it does.
+build:image:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  allow_failure: true
+  script:
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor
+      --context "$CI_PROJECT_DIR"
+      --dockerfile "$CI_PROJECT_DIR/Dockerfile"
+      --build-arg "FE_IMAGE=$FE_IMAGE"
+      --destination "$IMAGE:$CI_COMMIT_SHORT_SHA"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+# Runs the image just built and asks it for /health. Needs a runner that allows
+# the docker:dind service (privileged).
+test:smoke:
+  stage: build
+  needs: [build:image]
+  image: docker:cli
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  allow_failure: true
+  script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - docker run -d --name younotes -p 3000:3000 "$IMAGE:$CI_COMMIT_SHORT_SHA"
+    - for i in $(seq 1 30); do wget -q -O - http://docker:3000/health && exit 0; sleep 1; done; docker logs younotes; exit 1
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+# --- Publish ---
+# Retags the tested image: `latest` from the default branch, the git tag (v0.x.y) from a tag.
+.publish: &publish
+  stage: publish
+  needs: [build:image, test:smoke]
+  image:
+    name: gcr.io/go-containerregistry/crane:debug
+    entrypoint: [""]
+  script:
+    - crane auth login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - crane tag "$IMAGE:$CI_COMMIT_SHORT_SHA" "$PUBLISH_TAG"
+
+publish:latest:
+  <<: *publish
+  variables:
+    PUBLISH_TAG: latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+publish:release:
+  <<: *publish
+  variables:
+    PUBLISH_TAG: $CI_COMMIT_TAG
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/

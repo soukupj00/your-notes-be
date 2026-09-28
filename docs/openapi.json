@@ -1,0 +1,163 @@
+{
+  "components": {
+    "schemas": {}
+  },
+  "info": {
+    "description": "Sync for the YouNotes PWA. Errors are application/problem+json (RFC 9457).",
+    "title": "YouNotes Self-hosted Server",
+    "version": "0.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "_links": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "docs": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "health": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "openapi": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "self": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "self",
+                        "health",
+                        "docs",
+                        "openapi"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "_links"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "The entry point: links to everything a client can do",
+        "tags": [
+          "meta"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "ok"
+                      ],
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "version"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Liveness, including a database round trip",
+        "tags": [
+          "meta"
+        ]
+      }
+    }
+  }
+}

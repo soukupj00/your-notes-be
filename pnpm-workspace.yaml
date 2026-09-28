@@ -1,0 +1,6 @@
+# Which dependencies may run install-time build scripts (pnpm 11 `allowBuilds`).
+allowBuilds:
+  # The native SQLite binding the server runs on.
+  better-sqlite3: true
+  # tsx and drizzle-kit need their platform binary.
+  esbuild: true

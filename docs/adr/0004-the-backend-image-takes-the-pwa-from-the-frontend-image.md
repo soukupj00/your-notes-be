@@ -1,0 +1,8 @@
+# The backend image takes the built PWA from the published frontend image, and Caddy is the only proxy
+
+ADR 0018 (frontend) decided that the server serves the PWA from one origin; this repository has to get the built application into its image without owning the frontend toolchain.
+Decided 2026-09-28: the Dockerfile names the frontend's published image (ADR 0006, frontend) as a build stage, pinned by tag in a build argument, and copies its static files into the server image; bumping that tag is how a backend release states which frontend it ships.
+A git submodule building the frontend here, and passing CI artifacts between the two GitLab projects, were rejected as a second toolchain and a fragile cross-project dependency for work the frontend pipeline already does.
+The stack is two containers, the server and Caddy: Caddy terminates TLS and reverse-proxies to Fastify, which serves the static files itself through `@fastify/static`, so the nginx in the frontend image is a build-time source only and never runs.
+The own-domain TLS mode uses ACME HTTP-01 rather than the DNS-01 the frontend docs named, because DNS-01 needs a Caddy rebuilt with a DNS-provider plugin, which is exactly the step a non-programmer cannot be asked to take; DNS-01 is documented as possible, not supported.
+The hardening the skeleton ships regardless of mode (no unauthenticated route beyond the entry point, setup, sign-in, health, docs and the static files; per-IP rate limits on sign-in and code redemption; body limits; a non-root read-only container with no published port) is a requirement, not a later slice, and the guide states that only the own-domain mode puts the server on the public internet.

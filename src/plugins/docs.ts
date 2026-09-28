@@ -1,0 +1,21 @@
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
+import type { FastifyInstance } from 'fastify';
+import { jsonSchemaTransform } from 'fastify-type-provider-zod';
+import { VERSION } from '../version.ts';
+
+/** OpenAPI 3.1 generated from the routes' Zod schemas; the UI's assets ship in the package. */
+export async function registerDocs(app: FastifyInstance): Promise<void> {
+  await app.register(swagger, {
+    openapi: {
+      openapi: '3.1.0',
+      info: {
+        title: 'YouNotes Self-hosted Server',
+        description: 'Sync for the YouNotes PWA. Errors are application/problem+json (RFC 9457).',
+        version: VERSION,
+      },
+    },
+    transform: jsonSchemaTransform,
+  });
+  await app.register(swaggerUi, { routePrefix: '/api/docs' });
+}
