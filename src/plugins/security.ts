@@ -6,7 +6,7 @@ import { sendProblem } from '../problem.ts';
  * Static headers every response carries. A real Content-Security-Policy is its own later task,
  * tested against the built PWA (PLAN.md "Security").
  */
-const SECURITY_HEADERS = {
+export const SECURITY_HEADERS = {
   'x-content-type-options': 'nosniff',
   'x-frame-options': 'DENY',
   'referrer-policy': 'no-referrer',

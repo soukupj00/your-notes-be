@@ -26,6 +26,8 @@ export const rootRoutes: FastifyPluginAsyncZod = async (app) => {
           devices: link('/api/devices'),
           codes: link('/api/codes', { title: 'Mint a Pairing Code' }),
           accounts: link('/api/accounts', { title: 'Spend an Invite' }),
+          changes: link('/api/changes', { title: 'The change feed; POST pushes a batch' }),
+          stream: link('/api/changes/stream', { title: 'Live Update hints (SSE)' }),
         }
       )
   );

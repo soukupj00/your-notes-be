@@ -16,12 +16,14 @@ import { genReqId, registerSecurity } from './plugins/security.ts';
 import { registerStatic } from './plugins/static.ts';
 import { registerErrorHandler } from './problem.ts';
 import { accountRoutes } from './routes/accounts.ts';
+import { changeRoutes } from './routes/changes.ts';
 import { codeRoutes } from './routes/codes.ts';
 import { deviceRoutes } from './routes/devices.ts';
 import { healthRoutes } from './routes/health.ts';
 import { rootRoutes } from './routes/root.ts';
 import { sessionRoutes } from './routes/session.ts';
 import { setupRoutes } from './routes/setup.ts';
+import { LiveUpdates, streamRoutes } from './routes/stream.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -30,6 +32,7 @@ declare module 'fastify' {
     blobs: BlobStore;
     /** The clock every expiry is measured against; tests pass their own. */
     now: () => Date;
+    live: LiveUpdates;
   }
 }
 
@@ -63,6 +66,9 @@ export async function buildServer({
   app.decorate('db', db);
   app.decorate('blobs', blobs);
   app.decorate('now', now);
+  app.decorate('live', new LiveUpdates());
+  // Open streams would otherwise hold `close()` until their clients leave.
+  app.addHook('preClose', async () => app.live.closeAll());
 
   registerErrorHandler(app);
   registerSecurity(app);
@@ -81,6 +87,8 @@ export async function buildServer({
   await app.register(deviceRoutes);
   await app.register(codeRoutes);
   await app.register(accountRoutes);
+  await app.register(changeRoutes);
+  await app.register(streamRoutes);
   await registerStatic(app, config.publicDir);
 
   return app;

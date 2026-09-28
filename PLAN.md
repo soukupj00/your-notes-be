@@ -79,7 +79,8 @@ Single-resource `GET`s exist as HAL link targets with an `ETag`; per-resource `P
 | `rev` equal | the row | `accepted`, rev + 1, new `seq` |
 | `rev` lower | the row | `conflict` with the server row; the Device makes the Conflicted Copy |
 | anything | a Tombstone | `gone` |
-| a Tombstone | the row | row deleted, Tombstone written, blobs released to the sweep |
+| a Tombstone, `rev` equal | the row | row deleted, Tombstone written, blobs released to the sweep |
+| a Tombstone, `rev` stale or absent | the Note or Tag | `conflict` with the server row, nothing written; a NoteTag Tombstone is always accepted |
 | a NoteTag | anything | `accepted`; a link has nothing to conflict over |
 
 One transaction per batch; a malformed row fails the whole batch with 400.
@@ -138,8 +139,10 @@ End-to-end encryption, sharing a Note into another Account, email, a WAF, a sing
 - [x] **B2 Accounts and Pairing**: `accounts`, `sessions`, `codes`; the first-run Pairing Link in the log; setup, session, devices and revoke, invites, password reset, CLI; rate limits.
   Done when a phone scans the log's QR and lands signed in, and the contract file is published for frontend slice 3.
   Deviations: `PUBLIC_URL` added so the printed link names the right origin; the `setup` code has no clock expiry (ADR 0001).
-- [ ] **B3 The loop**: push with the rules above, feed pages with `ETag` and `410`, SSE hints, the tombstone sweep.
-  Open before B3: the `id` a NoteTag Tombstone carries (the link has a composite key), to be fixed in the contract with the frontend.
+- [x] **B3 The loop**: push with the rules above, feed pages with `ETag` and `410`, SSE hints, the tombstone sweep.
+  A NoteTag Tombstone's `id`, and a NoteTag push outcome's, is `<noteId>:<tagId>` (`noteTagId` in the contract).
+  A Tombstone carries the `rev` the Device last agreed with, so a purge never discards a newer edit.
+  Deviations: `since=0` never answers 410, because a Device starting empty cannot have missed a Tombstone and would otherwise loop on resync; a stored Tombstone's `deletedAt` is the server's clock, so a Device's clock cannot shorten the window.
   Done when frontend slice 4 runs against it and a conflict yields a Conflicted Copy on the Device.
 - [ ] **B4 Blobs**: the blob routes, temp-file write, orphan sweep, size caps.
   Done when frontend slice 5 syncs previews and bytes.

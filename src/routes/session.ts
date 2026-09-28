@@ -25,7 +25,12 @@ export const SIGN_IN_RATE_LIMIT = { max: 10, timeWindow: '1 minute' };
 export function sessionBody(account: SessionAccount, device: SessionDevice): SessionResponse {
   return hal(
     { account, device },
-    { self: link('/api/session'), devices: link('/api/devices'), codes: link('/api/codes') }
+    {
+      self: link('/api/session'),
+      devices: link('/api/devices'),
+      codes: link('/api/codes'),
+      changes: link('/api/changes'),
+    }
   );
 }
 

@@ -8,12 +8,14 @@ import { pairingLink } from './contract/index.ts';
 import { openDatabase } from './db/client.ts';
 import { migrateDatabase } from './db/migrate.ts';
 import { buildServer } from './server.ts';
+import { SWEEP_EVERY_MS, sweep } from './sweep.ts';
 
 const config = loadConfig(process.env);
 mkdirSync(config.dataDir, { recursive: true });
 
 const db = openDatabase(join(config.dataDir, 'younotes.db'));
 migrateDatabase(db);
+sweep(db, new Date(), config.tombstoneDays);
 
 const pretty = process.env.NODE_ENV !== 'production' && process.stdout.isTTY;
 const app = await buildServer({
@@ -36,6 +38,14 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 
 // `listen` logs the address it bound to.
 await app.listen({ port: config.port, host: config.host });
+
+setInterval(() => {
+  try {
+    sweep(db, new Date(), config.tombstoneDays);
+  } catch (error) {
+    app.log.error({ err: error }, 'sweep failed');
+  }
+}, SWEEP_EVERY_MS).unref();
 
 // First run (ADR 0001): a new link on every start until the Owner exists.
 const setupCode = ensureSetupCode(db, new Date());

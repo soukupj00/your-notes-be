@@ -5,15 +5,17 @@ src/
   contract/index.ts   the shared Zod contract; the frontend vendors this file
   config.ts           environment variables to a validated Config
   server.ts           buildServer(): the whole app, never listens
-  main.ts             opens the database, migrates, listens, prints the first-run Pairing Link
+  main.ts             opens the database, migrates, sweeps daily, listens, prints the first-run Pairing Link
   cli.ts              backup <dir>, reset-owner-password
   problem.ts          every error as application/problem+json
   hal.ts              _links and _embedded helpers
+  sweep.ts            expired Tombstones (raising pruned_seq), Sessions and Pairing Codes
+  sync/               decide.ts: the sync rules, pure, no HTTP and no Drizzle
   auth/               passwords (scrypt), sessions (cookie), codes (Pairing Codes)
-  db/                 schema.ts, client.ts, migrate.ts
+  db/                 schema.ts, client.ts, migrate.ts, rows.ts (rows to and from the contract)
   blobs/              BlobStore interface, disk and memory stores, one contract test
   plugins/            auth, security (CSRF, headers, request id), docs, static (PWA)
-  routes/             one file per route group
+  routes/             one file per route group; changes.ts (push, feed), stream.ts (SSE)
 drizzle/              generated migrations, applied at startup
 scripts/openapi.ts    writes docs/openapi.json
 ```

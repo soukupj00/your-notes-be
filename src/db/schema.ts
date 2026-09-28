@@ -16,6 +16,8 @@ export const accounts = sqliteTable('accounts', {
   role: text('role', { enum: ['owner', 'member'] }).notNull(),
   /** The Account's Sequence: advanced by every accepted change (ADR 0002). */
   seq: integer('seq').notNull().default(0),
+  /** The highest Sequence of a Tombstone the sweep has removed; older cursors get 410. */
+  prunedSeq: integer('pruned_seq').notNull().default(0),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });

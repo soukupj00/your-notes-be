@@ -86,22 +86,49 @@ export const NoteTag = z.object({
 export type NoteTag = z.infer<typeof NoteTag>;
 
 /** A row plus the Revision it was last in agreement with; absent means never pushed. */
-export function revisioned<T extends z.ZodObject>(schema: T) {
+export function revisioned<Shape extends z.ZodRawShape>(schema: z.ZodObject<Shape>) {
   return schema.extend({ rev: Rev.optional() });
 }
 
 export const RevisionedNote = revisioned(Note);
 export const RevisionedTag = revisioned(Tag);
 export const RevisionedNoteTag = revisioned(NoteTag);
+export type RevisionedNote = z.infer<typeof RevisionedNote>;
+export type RevisionedTag = z.infer<typeof RevisionedTag>;
+export type RevisionedNoteTag = z.infer<typeof RevisionedNoteTag>;
 
 export const TombstoneKind = z.enum(['note', 'tag', 'noteTag']);
 
-/** The record that something was purged, so the deletion reaches offline Devices. */
-export const Tombstone = z.object({
-  id: z.string().min(1),
-  kind: TombstoneKind,
-  deletedAt: IsoDateTime,
-});
+/** A NoteTag has no id of its own; its Tombstone and push outcome use `<noteId>:<tagId>`. */
+export function noteTagId(noteId: string, tagId: string): string {
+  return `${noteId}:${tagId}`;
+}
+
+/** The two halves of a NoteTag id, or null when `id` is not one. */
+export function parseNoteTagId(id: string): { noteId: string; tagId: string } | null {
+  const [noteId, tagId, ...rest] = id.split(':');
+  if (rest.length > 0 || !Id.safeParse(noteId).success || !Id.safeParse(tagId).success) return null;
+  return { noteId: noteId as string, tagId: tagId as string };
+}
+
+/**
+ * The record that something was purged, so the deletion reaches offline Devices.
+ * `id` is the Note's or Tag's id, or `noteTagId(noteId, tagId)` for a NoteTag.
+ * `rev` is the Revision the Device last agreed with for what it purged, absent if it never
+ * pushed it; a stale one for a Note or Tag answers `conflict`, so a purge never discards a newer edit.
+ * The server keeps Tombstones for `TOMBSTONE_DAYS`; a cursor older than that gets 410.
+ */
+export const Tombstone = z
+  .object({
+    id: z.string().min(1),
+    kind: TombstoneKind,
+    deletedAt: IsoDateTime,
+    rev: Rev.optional(),
+  })
+  .refine((t) => t.kind !== 'noteTag' || parseNoteTagId(t.id) !== null, {
+    message: 'A noteTag Tombstone id is <noteId>:<tagId>',
+    path: ['id'],
+  });
 export type Tombstone = z.infer<typeof Tombstone>;
 
 // ---------------------------------------------------------------------------
@@ -130,6 +157,8 @@ export const RootResponse = z.object({
     devices: Link,
     codes: Link,
     accounts: Link,
+    changes: Link,
+    stream: Link,
   }),
 });
 export type RootResponse = z.infer<typeof RootResponse>;
@@ -180,7 +209,7 @@ export type SignInRequest = z.infer<typeof SignInRequest>;
 export const SessionResponse = z.object({
   account: z.object({ id: Id, username: z.string(), role: Role }),
   device: z.object({ id: Id, name: z.string() }),
-  _links: z.object({ self: Link, devices: Link, codes: Link }),
+  _links: z.object({ self: Link, devices: Link, codes: Link, changes: Link }),
 });
 export type SessionResponse = z.infer<typeof SessionResponse>;
 
@@ -209,6 +238,68 @@ export type CodeResponse = z.infer<typeof CodeResponse>;
 
 export const PasswordRequest = z.object({ password: Password });
 export type PasswordRequest = z.infer<typeof PasswordRequest>;
+
+// ---------------------------------------------------------------------------
+// Sync (PLAN.md "Sync rules"; the frontend's `Remote` seam)
+
+/** Rows in one push, across all four arrays; a bigger batch is 400. */
+export const MAX_BATCH = 500;
+
+export const PushBatch = z.object({
+  notes: z.array(RevisionedNote).max(MAX_BATCH),
+  tags: z.array(RevisionedTag).max(MAX_BATCH),
+  noteTags: z.array(RevisionedNoteTag).max(MAX_BATCH),
+  tombstones: z.array(Tombstone).max(MAX_BATCH),
+});
+export type PushBatch = z.infer<typeof PushBatch>;
+
+const RowKind = z.enum(['note', 'tag', 'noteTag']);
+
+/**
+ * One per pushed row, in input order: notes, tags, noteTags, tombstones.
+ * `id` is the row's id, or `noteTagId(noteId, tagId)` for a NoteTag.
+ */
+export const PushOutcome = z.discriminatedUnion('status', [
+  z.object({ kind: RowKind, id: z.string(), status: z.literal('accepted'), rev: Rev }),
+  z.discriminatedUnion('kind', [
+    z.object({
+      kind: z.literal('note'),
+      id: z.string(),
+      status: z.literal('conflict'),
+      server: RevisionedNote,
+    }),
+    z.object({
+      kind: z.literal('tag'),
+      id: z.string(),
+      status: z.literal('conflict'),
+      server: RevisionedTag,
+    }),
+  ]),
+  z.object({ kind: RowKind, id: z.string(), status: z.literal('gone') }),
+]);
+export type PushOutcome = z.infer<typeof PushOutcome>;
+
+export const PushResponse = z.object({
+  outcomes: z.array(PushOutcome),
+  /** The Account's Sequence after this push. */
+  seq: z.number().int().min(0),
+  _links: z.object({ self: Link, changes: Link }),
+});
+export type PushResponse = z.infer<typeof PushResponse>;
+
+/**
+ * One page of the change feed, ordered by Sequence across the four kinds.
+ * `seq` is the Account's current Sequence; without `next` the Device is caught up.
+ */
+export const ChangesPage = z.object({
+  notes: z.array(RevisionedNote),
+  tags: z.array(RevisionedTag),
+  noteTags: z.array(RevisionedNoteTag),
+  tombstones: z.array(Tombstone),
+  seq: z.number().int().min(0),
+  _links: z.object({ self: Link, next: Link.optional(), stream: Link }),
+});
+export type ChangesPage = z.infer<typeof ChangesPage>;
 
 // ---------------------------------------------------------------------------
 // Responses
