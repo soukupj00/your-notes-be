@@ -15,6 +15,7 @@ pnpm test
 pnpm check        # Biome: lint and format
 ```
 
+`docker compose --profile local build` builds the image from this checkout through `compose.override.yml`, which only developers have; set `FE_IMAGE` in `.env` if the frontend image cannot be pulled.
 `pnpm dev` serves the API only until a built PWA is in `./public`, for example `cp -r ../ni-dip-fe/dist public`.
 The API reference is at `/api/docs`; the same document is committed as [`docs/openapi.json`](./docs/openapi.json) for import into any HTTP client.
 
@@ -34,7 +35,13 @@ docker compose --profile local up younotes-local
 On first start the server log prints a Pairing Link and a QR code; open it on your phone to create the Owner.
 To reset a forgotten Owner password, run `docker compose exec younotes node dist/cli.js reset-owner-password`.
 
-A full setup guide is still to come; until then [`PLAN.md`](./PLAN.md) describes the deployment modes.
+The step-by-step guide for people running it at home, including the three TLS modes and backups, is [`docs/setup.md`](./docs/setup.md).
+
+## Release
+
+1. Bump `version` in `package.json` and merge to `main`.
+2. Tag that commit `v0.x.y` and push the tag; CI builds, smoke-tests and publishes the image under that tag.
+3. Set `YOUNOTES_VERSION` in `.env.example` to the new tag, so new installs start on it; `docs/setup.md` downloads the files from the tag too, so update its three `curl` lines.
 
 ## More
 

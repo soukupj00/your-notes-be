@@ -1,24 +1,26 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ensureSetupCode } from '../auth/codes.ts';
 import { SESSION_COOKIE } from '../auth/sessions.ts';
-import { memoryBlobStore } from '../blobs/memory.ts';
-import { loadConfig } from '../config.ts';
 import {
   ChangesPage,
-  CodeResponse,
   noteTagId,
   Problem,
   type PushBatch,
   PushResponse,
 } from '../contract/index.ts';
-import { type Db, openDatabase } from '../db/client.ts';
-import { migrateDatabase } from '../db/migrate.ts';
-import { type App, buildServer } from '../server.ts';
+import type { Db } from '../db/client.ts';
+import type { App } from '../server.ts';
 import { sweep } from '../sweep.ts';
+import {
+  as,
+  cookieOf,
+  inviteMember,
+  pairDevice,
+  signUpOwner,
+  testServer,
+} from '../test/helpers.ts';
 
 const T = '2026-09-28T10:00:00.000Z';
-const PASSWORD = 'correct horse';
 
 let clock: Date;
 let db: Db;
@@ -30,61 +32,13 @@ afterEach(async () => {
 
 async function start(env: Record<string, string> = {}) {
   clock = new Date(T);
-  db = openDatabase(':memory:');
-  migrateDatabase(db);
-  app = await buildServer({
-    config: loadConfig({ PUBLIC_DIR: '/nonexistent', ...env }),
-    db,
-    blobs: memoryBlobStore(),
-    logger: false,
-    now: () => clock,
-  });
+  ({ app, db } = await testServer(env, () => clock));
 }
-
-const as = (cookie: string) => ({ cookies: { [SESSION_COOKIE]: cookie } });
-const cookieOf = (response: Awaited<ReturnType<App['inject']>>) =>
-  response.cookies.find((c) => c.name === SESSION_COOKIE)?.value ?? '';
 
 /** The Owner's first Device; `pair` adds another Device, `invite` another Account. */
-async function owner(): Promise<string> {
-  const code = ensureSetupCode(db, clock);
-  const response = await app.inject({
-    method: 'POST',
-    url: '/api/setup',
-    payload: { code, username: 'olga', password: PASSWORD, deviceName: 'Laptop' },
-  });
-  return cookieOf(response);
-}
-
-async function mint(cookie: string, kind: 'device' | 'invite') {
-  const response = await app.inject({
-    method: 'POST',
-    url: '/api/codes',
-    payload: { kind },
-    ...as(cookie),
-  });
-  return CodeResponse.parse(response.json()).code;
-}
-
-async function pair(cookie: string): Promise<string> {
-  const code = await mint(cookie, 'device');
-  const response = await app.inject({
-    method: 'POST',
-    url: '/api/session',
-    payload: { code, deviceName: 'Phone' },
-  });
-  return cookieOf(response);
-}
-
-async function invite(cookie: string): Promise<string> {
-  const code = await mint(cookie, 'invite');
-  const response = await app.inject({
-    method: 'POST',
-    url: '/api/accounts',
-    payload: { code, username: 'max', password: PASSWORD, deviceName: 'Phone' },
-  });
-  return cookieOf(response);
-}
+const owner = () => signUpOwner(app, db, clock);
+const pair = async (cookie: string) => cookieOf(await pairDevice(app, cookie));
+const invite = async (cookie: string) => cookieOf(await inviteMember(app, cookie));
 
 const note = (id: string, extra: object = {}) => ({
   id,
@@ -329,6 +283,15 @@ describe('the feed', () => {
       ...as(laptop),
     });
     expect(changed.statusCode).toBe(200);
+  });
+
+  it('answers 410 to a cursor past the Sequence, as after restoring a backup', async () => {
+    await start();
+    const laptop = await owner();
+    await push(laptop, { notes: [note(randomUUID())] });
+    expect((await pull(laptop, 1)).notes).toEqual([]);
+    const ahead = await app.inject({ url: '/api/changes?since=2', ...as(laptop) });
+    expect(Problem.parse(ahead.json())).toMatchObject({ status: 410 });
   });
 
   it('answers 410 to a cursor older than the swept Tombstones, but not to 0', async () => {

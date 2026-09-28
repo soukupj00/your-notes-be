@@ -1,0 +1,17 @@
+# Developers only: build the server image from this checkout instead of pulling it.
+# Compose merges this file into compose.yml automatically when it sits next to it;
+# the setup guide downloads compose.yml alone, so people running YouNotes never see it.
+#
+#   docker compose --profile local build
+
+x-build: &build
+  build:
+    context: .
+    args:
+      FE_IMAGE: ${FE_IMAGE:-registry.gitlab.fit.cvut.cz/soukuj26/ni-dip-fe:latest}
+
+services:
+  younotes:
+    <<: *build
+  younotes-local:
+    <<: *build

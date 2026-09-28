@@ -15,6 +15,7 @@ src/
   db/                 schema.ts, client.ts, migrate.ts, rows.ts (rows to and from the contract)
   blobs/              BlobStore interface, disk and memory stores, one contract test
   plugins/            auth, security (CSRF, headers, request id), docs, static (PWA)
+  test/               helpers.ts: the test server and sign-up steps the API tests share
   routes/             one file per route group; changes.ts (push, feed), stream.ts (SSE), blobs.ts (bytes)
 drizzle/              generated migrations, applied at startup
 scripts/openapi.ts    writes docs/openapi.json

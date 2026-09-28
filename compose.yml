@@ -3,13 +3,14 @@
 #
 #   docker compose up -d                      # the full stack over HTTPS
 #   docker compose --profile local up younotes-local   # just the server on http://localhost:3000
+#
+# Building the image yourself: see compose.override.yml, which Compose merges in when present.
+
+# Fixed, so the stored data keeps its name even if this folder is renamed or moved.
+name: younotes
 
 x-younotes: &younotes
   image: registry.gitlab.fit.cvut.cz/soukuj26/ni-dip-be:${YOUNOTES_VERSION:-latest}
-  build:
-    context: .
-    args:
-      FE_IMAGE: ${FE_IMAGE:-registry.gitlab.fit.cvut.cz/soukuj26/ni-dip-fe:latest}
   restart: unless-stopped
   read_only: true
   tmpfs:

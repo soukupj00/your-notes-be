@@ -53,7 +53,7 @@ describe('meta routes', () => {
   it('GET /health reports ok and the version', async () => {
     const response = await app.inject('/health');
     expect(response.statusCode).toBe(200);
-    expect(HealthResponse.parse(response.json())).toEqual({ status: 'ok', version: '0.0.0' });
+    expect(HealthResponse.parse(response.json())).toEqual({ status: 'ok', version: '0.1.0' });
   });
 
   it('GET /api is a HAL root that links only to routes that exist', async () => {

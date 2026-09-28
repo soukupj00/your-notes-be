@@ -1,23 +1,26 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ensureSetupCode, mintCode } from '../auth/codes.ts';
-import { SESSION_COOKIE } from '../auth/sessions.ts';
-import { memoryBlobStore } from '../blobs/memory.ts';
-import { loadConfig } from '../config.ts';
 import {
   CodeResponse,
   DevicesResponse,
-  Problem,
   RootResponse,
   SessionResponse,
   SetupStatus,
 } from '../contract/index.ts';
-import { type Db, openDatabase } from '../db/client.ts';
-import { migrateDatabase } from '../db/migrate.ts';
-import { type App, buildServer } from '../server.ts';
+import type { Db } from '../db/client.ts';
+import type { App } from '../server.ts';
+import {
+  as,
+  cookieOf,
+  expectProblem,
+  inviteMember,
+  mintPairingCode,
+  PASSWORD,
+  sessionCookie,
+  signUpOwner,
+  testServer,
+} from '../test/helpers.ts';
 
-type Response = Awaited<ReturnType<App['inject']>>;
-
-const PASSWORD = 'correct horse';
 let clock: Date;
 let db: Db;
 let app: App;
@@ -25,74 +28,25 @@ let setupCode: string;
 
 beforeEach(async () => {
   clock = new Date('2026-09-28T10:00:00.000Z');
-  db = openDatabase(':memory:');
-  migrateDatabase(db);
+  ({ app, db } = await testServer({}, () => clock));
   setupCode = ensureSetupCode(db, clock) ?? '';
-  app = await buildServer({
-    config: loadConfig({ PUBLIC_DIR: '/nonexistent' }),
-    db,
-    blobs: memoryBlobStore(),
-    logger: false,
-    now: () => clock,
-  });
 });
 
 afterEach(async () => {
   await app.close();
 });
 
-function expectProblem(response: Response, status: number): Problem {
-  expect(response.statusCode).toBe(status);
-  expect(response.headers['content-type']).toMatch(/^application\/problem\+json/);
-  return Problem.parse(response.json());
-}
-
-function sessionCookie(response: Response) {
-  return response.cookies.find((cookie) => cookie.name === SESSION_COOKIE);
-}
-
-/** Signed in as `cookie`, or signed out. */
-function as(cookie?: string) {
-  return cookie ? { cookies: { [SESSION_COOKIE]: cookie } } : {};
-}
-
 function post(url: string, payload: object, cookie?: string, remoteAddress?: string) {
   return app.inject({ method: 'POST', url, payload, remoteAddress, ...as(cookie) });
 }
 
-/** Creates the Owner through the setup route; returns the new Session's cookie. */
-async function setUp(username = 'olga'): Promise<string> {
-  const response = await post('/api/setup', {
-    code: setupCode,
-    username,
-    password: PASSWORD,
-    deviceName: 'Laptop',
-  });
-  expect(response.statusCode).toBe(201);
-  return sessionCookie(response)?.value ?? '';
-}
+const setUp = () => signUpOwner(app, db, clock);
+const mint = (cookie: string, kind: 'device' | 'invite') => mintPairingCode(app, cookie, kind);
 
-async function mint(cookie: string, kind: 'device' | 'invite'): Promise<string> {
-  const response = await post('/api/codes', { kind }, cookie);
-  expect(response.statusCode).toBe(201);
-  return CodeResponse.parse(response.json()).code;
-}
-
-/** An Invite from the Owner, spent by `username`; returns the member's cookie. */
-async function invite(ownerCookie: string, username = 'max'): Promise<string> {
-  const code = await mint(ownerCookie, 'invite');
-  const response = await post('/api/accounts', {
-    code,
-    username,
-    password: PASSWORD,
-    deviceName: 'Phone',
-  });
-  expect(response.statusCode).toBe(201);
-  expect(SessionResponse.parse(response.json()).account).toMatchObject({
-    username,
-    role: 'member',
-  });
-  return sessionCookie(response)?.value ?? '';
+async function invite(ownerCookie: string): Promise<string> {
+  const response = await inviteMember(app, ownerCookie);
+  expect(SessionResponse.parse(response.json()).account).toMatchObject({ role: 'member' });
+  return cookieOf(response);
 }
 
 describe('first run', () => {

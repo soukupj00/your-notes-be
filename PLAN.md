@@ -94,17 +94,19 @@ src/
   contract/index.ts   shared Zod contract
   config.ts           env -> Config
   server.ts           buildServer(config, deps), no listen()
-  main.ts             listen, migrate, print the first-run Pairing Link
+  main.ts             migrate, sweep, listen, print the first-run Pairing Link
   cli.ts              backup, reset-owner-password
-  db/                 schema.ts, client.ts, migrate.ts
+  sweep.ts            daily: expired Tombstones, Sessions, codes, orphan blobs
+  db/                 schema.ts, client.ts, migrate.ts, rows.ts
   blobs/              BlobStore.ts, disk.ts, memory.ts, blobStore.contract.test.ts
   auth/               passwords.ts, sessions.ts, codes.ts
-  sync/               push.ts, pull.ts
-  hal.ts
+  sync/               decide.ts
+  hal.ts, problem.ts
   routes/             one file per route group
-  plugins/            auth.ts, static.ts, docs.ts
+  plugins/            auth.ts, security.ts, static.ts, docs.ts
+  test/               helpers.ts, shared by the API tests
 drizzle/              generated migrations
-docs/                 openapi.json, adr/, architecture/, setup.md
+docs/                 openapi.json, setup.md, adr/, architecture/structure.md
 ```
 Plugins: `fastify-type-provider-zod`, `@fastify/swagger`, `@fastify/swagger-ui`, `@fastify/cookie`, `@fastify/static`, `@fastify/rate-limit`, `@fastify/sensible`.
 SSE is ~20 lines on `reply.raw`.
@@ -143,11 +145,14 @@ End-to-end encryption, sharing a Note into another Account, email, a WAF, a sing
   A NoteTag Tombstone's `id`, and a NoteTag push outcome's, is `<noteId>:<tagId>` (`noteTagId` in the contract).
   A Tombstone carries the `rev` the Device last agreed with, so a purge never discards a newer edit.
   Deviations: `since=0` never answers 410, because a Device starting empty cannot have missed a Tombstone and would otherwise loop on resync; a stored Tombstone's `deletedAt` is the server's clock, so a Device's clock cannot shorten the window.
+  A cursor past the Account's Sequence also answers 410: it was issued before a restore rewound the database.
   Done when frontend slice 4 runs against it and a conflict yields a Conflicted Copy on the Device.
 - [x] **B4 Blobs**: the blob routes, temp-file write, orphan sweep, size caps.
   Deviations: no byte counting past Content-Length, because Node's HTTP parser already ends the body there; blob responses also send `Content-Security-Policy: default-src 'none'; sandbox`, so uploaded HTML never runs as this origin.
   Done when frontend slice 5 syncs previews and bytes.
-- [ ] **B5 Setup and docs**: `docs/setup.md` (three modes, adding a phone, adding a household member, backup and restore, upgrade, Owner reset, the "your data" section, the exposure table per mode), release tagging.
+- [x] **B5 Setup and docs**: `docs/setup.md` (three modes, adding a phone, adding a household member, backup and restore, upgrade, Owner reset, the "your data" section, the exposure table per mode), release tagging.
   Done when a non-programmer follows the guide unsupervised in a user test.
+  Deviation: the Caddyfile gained `default_sni`, because a browser opening an IP address sends no server name and the internal-CA mode failed the TLS handshake without it.
+  The user test is still to run.
 - [ ] **B6 Share Links** (after sync works): `shares` table, mint, revoke and list routes, the unauthenticated `GET /api/shares/:token` and its blob route, the frontend `/share/$token` read-only route rendered through DOMPurify.
   Only reaches strangers in the own-domain mode; documented as such.

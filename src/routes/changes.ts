@@ -247,7 +247,8 @@ export const changeRoutes: FastifyPluginAsyncZod = async (app) => {
         .where(eq(accounts.id, account.id))
         .get() ?? { seq: 0, prunedSeq: 0 };
       // A Device starting from 0 holds nothing, so it cannot have missed a removed Tombstone.
-      if (since > 0 && since < prunedSeq) {
+      // A cursor past the Sequence was issued before a restore rewound the database.
+      if ((since > 0 && since < prunedSeq) || since > seq) {
         return sendProblem(reply, 410, 'Cursor is older than the tombstone window; resync');
       }
 

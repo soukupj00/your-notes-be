@@ -5,7 +5,7 @@
   "info": {
     "description": "Sync for the YouNotes PWA. Errors are application/problem+json (RFC 9457).",
     "title": "YouNotes Self-hosted Server",
-    "version": "0.0.0"
+    "version": "0.1.0"
   },
   "openapi": "3.1.0",
   "paths": {

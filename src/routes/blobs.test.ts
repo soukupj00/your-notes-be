@@ -2,14 +2,17 @@ import { randomUUID } from 'node:crypto';
 import { request as httpRequest } from 'node:http';
 import { buffer } from 'node:stream/consumers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ensureSetupCode } from '../auth/codes.ts';
 import { SESSION_COOKIE } from '../auth/sessions.ts';
-import { memoryBlobStore } from '../blobs/memory.ts';
-import { loadConfig } from '../config.ts';
-import { CodeResponse, Problem } from '../contract/index.ts';
-import { openDatabase } from '../db/client.ts';
-import { migrateDatabase } from '../db/migrate.ts';
-import { type App, buildServer } from '../server.ts';
+import { Problem } from '../contract/index.ts';
+import type { App } from '../server.ts';
+import {
+  as,
+  cookieOf,
+  inviteMember,
+  type Response,
+  signUpOwner,
+  testServer,
+} from '../test/helpers.ts';
 
 const LIMIT = 1024;
 const BYTES = Buffer.from('\x89PNG not really');
@@ -18,31 +21,17 @@ let app: App;
 let olga: string;
 
 beforeEach(async () => {
-  const db = openDatabase(':memory:');
-  migrateDatabase(db);
-  const code = ensureSetupCode(db, new Date());
-  app = await buildServer({
-    config: loadConfig({ PUBLIC_DIR: '/nonexistent', BLOB_LIMIT_BYTES: String(LIMIT) }),
-    db,
-    blobs: memoryBlobStore(),
-    logger: false,
-  });
-  const setup = await app.inject({
-    method: 'POST',
-    url: '/api/setup',
-    payload: { code, username: 'olga', password: 'correct horse', deviceName: 'Laptop' },
-  });
-  olga = cookieOf(setup);
+  const server = await testServer({ BLOB_LIMIT_BYTES: String(LIMIT) });
+  app = server.app;
+  olga = await signUpOwner(app, server.db);
 });
 
 afterEach(async () => {
   await app.close();
 });
 
-type Response = Awaited<ReturnType<App['inject']>>;
-const cookieOf = (r: Response) => r.cookies.find((c) => c.name === SESSION_COOKIE)?.value ?? '';
-const as = (cookie: string) => ({ cookies: { [SESSION_COOKIE]: cookie } });
 const problem = (r: Response) => Problem.parse(r.json()).status;
+const member = async () => cookieOf(await inviteMember(app, olga));
 
 function put(id: string, body: Buffer, cookie = olga, headers: Record<string, string> = {}) {
   return app.inject({
@@ -52,26 +41,6 @@ function put(id: string, body: Buffer, cookie = olga, headers: Record<string, st
     headers: { 'content-type': 'image/png', ...headers },
     ...as(cookie),
   });
-}
-
-async function member(): Promise<string> {
-  const minted = await app.inject({
-    method: 'POST',
-    url: '/api/codes',
-    payload: { kind: 'invite' },
-    ...as(olga),
-  });
-  const response = await app.inject({
-    method: 'POST',
-    url: '/api/accounts',
-    payload: {
-      code: CodeResponse.parse(minted.json()).code,
-      username: 'max',
-      password: 'correct horse',
-      deviceName: 'Phone',
-    },
-  });
-  return cookieOf(response);
 }
 
 describe('blobs', () => {
