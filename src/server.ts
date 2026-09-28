@@ -24,6 +24,7 @@ import { healthRoutes } from './routes/health.ts';
 import { rootRoutes } from './routes/root.ts';
 import { sessionRoutes } from './routes/session.ts';
 import { setupRoutes } from './routes/setup.ts';
+import { shareRoutes } from './routes/shares.ts';
 import { LiveUpdates, streamRoutes } from './routes/stream.ts';
 
 declare module 'fastify' {
@@ -91,6 +92,7 @@ export async function buildServer({
   await app.register(changeRoutes);
   await app.register(streamRoutes);
   await app.register(blobRoutes);
+  await app.register(shareRoutes);
   await registerStatic(app, config.publicDir);
 
   return app;

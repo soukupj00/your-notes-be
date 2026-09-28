@@ -161,6 +161,7 @@ export const RootResponse = z.object({
     stream: Link,
     /** Templated: `{id}` is an Attachment id. */
     blobs: Link,
+    shares: Link,
   }),
 });
 export type RootResponse = z.infer<typeof RootResponse>;
@@ -184,6 +185,11 @@ export const CodeKind = z.enum(['device', 'invite']);
 /** Where a Pairing Link points; the server and the PWA build it the same way. */
 export function pairingLink(origin: string, code: string): string {
   return `${origin.replace(/\/+$/, '')}/pair#${code}`;
+}
+
+/** Where a Share Link points: the PWA's read-only page for one Note. */
+export function shareLink(origin: string, token: string): string {
+  return `${origin.replace(/\/+$/, '')}/share/${token}`;
 }
 
 export const SetupStatus = z.object({
@@ -211,7 +217,14 @@ export type SignInRequest = z.infer<typeof SignInRequest>;
 export const SessionResponse = z.object({
   account: z.object({ id: Id, username: z.string(), role: Role }),
   device: z.object({ id: Id, name: z.string() }),
-  _links: z.object({ self: Link, devices: Link, codes: Link, changes: Link, blobs: Link }),
+  _links: z.object({
+    self: Link,
+    devices: Link,
+    codes: Link,
+    changes: Link,
+    blobs: Link,
+    shares: Link,
+  }),
 });
 export type SessionResponse = z.infer<typeof SessionResponse>;
 
@@ -240,6 +253,36 @@ export type CodeResponse = z.infer<typeof CodeResponse>;
 
 export const PasswordRequest = z.object({ password: Password });
 export type PasswordRequest = z.infer<typeof PasswordRequest>;
+
+// ---------------------------------------------------------------------------
+// Share Links: one Note, read-only, for anyone holding the token (ADR 0005)
+
+export const ShareRequest = z.object({ noteId: Id });
+export type ShareRequest = z.infer<typeof ShareRequest>;
+
+export const Share = z.object({
+  id: Id,
+  noteId: Id,
+  /** Build the link with `shareLink(origin, token)`. */
+  token: z.string(),
+  createdAt: IsoDateTime,
+  /** `self` revokes it (DELETE); `public` is what anyone with the token reads. */
+  _links: z.object({ self: Link, public: Link }),
+});
+export type Share = z.infer<typeof Share>;
+
+export const SharesResponse = z.object({
+  _links: z.object({ self: Link }),
+  _embedded: z.object({ shares: z.array(Share) }),
+});
+export type SharesResponse = z.infer<typeof SharesResponse>;
+
+/** What a Share Link shows: the Note without its Revision; `blobs` is templated by Attachment id. */
+export const SharedNote = z.object({
+  note: Note,
+  _links: z.object({ self: Link, blobs: Link }),
+});
+export type SharedNote = z.infer<typeof SharedNote>;
 
 // ---------------------------------------------------------------------------
 // Sync (PLAN.md "Sync rules"; the frontend's `Remote` seam)

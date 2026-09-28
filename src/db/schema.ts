@@ -1,4 +1,11 @@
-import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 import type { AttachmentMeta } from '../contract/index.ts';
 
 // Ids are text UUIDs; timestamps are ISO 8601 strings, the same as on the wire.
@@ -137,4 +144,20 @@ export const blobs = sqliteTable(
     createdAt: text('created_at').notNull(),
   },
   (t) => [index('blobs_account_idx').on(t.accountId)]
+);
+
+/**
+ * Share Links: one per shared Note, readable by anyone holding the token. The token is kept in
+ * clear so the link can be shown again (ADR 0005); the sweep removes a share whose Note is gone.
+ */
+export const shares = sqliteTable(
+  'shares',
+  {
+    id: text('id').primaryKey(),
+    accountId: account(),
+    noteId: text('note_id').notNull(),
+    token: text('token').notNull().unique(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [uniqueIndex('shares_account_note_idx').on(t.accountId, t.noteId)]
 );

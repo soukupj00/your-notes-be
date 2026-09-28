@@ -31,6 +31,7 @@ export function sessionBody(account: SessionAccount, device: SessionDevice): Ses
       codes: link('/api/codes'),
       changes: link('/api/changes'),
       blobs: link('/api/blobs/{id}', { templated: true }),
+      shares: link('/api/shares'),
     }
   );
 }

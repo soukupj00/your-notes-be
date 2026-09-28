@@ -26,6 +26,9 @@ export function registerAuth(app: FastifyInstance): void {
   app.decorateRequest('device', null);
 
   app.addHook('onRequest', async (request, reply) => {
+    const required = request.routeOptions.config.auth;
+    // Public routes (the PWA, setup, Share Links) neither read nor clear the cookie.
+    if (!required) return;
     const token = request.cookies[SESSION_COOKIE];
     if (token) {
       const session = resolveSession(app.db, token, app.now());
@@ -36,8 +39,6 @@ export function registerAuth(app: FastifyInstance): void {
         clearSessionCookie(reply);
       }
     }
-    const required = request.routeOptions.config.auth;
-    if (!required) return;
     if (!request.account) return sendProblem(reply, 401, 'Sign in first');
     if (required === 'owner' && request.account.role !== 'owner') {
       return sendProblem(reply, 403, 'Only the Owner can do this');

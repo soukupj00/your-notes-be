@@ -3,7 +3,7 @@
 The backend half of M5 in the frontend's [`PLAN.md`](../ni-dip-fe/PLAN.md).
 Scoped by a `/grill-with-docs` session on 2026-09-28.
 Product decisions taken as given: frontend ADR 0017 (conflict model), 0018 (the server serves the PWA), 0020 (the `Remote` and `AccountService` seams), the thesis ADR 0002 (bytes are files on disk), and [`../ni-dip-fe/docs/architecture/04-sync.md`](../ni-dip-fe/docs/architecture/04-sync.md) and [`05-server.md`](../ni-dip-fe/docs/architecture/05-server.md).
-Decisions made here: [`docs/adr/`](./docs/adr/) 0001 to 0004.
+Decisions made here: [`docs/adr/`](./docs/adr/) 0001 to 0005.
 Vocabulary: [`CONTEXT.md`](./CONTEXT.md), with product terms canonical in [`../ni-dip-fe/CONTEXT.md`](../ni-dip-fe/CONTEXT.md).
 
 ## Decided
@@ -46,6 +46,7 @@ All under `/api`; everything else is the PWA with SPA fallback.
 | Push | `POST /api/changes`: the batch, one transaction, per-row outcome `accepted`, `conflict`, `gone` |
 | Live Update | `GET /api/changes/stream`: SSE, `id:` is the Sequence, no payload |
 | Blobs | `PUT`, `GET`, `HEAD /api/blobs/:id` |
+| Share Links | `POST`, `GET /api/shares`, `GET`, `DELETE /api/shares/:id`; public, no Session: `GET /api/public/shares/:token` and `GET`, `HEAD .../blobs/:id` |
 | Health | `GET /health` |
 
 Batch push is the only write path in M5.
@@ -66,7 +67,7 @@ Single-resource `GET`s exist as HAL link targets with an `ETag`; per-resource `P
 ### Data
 - `DATA_DIR` holds `younotes.db` (WAL, foreign keys on, `busy_timeout`) and `blobs/<id>`; that directory is the backup unit.
 - Drizzle schema in `src/db/schema.ts`; `drizzle-kit` migrations committed under `drizzle/` and applied at startup.
-- Tables: `accounts` (with the Sequence counter), `sessions`, `codes`, `notes`, `tags`, `note_tags`, `tombstones`, `blobs`; later `shares`.
+- Tables: `accounts` (with the Sequence counter), `sessions`, `codes`, `notes`, `tags`, `note_tags`, `tombstones`, `blobs`, `shares`.
 - Every synced row carries `rev` and `seq`; the feed is read from the rows, no change log (ADR 0002).
 - Attachment metadata is a JSON column on `notes`; `blobs` records ownership and existence (ADR 0003).
 - CLI `backup <dir>`: `VACUUM INTO` plus a copy of `blobs/`; no scheduler, the guide shows the cron line.
@@ -154,5 +155,6 @@ End-to-end encryption, sharing a Note into another Account, email, a WAF, a sing
   Done when a non-programmer follows the guide unsupervised in a user test.
   Deviation: the Caddyfile gained `default_sni`, because a browser opening an IP address sends no server name and the internal-CA mode failed the TLS handshake without it.
   The user test is still to run.
-- [ ] **B6 Share Links** (after sync works): `shares` table, mint, revoke and list routes, the unauthenticated `GET /api/shares/:token` and its blob route, the frontend `/share/$token` read-only route rendered through DOMPurify.
+- [x] **B6 Share Links** (after sync works): `shares` table, mint, revoke and list routes, the unauthenticated `GET /api/public/shares/:token` and its blob route, the frontend `/share/$token` read-only route rendered through DOMPurify.
   Only reaches strangers in the own-domain mode; documented as such.
+  Server side done; the `/share/$token` page is the frontend's. Tokens are stored in clear (ADR 0005), one share per Note.

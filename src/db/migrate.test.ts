@@ -34,6 +34,9 @@ it('applies every migration to an empty database, twice without harm', () => {
         "name": "sessions",
       },
       {
+        "name": "shares",
+      },
+      {
         "name": "tags",
       },
       {

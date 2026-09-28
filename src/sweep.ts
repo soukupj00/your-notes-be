@@ -1,14 +1,15 @@
 import { eq, isNotNull, lt, lte, max, or, sql } from 'drizzle-orm';
 import type { BlobStore } from './blobs/BlobStore.ts';
 import type { Db } from './db/client.ts';
-import { accounts, blobs, codes, sessions, tombstones } from './db/schema.ts';
+import { accounts, blobs, codes, notes, sessions, shares, tombstones } from './db/schema.ts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Daily housekeeping. In one transaction: Tombstones past the window go, and each Account's
  * `pruned_seq` rises to the newest one removed, so an older cursor gets 410 (PLAN.md "Sync rules");
- * expired Sessions and spent or expired Pairing Codes go too. Then the blobs (`sweepBlobs`).
+ * expired Sessions, spent or expired Pairing Codes, and Share Links of purged Notes go too.
+ * Then the blobs (`sweepBlobs`).
  */
 export async function sweep(
   db: Db,
@@ -38,6 +39,11 @@ export async function sweep(
     db.delete(codes)
       .where(or(isNotNull(codes.usedAt), lte(codes.expiresAt, at)))
       .run();
+    // A Share Link outlives its purged Note only until here; the public route already hides it.
+    db.run(sql`
+      delete from ${shares} where not exists (
+        select 1 from ${notes} n where n.account_id = ${shares.accountId} and n.id = ${shares.noteId}
+      )`);
   })();
   await sweepBlobs(db, store, now);
 }
