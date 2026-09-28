@@ -76,14 +76,13 @@ test:unit:
     - pnpm test
 
 # --- Build ---
-# The frontend does not publish its image yet (its ADR 0006), so the FE_IMAGE
-# stage cannot be pulled and these two jobs may fail until it does.
+# Pulls the frontend's published image (FE_IMAGE); ni-dip-be is on that project's
+# CI/CD job token allowlist, which is what lets the job token read its registry.
 build:image:
   stage: build
   image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
-  allow_failure: true
   script:
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
     - /kaniko/executor
