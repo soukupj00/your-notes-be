@@ -63,6 +63,14 @@ describe.each(implementations)('BlobStore (%s)', (_name, create) => {
     expect(await store.has(ID)).toBe(false);
   });
 
+  it('lists what it holds', async () => {
+    expect(await store.list()).toEqual([]);
+    await store.put(ID, BYTES, BYTES.length);
+    expect(await store.list()).toEqual([ID]);
+    await store.delete(ID);
+    expect(await store.list()).toEqual([]);
+  });
+
   it('refuses an id that could escape its directory', async () => {
     await expect(store.put('../escape', BYTES, BYTES.length)).rejects.toThrow(/Invalid blob id/);
     await expect(store.has('a/b')).rejects.toThrow(/Invalid blob id/);

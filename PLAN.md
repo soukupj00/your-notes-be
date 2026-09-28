@@ -144,7 +144,8 @@ End-to-end encryption, sharing a Note into another Account, email, a WAF, a sing
   A Tombstone carries the `rev` the Device last agreed with, so a purge never discards a newer edit.
   Deviations: `since=0` never answers 410, because a Device starting empty cannot have missed a Tombstone and would otherwise loop on resync; a stored Tombstone's `deletedAt` is the server's clock, so a Device's clock cannot shorten the window.
   Done when frontend slice 4 runs against it and a conflict yields a Conflicted Copy on the Device.
-- [ ] **B4 Blobs**: the blob routes, temp-file write, orphan sweep, size caps.
+- [x] **B4 Blobs**: the blob routes, temp-file write, orphan sweep, size caps.
+  Deviations: no byte counting past Content-Length, because Node's HTTP parser already ends the body there; blob responses also send `Content-Security-Policy: default-src 'none'; sandbox`, so uploaded HTML never runs as this origin.
   Done when frontend slice 5 syncs previews and bytes.
 - [ ] **B5 Setup and docs**: `docs/setup.md` (three modes, adding a phone, adding a household member, backup and restore, upgrade, Owner reset, the "your data" section, the exposure table per mode), release tagging.
   Done when a non-programmer follows the guide unsupervised in a user test.

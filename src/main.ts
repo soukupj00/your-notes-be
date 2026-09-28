@@ -15,13 +15,14 @@ mkdirSync(config.dataDir, { recursive: true });
 
 const db = openDatabase(join(config.dataDir, 'younotes.db'));
 migrateDatabase(db);
-sweep(db, new Date(), config.tombstoneDays);
+const blobs = await diskBlobStore(join(config.dataDir, 'blobs'));
+await sweep(db, blobs, new Date(), config.tombstoneDays);
 
 const pretty = process.env.NODE_ENV !== 'production' && process.stdout.isTTY;
 const app = await buildServer({
   config,
   db,
-  blobs: await diskBlobStore(join(config.dataDir, 'blobs')),
+  blobs,
   logger: {
     level: config.logLevel,
     ...(pretty ? { transport: { target: 'pino-pretty' } } : {}),
@@ -40,11 +41,9 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 await app.listen({ port: config.port, host: config.host });
 
 setInterval(() => {
-  try {
-    sweep(db, new Date(), config.tombstoneDays);
-  } catch (error) {
-    app.log.error({ err: error }, 'sweep failed');
-  }
+  sweep(db, blobs, new Date(), config.tombstoneDays).catch((error) =>
+    app.log.error({ err: error }, 'sweep failed')
+  );
 }, SWEEP_EVERY_MS).unref();
 
 // First run (ADR 0001): a new link on every start until the Owner exists.

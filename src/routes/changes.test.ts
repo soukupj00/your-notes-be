@@ -337,7 +337,7 @@ describe('the feed', () => {
     const n = randomUUID();
     await push(laptop, { notes: [note(n)] });
     await push(laptop, { tombstones: [{ id: n, kind: 'note', deletedAt: T, rev: 1 }] });
-    sweep(db, new Date(clock.getTime() + 91 * 86_400_000), 90);
+    await sweep(db, app.blobs, new Date(clock.getTime() + 91 * 86_400_000), 90);
     const gone = await app.inject({ url: '/api/changes?since=1', ...as(laptop) });
     expect(Problem.parse(gone.json())).toMatchObject({ status: 410 });
     expect((await pull(laptop, 2)).tombstones).toEqual([]);

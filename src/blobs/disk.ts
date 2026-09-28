@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, rename, rm, stat } from 'node:fs/promises';
+import { mkdir, readdir, rename, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { assertBlobId, BlobSizeMismatchError, type BlobStore } from './BlobStore.ts';
+import { assertBlobId, BlobSizeMismatchError, type BlobStore, SAFE_ID } from './BlobStore.ts';
 
 /**
  * Bytes as files, `<dir>/<id>` (thesis ADR 0002). A write lands in `<dir>/.tmp` first and is
@@ -52,6 +52,10 @@ export async function diskBlobStore(dir: string): Promise<BlobStore> {
     },
     async delete(id) {
       await rm(pathOf(id), { force: true });
+    },
+    async list() {
+      // `.tmp` fails SAFE_ID, so writes in progress are never listed.
+      return (await readdir(dir)).filter((name) => SAFE_ID.test(name));
     },
   };
 }

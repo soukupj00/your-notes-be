@@ -9,9 +9,11 @@ export interface BlobStore {
   has(id: string): Promise<boolean>;
   /** Removes the bytes; a missing id is not an error. */
   delete(id: string): Promise<void>;
+  /** Every stored id, without writes still in progress; the sweep's view of what is on disk. */
+  list(): Promise<string[]>;
 }
 
-const SAFE_ID = /^[A-Za-z0-9-]{1,64}$/;
+export const SAFE_ID = /^[A-Za-z0-9-]{1,64}$/;
 
 /** Blob ids become file names, so anything but a plain token is refused before it reaches a path. */
 export function assertBlobId(id: string): void {

@@ -16,6 +16,7 @@ import { genReqId, registerSecurity } from './plugins/security.ts';
 import { registerStatic } from './plugins/static.ts';
 import { registerErrorHandler } from './problem.ts';
 import { accountRoutes } from './routes/accounts.ts';
+import { blobRoutes } from './routes/blobs.ts';
 import { changeRoutes } from './routes/changes.ts';
 import { codeRoutes } from './routes/codes.ts';
 import { deviceRoutes } from './routes/devices.ts';
@@ -89,6 +90,7 @@ export async function buildServer({
   await app.register(accountRoutes);
   await app.register(changeRoutes);
   await app.register(streamRoutes);
+  await app.register(blobRoutes);
   await registerStatic(app, config.publicDir);
 
   return app;

@@ -169,7 +169,6 @@ function applyPush(
         db.delete(noteTags)
           .where(and(eq(noteTags.accountId, accountId), eq(noteTags.noteId, id)))
           .run();
-        // B4: release the Note's blobs to the orphan sweep.
       } else if (kind === 'tag') {
         db.delete(tags)
           .where(and(eq(tags.accountId, accountId), eq(tags.id, id)))

@@ -159,6 +159,8 @@ export const RootResponse = z.object({
     accounts: Link,
     changes: Link,
     stream: Link,
+    /** Templated: `{id}` is an Attachment id. */
+    blobs: Link,
   }),
 });
 export type RootResponse = z.infer<typeof RootResponse>;
@@ -209,7 +211,7 @@ export type SignInRequest = z.infer<typeof SignInRequest>;
 export const SessionResponse = z.object({
   account: z.object({ id: Id, username: z.string(), role: Role }),
   device: z.object({ id: Id, name: z.string() }),
-  _links: z.object({ self: Link, devices: Link, codes: Link, changes: Link }),
+  _links: z.object({ self: Link, devices: Link, codes: Link, changes: Link, blobs: Link }),
 });
 export type SessionResponse = z.infer<typeof SessionResponse>;
 

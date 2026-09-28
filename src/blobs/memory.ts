@@ -25,5 +25,8 @@ export function memoryBlobStore(): BlobStore {
       assertBlobId(id);
       bytes.delete(id);
     },
+    async list() {
+      return [...bytes.keys()];
+    },
   };
 }

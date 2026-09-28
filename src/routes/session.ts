@@ -30,6 +30,7 @@ export function sessionBody(account: SessionAccount, device: SessionDevice): Ses
       devices: link('/api/devices'),
       codes: link('/api/codes'),
       changes: link('/api/changes'),
+      blobs: link('/api/blobs/{id}', { templated: true }),
     }
   );
 }

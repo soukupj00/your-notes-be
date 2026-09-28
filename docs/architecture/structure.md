@@ -9,13 +9,13 @@ src/
   cli.ts              backup <dir>, reset-owner-password
   problem.ts          every error as application/problem+json
   hal.ts              _links and _embedded helpers
-  sweep.ts            expired Tombstones (raising pruned_seq), Sessions and Pairing Codes
+  sweep.ts            expired Tombstones (raising pruned_seq), Sessions, Pairing Codes, orphan blobs
   sync/               decide.ts: the sync rules, pure, no HTTP and no Drizzle
   auth/               passwords (scrypt), sessions (cookie), codes (Pairing Codes)
   db/                 schema.ts, client.ts, migrate.ts, rows.ts (rows to and from the contract)
   blobs/              BlobStore interface, disk and memory stores, one contract test
   plugins/            auth, security (CSRF, headers, request id), docs, static (PWA)
-  routes/             one file per route group; changes.ts (push, feed), stream.ts (SSE)
+  routes/             one file per route group; changes.ts (push, feed), stream.ts (SSE), blobs.ts (bytes)
 drizzle/              generated migrations, applied at startup
 scripts/openapi.ts    writes docs/openapi.json
 ```

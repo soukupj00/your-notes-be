@@ -132,6 +132,8 @@ export const blobs = sqliteTable(
     id: text('id').primaryKey(),
     accountId: account(),
     size: integer('size').notNull(),
+    /** The Content-Type it was uploaded with, served back as is. */
+    mime: text('mime').notNull(),
     createdAt: text('created_at').notNull(),
   },
   (t) => [index('blobs_account_idx').on(t.accountId)]
