@@ -303,6 +303,152 @@
       }
     },
     "/api/accounts": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "_embedded": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accounts": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "_links": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "password": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "href": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "templated": {
+                                        "type": "boolean"
+                                      },
+                                      "title": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "href"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "self": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "href": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
+                                      "templated": {
+                                        "type": "boolean"
+                                      },
+                                      "title": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "href"
+                                    ],
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "self",
+                                  "password"
+                                ],
+                                "type": "object"
+                              },
+                              "createdAt": {
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                                "type": "string"
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "role": {
+                                "enum": [
+                                  "owner",
+                                  "member"
+                                ],
+                                "type": "string"
+                              },
+                              "username": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "username",
+                              "role",
+                              "createdAt",
+                              "_links"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "accounts"
+                      ],
+                      "type": "object"
+                    },
+                    "_links": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "self": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "self"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "_links",
+                    "_embedded"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "Every Account on the server, the Owner's included (Owner only)",
+        "tags": [
+          "accounts"
+        ]
+      },
       "post": {
         "requestBody": {
           "content": {
@@ -536,6 +682,116 @@
           }
         },
         "summary": "Spend an Invite: create a member Account and sign this Device in",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/accounts/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "_links": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "password": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        },
+                        "self": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "href": {
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "templated": {
+                              "type": "boolean"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "href"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "self",
+                        "password"
+                      ],
+                      "type": "object"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "role": {
+                      "enum": [
+                        "owner",
+                        "member"
+                      ],
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "username",
+                    "role",
+                    "createdAt",
+                    "_links"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Default Response"
+          }
+        },
+        "summary": "One Account (Owner only)",
         "tags": [
           "accounts"
         ]

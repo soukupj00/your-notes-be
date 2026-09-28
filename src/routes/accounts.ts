@@ -5,9 +5,17 @@ import { z } from 'zod';
 import { spendCode } from '../auth/codes.ts';
 import { hashPassword } from '../auth/passwords.ts';
 import type { SessionAccount } from '../auth/sessions.ts';
-import { CreateAccountRequest, Id, PasswordRequest, SessionResponse } from '../contract/index.ts';
+import {
+  Account,
+  AccountsResponse,
+  CreateAccountRequest,
+  Id,
+  PasswordRequest,
+  SessionResponse,
+} from '../contract/index.ts';
 import type { Db } from '../db/client.ts';
 import { accounts } from '../db/schema.ts';
+import { hal, link } from '../hal.ts';
 import { sendProblem } from '../problem.ts';
 import { openSession, SIGN_IN_RATE_LIMIT, WRONG_CREDENTIALS } from './session.ts';
 
@@ -28,6 +36,20 @@ export function insertAccount(
     .values({ id, username, passwordHash, role, createdAt: at, updatedAt: at })
     .run();
   return { id, username, role };
+}
+
+const accountColumns = {
+  id: accounts.id,
+  username: accounts.username,
+  role: accounts.role,
+  createdAt: accounts.createdAt,
+};
+
+function accountBody(row: Omit<Account, '_links'>): Account {
+  return hal(row, {
+    self: link(`/api/accounts/${row.id}`),
+    password: link(`/api/accounts/${row.id}/password`),
+  });
 }
 
 export const accountRoutes: FastifyPluginAsyncZod = async (app) => {
@@ -67,6 +89,44 @@ export const accountRoutes: FastifyPluginAsyncZod = async (app) => {
       }
       if (!member) return sendProblem(reply, 401, WRONG_CREDENTIALS);
       return openSession(app, reply, member, deviceName);
+    }
+  );
+
+  app.get(
+    '/api/accounts',
+    {
+      config: { auth: 'owner' },
+      schema: {
+        summary: "Every Account on the server, the Owner's included (Owner only)",
+        tags: ['accounts'],
+        response: { 200: AccountsResponse },
+      },
+    },
+    async () => {
+      const rows = app.db.select(accountColumns).from(accounts).orderBy(accounts.createdAt).all();
+      const items = rows.map(accountBody);
+      return hal({}, { self: link('/api/accounts') }, { accounts: items });
+    }
+  );
+
+  app.get(
+    '/api/accounts/:id',
+    {
+      config: { auth: 'owner' },
+      schema: {
+        summary: 'One Account (Owner only)',
+        tags: ['accounts'],
+        params: z.object({ id: Id }),
+        response: { 200: Account },
+      },
+    },
+    async (request, reply) => {
+      const row = app.db
+        .select(accountColumns)
+        .from(accounts)
+        .where(eq(accounts.id, request.params.id))
+        .get();
+      return row ? accountBody(row) : sendProblem(reply, 404, 'No such Account');
     }
   );
 

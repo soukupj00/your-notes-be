@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ensureSetupCode, mintCode } from '../auth/codes.ts';
 import {
+  Account,
+  AccountsResponse,
   CodeResponse,
   DevicesResponse,
   RootResponse,
@@ -257,6 +259,30 @@ describe('devices and pairing', () => {
 });
 
 describe('invites and passwords', () => {
+  it('lists every Account to the Owner, with the links to manage each', async () => {
+    const owner = await setUp();
+    await invite(owner);
+    const response = await app.inject({ url: '/api/accounts', ...as(owner) });
+    const list = AccountsResponse.parse(response.json())._embedded.accounts;
+    expect(list.map(({ username, role }) => ({ username, role }))).toEqual([
+      { username: 'olga', role: 'owner' },
+      { username: 'max', role: 'member' },
+    ]);
+    const [, max] = list;
+    expect(max?._links.password.href).toBe(`/api/accounts/${max?.id}/password`);
+    const self = await app.inject({ url: max?._links.self.href ?? '', ...as(owner) });
+    expect(Account.parse(self.json())).toEqual(max);
+    expectProblem(
+      await app.inject({ url: `/api/accounts/${crypto.randomUUID()}`, ...as(owner) }),
+      404
+    );
+  });
+
+  it('does not list Accounts to a member', async () => {
+    const member = await invite(await setUp());
+    expectProblem(await app.inject({ url: '/api/accounts', ...as(member) }), 403);
+  });
+
   it('creates a member from an Invite; a member mints device codes but not Invites', async () => {
     const owner = await setUp();
     const member = await invite(owner);

@@ -214,6 +214,22 @@ export const SignInRequest = z.union([
 ]);
 export type SignInRequest = z.infer<typeof SignInRequest>;
 
+/** A Local Account as the Owner sees it when managing the household (`GET /api/accounts`). */
+export const Account = z.object({
+  id: Id,
+  username: z.string(),
+  role: Role,
+  createdAt: IsoDateTime,
+  _links: z.object({ self: Link, password: Link }),
+});
+export type Account = z.infer<typeof Account>;
+
+export const AccountsResponse = z.object({
+  _links: z.object({ self: Link }),
+  _embedded: z.object({ accounts: z.array(Account) }),
+});
+export type AccountsResponse = z.infer<typeof AccountsResponse>;
+
 export const SessionResponse = z.object({
   account: z.object({ id: Id, username: z.string(), role: Role }),
   device: z.object({ id: Id, name: z.string() }),
