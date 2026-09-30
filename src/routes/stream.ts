@@ -24,6 +24,7 @@ export const streamRoutes: FastifyPluginAsyncZod = async (app) => {
           ?.seq ?? 0;
       const lastEventId = Number(request.headers['last-event-id']);
 
+      // Hijacked, so the `onSend` hook never runs; its headers are written here.
       reply.hijack();
       const raw = reply.raw;
       raw.writeHead(200, {

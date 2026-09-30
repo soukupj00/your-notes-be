@@ -4,7 +4,7 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { spendCode } from '../auth/codes.ts';
 import { hashPassword } from '../auth/passwords.ts';
-import type { SessionAccount } from '../auth/sessions.ts';
+import { type SessionAccount, sessionAccountColumns } from '../auth/sessions.ts';
 import {
   Account,
   AccountsResponse,
@@ -16,10 +16,8 @@ import {
 import type { Db } from '../db/client.ts';
 import { accounts } from '../db/schema.ts';
 import { hal, link } from '../hal.ts';
-import { sendProblem } from '../problem.ts';
+import { Conflict, NotFound, Unauthorized } from '../shared/errors.ts';
 import { openSession, SIGN_IN_RATE_LIMIT, WRONG_CREDENTIALS } from './session.ts';
-
-class UsernameTaken extends Error {}
 
 export function insertAccount(
   db: Db,
@@ -38,12 +36,7 @@ export function insertAccount(
   return { id, username, role };
 }
 
-const accountColumns = {
-  id: accounts.id,
-  username: accounts.username,
-  role: accounts.role,
-  createdAt: accounts.createdAt,
-};
+const accountColumns = { ...sessionAccountColumns, createdAt: accounts.createdAt };
 
 function accountBody(row: Omit<Account, '_links'>): Account {
   return hal(row, {
@@ -68,26 +61,19 @@ export const accountRoutes: FastifyPluginAsyncZod = async (app) => {
       const { code, username, password, deviceName } = request.body;
       const passwordHash = await hashPassword(password);
       const now = app.now();
-      let member: SessionAccount | null;
-      try {
-        member = app.db.$client.transaction(() => {
-          // Code first, so only a holder of a good Invite learns whether a username is taken.
-          if (!spendCode(app.db, code, 'invite', now)) return null;
-          const taken = app.db
-            .select({ id: accounts.id })
-            .from(accounts)
-            .where(eq(accounts.username, username))
-            .get();
-          // Throwing rolls the spend back, so a taken name does not cost the Invite.
-          if (taken) throw new UsernameTaken();
-          return insertAccount(app.db, { username, passwordHash, role: 'member', now });
-        })();
-      } catch (error) {
-        if (error instanceof UsernameTaken)
-          return sendProblem(reply, 409, 'That username is taken');
-        throw error;
-      }
-      if (!member) return sendProblem(reply, 401, WRONG_CREDENTIALS);
+      const member = app.db.$client.transaction(() => {
+        // Code first, so only a holder of a good Invite learns whether a username is taken.
+        if (!spendCode(app.db, code, 'invite', now)) return null;
+        const taken = app.db
+          .select({ id: accounts.id })
+          .from(accounts)
+          .where(eq(accounts.username, username))
+          .get();
+        // Throwing rolls the spend back, so a taken name does not cost the Invite.
+        if (taken) throw new Conflict('That username is taken');
+        return insertAccount(app.db, { username, passwordHash, role: 'member', now });
+      })();
+      if (!member) throw new Unauthorized(WRONG_CREDENTIALS);
       return openSession(app, reply, member, deviceName);
     }
   );
@@ -120,13 +106,14 @@ export const accountRoutes: FastifyPluginAsyncZod = async (app) => {
         response: { 200: Account },
       },
     },
-    async (request, reply) => {
+    async (request) => {
       const row = app.db
         .select(accountColumns)
         .from(accounts)
         .where(eq(accounts.id, request.params.id))
         .get();
-      return row ? accountBody(row) : sendProblem(reply, 404, 'No such Account');
+      if (!row) throw new NotFound('No such Account');
+      return accountBody(row);
     }
   );
 
@@ -149,7 +136,7 @@ export const accountRoutes: FastifyPluginAsyncZod = async (app) => {
         .where(eq(accounts.id, request.params.id))
         .returning({ id: accounts.id })
         .get();
-      if (!updated) return sendProblem(reply, 404, 'No such Account');
+      if (!updated) throw new NotFound('No such Account');
       return reply.code(204).send();
     }
   );

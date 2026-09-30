@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { and, asc, eq, gt } from 'drizzle-orm';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -24,14 +23,12 @@ import {
 } from '../db/rows.ts';
 import { accounts, notes, noteTags, tags, tombstones } from '../db/schema.ts';
 import { hal, link } from '../hal.ts';
+import { etagOf, notModified } from '../http/etag.ts';
 import { sessionOf } from '../plugins/auth.ts';
-import { sendProblem } from '../problem.ts';
+import { BadRequest, Gone } from '../shared/errors.ts';
 import { decide } from '../sync/decide.ts';
 
-/**
- * Applies one push inside the caller's transaction: every accepted row gets its new `rev` and
- * the next Sequence. Returns the outcomes in input order and the Account's Sequence after.
- */
+/** Runs inside the caller's transaction; every accepted row takes the next Sequence. */
 function applyPush(
   db: Db,
   accountId: string,
@@ -190,10 +187,6 @@ function applyPush(
   return { outcomes, seq, advanced };
 }
 
-function etagOf(body: unknown): string {
-  return `"${createHash('sha256').update(JSON.stringify(body)).digest('base64url')}"`;
-}
-
 export const changeRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/api/changes',
@@ -206,13 +199,13 @@ export const changeRoutes: FastifyPluginAsyncZod = async (app) => {
         response: { 200: PushResponse },
       },
     },
-    async (request, reply) => {
+    async (request) => {
       const { account, device } = sessionOf(request);
       const batch = request.body;
       const size =
         batch.notes.length + batch.tags.length + batch.noteTags.length + batch.tombstones.length;
       if (size > MAX_BATCH) {
-        return sendProblem(reply, 400, `A push carries at most ${MAX_BATCH} rows; split it`);
+        throw new BadRequest(`A push carries at most ${MAX_BATCH} rows; split it`);
       }
       const now = app.now().toISOString();
       const { outcomes, seq, advanced } = app.db.$client.transaction(() =>
@@ -254,7 +247,7 @@ export const changeRoutes: FastifyPluginAsyncZod = async (app) => {
       // A Device starting from 0 holds nothing, so it cannot have missed a removed Tombstone.
       // A cursor past the Sequence was issued before a restore rewound the database.
       if ((origin > 0 && origin < prunedSeq) || since > seq) {
-        return sendProblem(reply, 410, 'Cursor is older than the tombstone window; resync');
+        throw new Gone('Cursor is older than the tombstone window; resync');
       }
 
       // Up to a page from each kind, merged by Sequence and cut to one page (ADR 0002).
@@ -326,10 +319,7 @@ export const changeRoutes: FastifyPluginAsyncZod = async (app) => {
       );
       const etag = etagOf(body);
       reply.header('etag', etag).header('cache-control', 'private, no-cache');
-      const ifNoneMatch = request.headers['if-none-match'];
-      if (ifNoneMatch?.split(',').some((tag) => tag.trim() === etag)) {
-        return reply.code(304).send(undefined);
-      }
+      if (notModified(request, etag)) return reply.code(304).send(undefined);
       return body;
     }
   );

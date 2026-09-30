@@ -2,13 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { newSecret } from '../auth/codes.ts';
 import { Id, Share, SharedNote, ShareRequest, SharesResponse } from '../contract/index.ts';
 import { noteFromRow } from '../db/rows.ts';
 import { blobs, notes, shares } from '../db/schema.ts';
 import { hal, link } from '../hal.ts';
 import { sessionOf } from '../plugins/auth.ts';
-import { sendProblem } from '../problem.ts';
+import { newSecret } from '../shared/crypto.ts';
+import { NotFound } from '../shared/errors.ts';
 import { sendBlob } from './blobs.ts';
 
 /** Per IP on the two unauthenticated routes: enough to read a Note and its pictures. */
@@ -26,9 +26,8 @@ function shareBody(row: typeof shares.$inferSelect): Share {
   );
 }
 
-/** Share Links (ADR 0005): the Account's own routes, then the public ones under `/api/public`. */
+/** Share Links (ADR 0005); the public routes under `/api/public` need only the token. */
 export const shareRoutes: FastifyPluginAsyncZod = async (app) => {
-  /** The shared Note, unless the share is gone or the Note is gone or trashed. */
   const sharedNote = (token: string) => {
     const share = app.db.select().from(shares).where(eq(shares.token, token)).get();
     if (!share) return undefined;
@@ -59,7 +58,7 @@ export const shareRoutes: FastifyPluginAsyncZod = async (app) => {
         .from(notes)
         .where(and(eq(notes.accountId, account.id), eq(notes.id, noteId)))
         .get();
-      if (!note) return sendProblem(reply, 404, 'No such Note');
+      if (!note) throw new NotFound('No such Note');
       const mine = and(eq(shares.accountId, account.id), eq(shares.noteId, noteId));
       const existing = app.db.select().from(shares).where(mine).get();
       if (existing) return reply.code(200).send(shareBody(existing));
@@ -108,14 +107,15 @@ export const shareRoutes: FastifyPluginAsyncZod = async (app) => {
         response: { 200: Share },
       },
     },
-    async (request, reply) => {
+    async (request) => {
       const { account } = sessionOf(request);
       const row = app.db
         .select()
         .from(shares)
         .where(and(eq(shares.id, request.params.id), eq(shares.accountId, account.id)))
         .get();
-      return row ? shareBody(row) : sendProblem(reply, 404, 'No such Share Link');
+      if (!row) throw new NotFound('No such Share Link');
+      return shareBody(row);
     }
   );
 
@@ -136,7 +136,7 @@ export const shareRoutes: FastifyPluginAsyncZod = async (app) => {
         .where(and(eq(shares.id, request.params.id), eq(shares.accountId, account.id)))
         .returning({ id: shares.id })
         .get();
-      if (!deleted) return sendProblem(reply, 404, 'No such Share Link');
+      if (!deleted) throw new NotFound('No such Share Link');
       return reply.code(204).send();
     }
   );
@@ -155,7 +155,7 @@ export const shareRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       const { token } = request.params;
       const note = sharedNote(token);
-      if (!note) return sendProblem(reply, 404, NOT_SHARED);
+      if (!note) throw new NotFound(NOT_SHARED);
       const { rev: _rev, ...shown } = noteFromRow(note);
       reply.header('cache-control', 'private, no-cache');
       return hal(
@@ -189,7 +189,7 @@ export const shareRoutes: FastifyPluginAsyncZod = async (app) => {
               .where(and(eq(blobs.id, id), eq(blobs.accountId, note.accountId)))
               .get()
           : undefined;
-      if (!row) return sendProblem(reply, 404, NOT_SHARED);
+      if (!row) throw new NotFound(NOT_SHARED);
       return sendBlob(app, request, reply, row);
     },
   });

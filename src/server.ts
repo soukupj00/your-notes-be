@@ -80,7 +80,7 @@ export async function buildServer({
   await app.register(sensible);
   await app.register(cookie);
   registerAuth(app);
-  // Limits are opted into per route (sign-in, code redemption), not applied globally.
+  // Routes opt in through `config.rateLimit`: sign-in, code redemption, public Share Links.
   await app.register(rateLimit, { global: false });
   await registerDocs(app);
 

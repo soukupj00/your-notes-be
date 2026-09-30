@@ -174,8 +174,9 @@ End-to-end encryption, sharing a Note into another Account, email, a WAF, a sing
 Every slice keeps `docs/openapi.json` byte for byte: the API does not change.
 Each slice updates `docs/architecture/structure.md` and `CLAUDE.md` for what it moved, and trims the comments of every file it touches to the rule in `CLAUDE.md`.
 
-- [ ] **R1 Groundwork**, no behaviour change: `shared/` (secrets and hashing, clock, the server's errors mapped once to problem details), the ETag helper, `LiveUpdates` out of its route file, duplicates removed (`accountColumns`, `DAY_MS`, the `If-None-Match` check).
+- [x] **R1 Groundwork**, no behaviour change: `shared/` (secrets and hashing, clock, the server's errors mapped once to problem details), the ETag helper, `LiveUpdates` out of its route file, duplicates removed (`accountColumns`, `DAY_MS`, the `If-None-Match` check).
   Done when the suite passes untouched and no handler builds a 404, 403 or 409 itself.
+  `BlobSizeMismatchError` is a `BadRequest`, so the upload route no longer maps it; `sendProblem` stays only where an answer must close or drain the connection, and in the hooks.
 - [ ] **R2 Modules and services**: the tree above, services as classes built in `server.ts` and reached through `app.decorate`, presenters, no route importing another route.
   Services still use Drizzle directly.
   Done when every route file is HTTP only.

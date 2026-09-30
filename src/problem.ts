@@ -2,6 +2,16 @@ import { STATUS_CODES } from 'node:http';
 import type { FastifyError, FastifyInstance, FastifyReply } from 'fastify';
 import { hasZodFastifySchemaValidationErrors } from 'fastify-type-provider-zod';
 import type { Problem } from './contract/index.ts';
+import { BadRequest, Conflict, Forbidden, Gone, NotFound, Unauthorized } from './shared/errors.ts';
+
+const STATUS_OF = [
+  [BadRequest, 400],
+  [Unauthorized, 401],
+  [Forbidden, 403],
+  [NotFound, 404],
+  [Conflict, 409],
+  [Gone, 410],
+] as const;
 
 export function sendProblem(
   reply: FastifyReply,
@@ -30,7 +40,8 @@ export function registerErrorHandler(app: FastifyInstance): void {
       }));
       return sendProblem(reply, 400, 'The request does not match the schema', errors);
     }
-    const status = error.statusCode ?? 500;
+    const status =
+      STATUS_OF.find(([type]) => error instanceof type)?.[1] ?? error.statusCode ?? 500;
     if (status >= 400 && status < 500) return sendProblem(reply, status, error.message);
     request.log.error({ err: error }, 'request failed');
     return sendProblem(reply, 500);

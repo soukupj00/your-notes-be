@@ -1,6 +1,6 @@
 type Client = { send(seq: number): void; close(): void };
 
-/** The open Live Update streams, one per Device; in process, as the server is one instance (ADR 0006). */
+/** Open Live Update streams, one per Device; in process, as there is one instance (ADR 0006). */
 export class LiveUpdates {
   readonly #accounts = new Map<string, Map<string, Client>>();
 

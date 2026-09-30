@@ -2,14 +2,11 @@ import { eq, isNotNull, lt, lte, max, or, sql } from 'drizzle-orm';
 import type { BlobStore } from './blobs/BlobStore.ts';
 import type { Db } from './db/client.ts';
 import { accounts, blobs, codes, notes, sessions, shares, tombstones } from './db/schema.ts';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
+import { DAY_MS } from './shared/clock.ts';
 
 /**
- * Daily housekeeping. In one transaction: Tombstones past the window go, and each Account's
- * `pruned_seq` rises to the newest one removed, so an older cursor gets 410 (PLAN.md "Sync rules");
- * expired Sessions, spent or expired Pairing Codes, and Share Links of purged Notes go too.
- * Then the blobs (`sweepBlobs`).
+ * Daily housekeeping. Each Account's `pruned_seq` rises to the newest Tombstone removed, so an
+ * older cursor gets 410 (PLAN.md "Sync rules").
  */
 export async function sweep(
   db: Db,
@@ -49,8 +46,8 @@ export async function sweep(
 }
 
 /**
- * Bytes no Note of their Account references for 24 hours go, file first, then row; a purged
- * Note's bytes leave this way. Files with no row at all (a crash between the two writes) go too.
+ * Bytes no Note references for a day go (a purged Note's too), file before row; so do files a
+ * crash left without a row.
  */
 async function sweepBlobs(db: Db, store: BlobStore, now: Date): Promise<void> {
   // Listed before the rows are read, so an upload finishing meanwhile is seen with its row.

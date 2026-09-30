@@ -8,13 +8,14 @@ import {
   createSession,
   type SessionAccount,
   type SessionDevice,
+  sessionAccountColumns,
   setSessionCookie,
 } from '../auth/sessions.ts';
 import { SessionResponse, SignInRequest } from '../contract/index.ts';
 import { accounts, sessions } from '../db/schema.ts';
 import { hal, link } from '../hal.ts';
 import { sessionOf } from '../plugins/auth.ts';
-import { sendProblem } from '../problem.ts';
+import { Unauthorized } from '../shared/errors.ts';
 
 /** One answer for a wrong username, a wrong password and a bad code, so none can be told apart. */
 export const WRONG_CREDENTIALS = 'Wrong credentials';
@@ -36,7 +37,7 @@ export function sessionBody(account: SessionAccount, device: SessionDevice): Ses
   );
 }
 
-/** Signs this Device in to the Account: a new Session, its cookie, and a 201 with the session body. */
+/** Signs this Device in: a new Session and its cookie; sets the 201. */
 export function openSession(
   app: FastifyInstance,
   reply: FastifyReply,
@@ -55,8 +56,6 @@ export function openSession(
   return sessionBody(account, { id: deviceId, name: deviceName });
 }
 
-const accountColumns = { id: accounts.id, username: accounts.username, role: accounts.role };
-
 export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/api/session',
@@ -74,7 +73,7 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
       let account: SessionAccount | undefined;
       if ('password' in body) {
         const row = app.db
-          .select({ ...accountColumns, passwordHash: accounts.passwordHash })
+          .select({ ...sessionAccountColumns, passwordHash: accounts.passwordHash })
           .from(accounts)
           .where(eq(accounts.username, body.username))
           .get();
@@ -85,13 +84,13 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
         const spent = spendCode(app.db, body.code, 'device', app.now());
         if (spent?.accountId) {
           account = app.db
-            .select(accountColumns)
+            .select(sessionAccountColumns)
             .from(accounts)
             .where(eq(accounts.id, spent.accountId))
             .get();
         }
       }
-      if (!account) return sendProblem(reply, 401, WRONG_CREDENTIALS);
+      if (!account) throw new Unauthorized(WRONG_CREDENTIALS);
       return openSession(app, reply, account, body.deviceName);
     }
   );

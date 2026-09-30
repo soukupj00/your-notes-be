@@ -8,6 +8,7 @@ import { CodeResponse, Problem } from '../contract/index.ts';
 import { type Db, openDatabase } from '../db/client.ts';
 import { migrateDatabase } from '../db/migrate.ts';
 import { type App, buildServer } from '../server.ts';
+import type { Clock } from '../shared/clock.ts';
 
 export const PASSWORD = 'correct horse';
 
@@ -15,7 +16,7 @@ export type Response = Awaited<ReturnType<App['inject']>>;
 
 export async function testServer(
   env: Record<string, string> = {},
-  now?: () => Date
+  now?: Clock
 ): Promise<{ app: App; db: Db }> {
   const db = openDatabase(':memory:');
   migrateDatabase(db);

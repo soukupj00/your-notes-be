@@ -3,18 +3,17 @@ import { and, eq } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { assertBlobId, BlobSizeMismatchError } from '../blobs/BlobStore.ts';
+import { assertBlobId } from '../blobs/BlobStore.ts';
 import { Id } from '../contract/index.ts';
 import { blobs } from '../db/schema.ts';
+import { notModified } from '../http/etag.ts';
 import { sessionOf } from '../plugins/auth.ts';
 import { sendProblem } from '../problem.ts';
+import { NotFound } from '../shared/errors.ts';
 
 const Params = z.object({ id: Id });
 
-/**
- * Answers GET or HEAD with a blob's bytes and its caching headers; shared by the Share Link route.
- * Bytes are write-once by id, so the id is the ETag and a copy may be kept for a year.
- */
+/** Bytes are write-once by id, so the id is the ETag and a copy may be kept for a year. */
 export async function sendBlob(
   app: FastifyInstance,
   request: FastifyRequest,
@@ -28,9 +27,7 @@ export async function sendBlob(
     // Uploaded bytes never run as a page of this origin, whatever their Content-Type says.
     'content-security-policy': "default-src 'none'; sandbox",
   });
-  if (request.headers['if-none-match']?.split(',').some((tag) => tag.trim() === etag)) {
-    return reply.code(304).send();
-  }
+  if (notModified(request, etag)) return reply.code(304).send();
   reply.headers({ 'content-type': row.mime, 'content-length': row.size });
   if (request.method === 'HEAD') return reply.send();
   const bytes = await app.blobs.get(row.id);
@@ -42,8 +39,8 @@ export async function sendBlob(
 }
 
 /**
- * Attachment bytes, write-once by id (frontend ADR 0017). Encapsulated so the raw-stream body
- * parser below applies to these routes only; every other route keeps parsing JSON.
+ * Attachment bytes (frontend ADR 0017). Encapsulated so the raw-stream body parser applies to
+ * these routes only; every other route keeps parsing JSON.
  */
 export const blobRoutes: FastifyPluginAsyncZod = async (app) => {
   app.removeAllContentTypeParsers();
@@ -90,13 +87,8 @@ export const blobRoutes: FastifyPluginAsyncZod = async (app) => {
         request.raw.resume();
         return reply.code(204).send();
       }
-      try {
-        // Node's HTTP parser stops the body at Content-Length, so it cannot exceed the limit.
-        await app.blobs.put(id, request.body as Readable, size);
-      } catch (error) {
-        if (error instanceof BlobSizeMismatchError) return sendProblem(reply, 400, error.message);
-        throw error;
-      }
+      // Node's HTTP parser stops the body at Content-Length, so it cannot exceed the limit.
+      await app.blobs.put(id, request.body as Readable, size);
       // File first, row second: a crash between them leaves a file the sweep removes.
       app.db
         .insert(blobs)
@@ -125,7 +117,7 @@ export const blobRoutes: FastifyPluginAsyncZod = async (app) => {
         .where(and(eq(blobs.id, id), eq(blobs.accountId, account.id)))
         .get();
       // Another Account's id is as unknown as one that does not exist.
-      if (!row) return sendProblem(reply, 404, 'No such blob');
+      if (!row) throw new NotFound('No such blob');
       return sendBlob(app, request, reply, row);
     },
   });

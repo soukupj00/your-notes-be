@@ -3,17 +3,23 @@ import { eq } from 'drizzle-orm';
 import type { FastifyReply } from 'fastify';
 import type { Db } from '../db/client.ts';
 import { accounts, sessions } from '../db/schema.ts';
-import { newSecret, sha256 } from './codes.ts';
+import { DAY_MS } from '../shared/clock.ts';
+import { newSecret, sha256 } from '../shared/crypto.ts';
 
 export const SESSION_COOKIE = 'younotes_session';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const TOUCH_EVERY_MS = 5 * 60 * 1000;
 
 export type SessionAccount = { id: string; username: string; role: 'owner' | 'member' };
 export type SessionDevice = { id: string; name: string };
 
-/** Signs a Device in: one row per Device, its id is the Device's id. Returns the cookie value. */
+export const sessionAccountColumns = {
+  id: accounts.id,
+  username: accounts.username,
+  role: accounts.role,
+};
+
+/** One row per Device: the Session's id is the Device's id. Returns the cookie value. */
 export function createSession(
   db: Db,
   {
@@ -45,7 +51,7 @@ export function createSession(
   return { token, deviceId };
 }
 
-/** The Account and Device behind a cookie value, or null; an expired Session is deleted on sight. */
+/** An expired Session is deleted on sight. */
 export function resolveSession(
   db: Db,
   token: string,
@@ -82,7 +88,7 @@ export function resolveSession(
 const COOKIE_OPTIONS = { httpOnly: true, secure: true, sameSite: 'lax', path: '/' } as const;
 
 export function setSessionCookie(reply: FastifyReply, token: string, ttlDays: number): void {
-  reply.setCookie(SESSION_COOKIE, token, { ...COOKIE_OPTIONS, maxAge: ttlDays * 24 * 60 * 60 });
+  reply.setCookie(SESSION_COOKIE, token, { ...COOKIE_OPTIONS, maxAge: (ttlDays * DAY_MS) / 1000 });
 }
 
 export function clearSessionCookie(reply: FastifyReply): void {

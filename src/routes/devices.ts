@@ -6,7 +6,7 @@ import { DevicesResponse, Id } from '../contract/index.ts';
 import { sessions } from '../db/schema.ts';
 import { hal, link } from '../hal.ts';
 import { sessionOf } from '../plugins/auth.ts';
-import { sendProblem } from '../problem.ts';
+import { NotFound } from '../shared/errors.ts';
 
 /** A Device is a Session seen from the person's side; revoking one ends its Session. */
 export const deviceRoutes: FastifyPluginAsyncZod = async (app) => {
@@ -63,7 +63,7 @@ export const deviceRoutes: FastifyPluginAsyncZod = async (app) => {
         .where(and(eq(sessions.id, request.params.id), eq(sessions.accountId, account.id)))
         .returning({ id: sessions.id })
         .get();
-      if (!deleted) return sendProblem(reply, 404, 'No such Device');
+      if (!deleted) throw new NotFound('No such Device');
       if (deleted.id === device.id) clearSessionCookie(reply);
       return reply.code(204).send();
     }

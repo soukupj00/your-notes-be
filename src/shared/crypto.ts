@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 
-/** The one shape of every secret the server hands out: 32 random bytes, base64url. */
+/** Every secret the server hands out has this one shape. */
 export function newSecret(): string {
   return randomBytes(32).toString('base64url');
 }

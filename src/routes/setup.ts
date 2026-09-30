@@ -3,7 +3,7 @@ import { ownerExists, spendCode } from '../auth/codes.ts';
 import { hashPassword } from '../auth/passwords.ts';
 import { CreateAccountRequest, SessionResponse, SetupStatus } from '../contract/index.ts';
 import { hal, link } from '../hal.ts';
-import { sendProblem } from '../problem.ts';
+import { NotFound, Unauthorized } from '../shared/errors.ts';
 import { insertAccount } from './accounts.ts';
 import { openSession, SIGN_IN_RATE_LIMIT, WRONG_CREDENTIALS } from './session.ts';
 
@@ -20,8 +20,8 @@ export const setupRoutes: FastifyPluginAsyncZod = async (app) => {
         response: { 200: SetupStatus },
       },
     },
-    async (_request, reply) => {
-      if (ownerExists(app.db)) return sendProblem(reply, 404, ALREADY_SET_UP);
+    async () => {
+      if (ownerExists(app.db)) throw new NotFound(ALREADY_SET_UP);
       return hal({ needsSetup: true as const }, { self: link('/api/setup') });
     }
   );
@@ -38,7 +38,7 @@ export const setupRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (request, reply) => {
-      if (ownerExists(app.db)) return sendProblem(reply, 404, ALREADY_SET_UP);
+      if (ownerExists(app.db)) throw new NotFound(ALREADY_SET_UP);
       const { code, username, password, deviceName } = request.body;
       const passwordHash = await hashPassword(password);
       const now = app.now();
@@ -46,7 +46,7 @@ export const setupRoutes: FastifyPluginAsyncZod = async (app) => {
         if (!spendCode(app.db, code, 'setup', now)) return null;
         return insertAccount(app.db, { username, passwordHash, role: 'owner', now });
       })();
-      if (!owner) return sendProblem(reply, 401, WRONG_CREDENTIALS);
+      if (!owner) throw new Unauthorized(WRONG_CREDENTIALS);
       return openSession(app, reply, owner, deviceName);
     }
   );
