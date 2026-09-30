@@ -40,6 +40,15 @@ Browsers only allow an app to work offline and use the microphone and camera whe
 So the first choice is how your Devices get that secure address.
 Pick one of the three ways below and remember its two settings; you will type them in step 4.
 
+| Way | Works away from home | Extra app on each Device | Router changes | Certificate to install on each Device |
+|---|---|---|---|---|
+| 3a. Tailscale (recommended) | Yes | Tailscale | No | No |
+| 3b. Your own domain | Yes | No | Yes | No |
+| 3c. Only at home | No, only on your home Wi-Fi | No | One small one | Yes |
+
+If you are unsure, choose Tailscale.
+Choose "Only at home" if you do not want to install anything extra and only use YouNotes at home.
+
 ### 3a. Tailscale (recommended)
 
 Tailscale is a free private network between your own devices.
@@ -47,6 +56,8 @@ It gives the machine a name like `homebox.tail1234.ts.net` with a real certifica
 
 1. Install Tailscale on the machine and on every phone and laptop that will use YouNotes: <https://tailscale.com/download>.
    Sign in with the same account everywhere.
+   On a phone, open the Tailscale app and switch it on; it should say "Connected".
+   Leave it on whenever you want YouNotes to sync.
 2. Open the DNS page of the Tailscale admin console: <https://login.tailscale.com/admin/dns>.
    Turn on **MagicDNS**, then turn on **HTTPS Certificates**.
 3. Open the Machines page: <https://login.tailscale.com/admin/machines>.
@@ -81,7 +92,8 @@ YOUNOTES_TLS=auto
 ### 3c. Only at home, without internet
 
 Use this if the machine should never be reachable from outside your home network.
-The server makes its own certificate, and each Device has to be told to trust it once.
+Your Devices sync only while they are on the same Wi-Fi as the machine; away from home they keep working offline and catch up when they are back.
+The server makes its own certificate, and each Device has to be told to trust it once, in step 4.
 
 1. Find the machine's local address:
 
@@ -89,32 +101,19 @@ The server makes its own certificate, and each Device has to be told to trust it
    hostname -I
    ```
 
-   Use the first address it prints, for example `192.168.1.50`.
-2. In your router, reserve that address for the machine ("DHCP reservation"), so it never changes.
+   It prints one or more addresses separated by spaces, for example `192.168.1.50 172.17.0.1`.
+   Use the one that starts with `192.168.` or `10.`.
+   Ignore any that start with `172.` (Docker's own) or `100.` (Tailscale's).
+2. In your router, reserve that address for the machine, so it never changes.
+   Routers call this "DHCP reservation" or "static lease"; your router's manual shows where.
+   Without it, the address can change after a restart and your Devices lose the server.
 
-Your two settings:
+Your two settings, with your own address:
 
 ```bash
 YOUNOTES_HOST=192.168.1.50
 YOUNOTES_TLS=internal
 ```
-
-After step 4, trust the certificate on every Device before you open YouNotes on it.
-First copy the certificate out of the server, in the `younotes` folder from step 4:
-
-```bash
-docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./younotes-root.crt
-```
-
-Send the file `younotes-root.crt` to each Device, for example by email to yourself, then:
-
-- **iPhone or iPad**: open the file and allow the download.
-  Go to Settings, General, VPN & Device Management, tap the profile and tap Install.
-  Then go to Settings, General, About, Certificate Trust Settings, and switch it on.
-- **Android**: go to Settings, Security, Encryption & credentials, Install a certificate, CA certificate, and pick the file.
-  The menu names differ a little between phone makers; search Settings for "certificate".
-- **Windows**: double-click the file, click Install Certificate, choose Local Machine, then "Place all certificates in the following store", Browse, Trusted Root Certification Authorities.
-- **Mac**: double-click the file to add it to Keychain Access, double-click the certificate there, open Trust, and set "When using this certificate" to Always Trust.
 
 ## 4. Start it
 
@@ -166,6 +165,10 @@ docker compose logs younotes
 
 Near the end you will see "No Owner yet", a link, and a large square QR code.
 The link looks like `https://homebox.tail1234.ts.net/pair#…` with a long code at the end.
+Check that the address in it is the one you chose in step 3.
+If it says `localhost` or something else, `YOUNOTES_HOST` in `.env` is not set right: fix it and run `docker compose up -d` again.
+
+<!-- screenshot: the server log showing "No Owner yet", the Pairing Link and the QR code -->
 
 That link creates your account, so treat it like a key.
 It works once.
@@ -176,41 +179,92 @@ docker compose restart younotes
 docker compose logs younotes
 ```
 
+### Only at home (3c): trust the certificate
+
+Skip this with Tailscale or your own domain.
+
+With the at-home setup, every Device has to trust the server's certificate once, before you open YouNotes on it.
+Otherwise the browser shows a warning that the connection is not private, and the app cannot work offline.
+
+Copy the certificate out of the server, in the `younotes` folder:
+
+```bash
+docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./younotes-root.crt
+```
+
+Send the file `younotes-root.crt` to each Device, for example by email to yourself, then:
+
+- **iPhone or iPad**: open the file in Safari or Mail and allow the download.
+  Go to Settings, General, VPN & Device Management, tap the profile whose name starts with "Caddy Local Authority" and tap Install.
+  Then go to Settings, General, About, Certificate Trust Settings, and switch it on.
+  Both parts are needed; the second is easy to miss.
+- **Android**: go to Settings, Security, Encryption & credentials, Install a certificate, CA certificate, and pick the file.
+  The menu names differ a little between phone makers; search Settings for "certificate".
+- **Windows**: double-click the file, click Install Certificate, choose Local Machine, then "Place all certificates in the following store", Browse, Trusted Root Certification Authorities.
+- **Mac**: double-click the file to add it to Keychain Access, double-click the certificate there, open Trust, and set "When using this certificate" to Always Trust.
+- **Firefox on any computer** keeps its own list: open Settings, search for "certificates", click View Certificates, open Authorities, click Import, pick the file and tick "Trust this CA to identify websites".
+
+Close and reopen the browser afterwards.
+To check it worked, open `https://` followed by your address, for example `https://192.168.1.50`: it should open without a warning.
+
 ## 5. Create the Owner
 
-On the Device you want to use first, scan the QR code with the camera, or type the link into the browser.
-Choose a username and a password.
-You are now the Owner, and this Device is signed in.
+Pick the Device you want to use YouNotes on first, for example your phone.
+
+1. With Tailscale, make sure the Tailscale app on it is switched on.
+   At home, make sure it is on your home Wi-Fi.
+2. Scan the QR code from step 4 with its camera, or type the link into its browser exactly, including everything after the `#`.
+3. The page "Create the Owner" opens.
+   Choose a username and a password, then tap "Create the Owner".
+4. You are now the Owner, and this Device is signed in.
+
+<!-- screenshot: the "Create the Owner" page on a phone -->
 
 Write the password down somewhere safe.
 New Devices normally join by scanning a link from a Device that is already signed in, so you will rarely type it.
 But when no signed-in Device is left to show a link, for example after losing your only phone, the password is the way back in.
 
-To install YouNotes as an app, use the browser's "Add to Home Screen" (phones) or "Install" (laptops).
+This first link is now used up.
+Opening it on a second Device only shows "This link has expired or was already used"; add every other Device through step 6 instead.
 
-## 6. Add a phone
+To install YouNotes as an app, open the browser's menu and choose "Add to Home Screen" (phones) or "Install" (laptops).
+Always install it from the server's address, as above.
+YouNotes syncs with the server it was opened from, so a copy installed from anywhere else never reaches your server.
 
-The screens for this are being built in the app; the words may differ.
+## 6. Add your other Devices
 
-1. On a Device that is already signed in, open Settings, then Devices, then "Add a Device".
+Do this for each phone, tablet or laptop you want to sync.
+
+1. On a Device that is already signed in, open Settings with the gear icon at the top, scroll to Devices and tap "Add a Device".
+   If the app is in Czech, these are "Nastavení", "Zařízení" and "Přidat zařízení".
    It shows a Pairing Link as a QR code.
-2. Scan it with the new phone's camera.
-   The phone opens YouNotes and is signed in to your account, without typing a password.
+2. On the new Device, check it can reach the server: Tailscale switched on, or on your home Wi-Fi.
+   With the at-home setup (3c), trust the certificate on it first.
+3. Scan the QR code with the new Device's camera.
+   A laptop has no camera to scan with: tap "Copy link" ("Kopírovat odkaz") instead, send the link to the laptop, for example by email to yourself, and open it in the laptop's browser.
+4. The page "Add this Device" opens; tap "Sign in".
+   The Device is signed in to your account, without typing a password, and your Notes start to arrive.
+5. Install it as an app, as in step 5.
+
+<!-- screenshot: Settings, Devices with the "Add a Device" button -->
+<!-- screenshot: the Pairing Link QR code shown by "Add a Device" -->
+<!-- screenshot: the "Add this Device" page on the new phone -->
 
 The link works once and for ten minutes.
-The phone must be able to reach the server the way you chose in step 3: in Tailscale, on the same network at home, or through the internet with your own domain.
-With the at-home setup (3c), trust the certificate on the phone first.
+If it has run out, tap "Add a Device" again for a new one.
+
+To check that sync works, write a Note on one Device and wait a few seconds: it appears on the other.
 
 Each Device shows up in Settings, Devices.
 If you lose one, remove it there; it is signed out and nothing else changes.
 
 ## 7. Add a household member
 
-The screens for this are being built in the app; the words may differ.
-
-1. As the Owner, open Settings, then Members, then "Invite".
+1. As the Owner, open Settings ("Nastavení"), scroll to Members ("Členové") and tap "Invite" ("Pozvat").
    It shows a QR code.
-2. The other person scans it on their own phone and chooses their own username and password.
+2. The other person makes sure their phone can reach the server, as in step 6.
+   With Tailscale, that means you share the machine with them in Tailscale, or they sign in to the same Tailscale account.
+3. They scan the QR code, see the page "Join", choose their own username and password, and tap "Create my account".
 
 Their Notes are separate from yours: neither of you sees the other's Notes.
 The invitation works once and for ten minutes.
@@ -289,7 +343,7 @@ docker compose exec younotes node dist/cli.js reset-owner-password
 It prints a new password once.
 Sign in with it, then write it down.
 Devices that are already signed in stay signed in.
-A household member who forgot their password asks the Owner, who can set a new one in the app (that screen is being built; the words may differ).
+A household member who forgot their password asks the Owner, who opens Settings, Members, taps "Set a new password" next to their name, and tells them the new one.
 
 ## 11. Your data: who can see what
 
@@ -315,9 +369,23 @@ Some things to know plainly:
 With the at-home setup (3c), this Device does not trust the certificate yet; repeat the steps in 3c for it, and on an iPhone make sure the switch in Certificate Trust Settings is on.
 With Tailscale, check that HTTPS Certificates is on in the admin console and that you removed the `# ` in `compose.yml`; `docker compose logs caddy` shows what went wrong.
 
-**The QR link does not open.**
-The Device cannot reach the server: with Tailscale, check Tailscale is on and signed in on that Device; at home, check it is on the home Wi-Fi.
-If the page opens but says the link is not valid, it was already used or has expired: run `docker compose restart younotes` and use the new link from `docker compose logs younotes`.
+**The QR link does not open, or the app says "Could not reach your server".**
+The Device cannot reach the server: with Tailscale, check the Tailscale app is switched on and says "Connected"; at home, check the Device is on the home Wi-Fi, not mobile data.
+
+**The page says "This link has expired or was already used".**
+Every link works once.
+If you already created the Owner on another Device, this is expected: add this Device from a signed-in one instead (step 6).
+A link from "Add a Device" or "Invite" also runs out after ten minutes; tap the button again for a new one.
+If nobody has created the Owner yet, run `docker compose restart younotes` and use the new link from `docker compose logs younotes`.
+
+**The page says "This link is incomplete".**
+The long code after the `#` was cut off, which happens when the link is typed by hand or copied only partly.
+Scan the QR code instead, or copy the whole link.
+
+**Notes do not appear on the other Device.**
+Check that both Devices are listed in Settings, Devices, and that both can reach the server.
+Check that the app on both was opened from the same address (step 5): a copy installed from another address syncs with nothing.
+Sync happens in the background; switching to another app and back makes it try again at once.
 
 **`docker compose up -d` says "address already in use".**
 Another program on the machine already uses port 80 or 443, usually another web server.

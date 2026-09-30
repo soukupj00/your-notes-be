@@ -19,6 +19,31 @@ pnpm check        # Biome: lint and format
 `pnpm dev` serves the API only until a built PWA is in `./public`, for example `cp -r ../ni-dip-fe/dist public`.
 The API reference is at `/api/docs`; the same document is committed as [`docs/openapi.json`](./docs/openapi.json) for import into any HTTP client.
 
+### Try it on your phone
+
+Phones only run the app over `https`, so `http://localhost:3000` is not enough.
+With Tailscale on this machine and the phone (HTTPS Certificates on, see [`docs/setup.md`](./docs/setup.md) 3a), `tailscale serve` gives the dev server a real certificate without Docker:
+
+```bash
+# 1. Build the app and let the server serve it; repeat after every frontend change
+(cd ../ni-dip-fe && pnpm build) && rm -rf public && cp -r ../ni-dip-fe/dist public
+
+# 2. Start the server with the machine's tailnet name, so the Pairing Link points there
+PUBLIC_URL=https://<machine>.<tailnet>.ts.net TRUST_PROXY=true pnpm dev
+
+# 3. In a second terminal, once: https on the tailnet name, forwarded to port 3000
+sudo tailscale serve --bg 3000
+```
+
+The machine's full name is on the Machines page of the Tailscale admin console, or in `tailscale serve status`.
+The first time, `tailscale serve` prints a link to enable Serve on the tailnet; open it and run the command again.
+Leave Funnel off: it would put the dev server on the public internet.
+
+Open the Pairing Link from the log on the first Device to create the Owner; it works once.
+Add every other Device from a signed-in one, under Settings, Devices, "Add a Device".
+`./data` keeps the accounts across restarts; delete it to start over.
+`sudo tailscale serve --https=443 off` stops serving.
+
 ## Self-host
 
 ```bash
