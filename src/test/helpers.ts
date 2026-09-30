@@ -1,12 +1,11 @@
-// Shared by the API tests: a real server over in-memory SQLite, and the sign-up steps they all need.
+// Shared by the API tests: a real server over in-memory SQLite, and the sign-ups they all need.
 import { expect } from 'vitest';
-import { ensureSetupCode } from '../auth/codes.ts';
-import { SESSION_COOKIE } from '../auth/sessions.ts';
 import { memoryBlobStore } from '../blobs/memory.ts';
 import { loadConfig } from '../config.ts';
 import { CodeResponse, Problem } from '../contract/index.ts';
 import { type Db, openDatabase } from '../db/client.ts';
 import { migrateDatabase } from '../db/migrate.ts';
+import { SESSION_COOKIE } from '../http/sessionCookie.ts';
 import { type App, buildServer } from '../server.ts';
 import type { Clock } from '../shared/clock.ts';
 
@@ -50,12 +49,12 @@ export function expectProblem(response: Response, status: number): Problem {
 }
 
 /** Creates the Owner `olga` through a fresh setup code; returns the Laptop's cookie. */
-export async function signUpOwner(app: App, db: Db, now = new Date()): Promise<string> {
+export async function signUpOwner(app: App): Promise<string> {
   const response = await app.inject({
     method: 'POST',
     url: '/api/setup',
     payload: {
-      code: ensureSetupCode(db, now),
+      code: app.services.pairing.ensureSetupCode(),
       username: 'olga',
       password: PASSWORD,
       deviceName: 'Laptop',

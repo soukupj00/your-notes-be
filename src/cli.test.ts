@@ -3,11 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
-import { hashPassword, verifyPassword } from './auth/passwords.ts';
 import { backup, resetOwnerPassword } from './cli.ts';
 import { openDatabase } from './db/client.ts';
 import { migrateDatabase } from './db/migrate.ts';
 import { accounts } from './db/schema.ts';
+import { hashPassword, verifyPassword } from './shared/passwords.ts';
 
 let root: string;
 afterEach(async () => {

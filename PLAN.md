@@ -127,7 +127,7 @@ No mocked database: real databases with migrations applied, per test file.
 | Tier | Against | Share |
 |---|---|---|
 | API over `app.inject()` | `buildServer()` on each Store (SQLite in memory, PGlite), memory `BlobStore`; every response parsed with the contract schema | most |
-| Unit | `sync/`, `hal.ts`, `auth/`, `config.ts` | second |
+| Unit | `modules/sync/decide.ts`, the pairing and housekeeping services, `http/hal.ts`, `shared/passwords.ts`, `config.ts` | second |
 | `Store` contract | SQLite in memory and PGlite; migrations from empty | one file |
 | Concurrency | a real PostgreSQL in CI: two pushes at once never share a Sequence | small |
 | `BlobStore` contract | disk (temp dir), memory, and S3 against MinIO in CI | one file |
@@ -177,9 +177,10 @@ Each slice updates `docs/architecture/structure.md` and `CLAUDE.md` for what it 
 - [x] **R1 Groundwork**, no behaviour change: `shared/` (secrets and hashing, clock, the server's errors mapped once to problem details), the ETag helper, `LiveUpdates` out of its route file, duplicates removed (`accountColumns`, `DAY_MS`, the `If-None-Match` check).
   Done when the suite passes untouched and no handler builds a 404, 403 or 409 itself.
   `BlobSizeMismatchError` is a `BadRequest`, so the upload route no longer maps it; `sendProblem` stays only where an answer must close or drain the connection, and in the hooks.
-- [ ] **R2 Modules and services**: the tree above, services as classes built in `server.ts` and reached through `app.decorate`, presenters, no route importing another route.
+- [x] **R2 Modules and services**: the tree above, services as classes built in `server.ts` and reached through `app.decorate`, presenters, no route importing another route.
   Services still use Drizzle directly.
   Done when every route file is HTTP only.
+  `createOwner` lives in the accounts service, so pairing sits below accounts and accounts below sessions with no cycle; API tests reach rules through `app.services` and live in `src/test/`.
 - [ ] **R3 The Store**: the async `Store` interface, the SQLite Store with its lock and `transaction(fn)` (a nested outer call throws), `/health` through `store.ping()`, the contract suite, Biome keeping drivers inside `src/infra/`.
   Done when no service imports Drizzle.
 - [ ] **R4 PostgreSQL**: its schema and migrations (existing migrations move to `drizzle/sqlite/`, checked against an install made before the move), `DATABASE_URL`, the Account row lock on push, the advisory lock for one instance, waiting for the database at startup, secrets redacted from logs, the API suite on PGlite, a real PostgreSQL in CI, a Compose profile, the setup guide section, and `docs/architecture/` "Adding a Store".

@@ -1,14 +1,13 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import QRCode from 'qrcode';
-import { ensureSetupCode } from './auth/codes.ts';
 import { diskBlobStore } from './blobs/disk.ts';
 import { loadConfig } from './config.ts';
 import { pairingLink } from './contract/index.ts';
 import { openDatabase } from './db/client.ts';
 import { migrateDatabase } from './db/migrate.ts';
+import { SWEEP_EVERY_MS } from './modules/housekeeping/service.ts';
 import { buildServer } from './server.ts';
-import { SWEEP_EVERY_MS, sweep } from './sweep.ts';
 
 const config = loadConfig(process.env);
 mkdirSync(config.dataDir, { recursive: true });
@@ -16,7 +15,6 @@ mkdirSync(config.dataDir, { recursive: true });
 const db = openDatabase(join(config.dataDir, 'younotes.db'));
 migrateDatabase(db);
 const blobs = await diskBlobStore(join(config.dataDir, 'blobs'));
-await sweep(db, blobs, new Date(), config.tombstoneDays);
 
 const pretty = process.env.NODE_ENV !== 'production' && process.stdout.isTTY;
 const app = await buildServer({
@@ -28,6 +26,7 @@ const app = await buildServer({
     ...(pretty ? { transport: { target: 'pino-pretty' } } : {}),
   },
 });
+await app.services.housekeeping.sweep(new Date());
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, async () => {
@@ -41,13 +40,13 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 await app.listen({ port: config.port, host: config.host });
 
 setInterval(() => {
-  sweep(db, blobs, new Date(), config.tombstoneDays).catch((error) =>
-    app.log.error({ err: error }, 'sweep failed')
-  );
+  app.services.housekeeping
+    .sweep(new Date())
+    .catch((error) => app.log.error({ err: error }, 'sweep failed'));
 }, SWEEP_EVERY_MS).unref();
 
 // First run (ADR 0001): a new link on every start until the Owner exists.
-const setupCode = ensureSetupCode(db, new Date());
+const setupCode = app.services.pairing.ensureSetupCode();
 if (setupCode) {
   const url = pairingLink(config.publicUrl, setupCode);
   app.log.info({ pairingLink: url }, 'No Owner yet: open the Pairing Link to create one');

@@ -5,10 +5,10 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { eq } from 'drizzle-orm';
-import { hashPassword } from './auth/passwords.ts';
 import { loadConfig } from './config.ts';
 import { openDatabase } from './db/client.ts';
 import { accounts } from './db/schema.ts';
+import { hashPassword } from './shared/passwords.ts';
 
 const USAGE = `Usage:
   node dist/cli.js backup <dir>
