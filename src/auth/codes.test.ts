@@ -3,7 +3,8 @@ import type { Db } from '../db/client.ts';
 import { openDatabase } from '../db/client.ts';
 import { migrateDatabase } from '../db/migrate.ts';
 import { accounts, codes } from '../db/schema.ts';
-import { CODE_TTL_MS, ensureSetupCode, mintCode, sha256, spendCode } from './codes.ts';
+import { sha256 } from '../shared/crypto.ts';
+import { CODE_TTL_MS, ensureSetupCode, mintCode, spendCode } from './codes.ts';
 
 const T0 = new Date('2026-09-28T10:00:00.000Z');
 const later = (ms: number) => new Date(T0.getTime() + ms);

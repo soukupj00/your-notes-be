@@ -1,7 +1,7 @@
-import { createHash, randomBytes } from 'node:crypto';
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import type { Db } from '../db/client.ts';
 import { accounts, codes } from '../db/schema.ts';
+import { newSecret, sha256 } from '../shared/crypto.ts';
 
 export type CodeKind = 'setup' | 'device' | 'invite';
 
@@ -9,16 +9,6 @@ export const CODE_TTL_MS = 10 * 60 * 1000;
 
 /** A `setup` code does not expire by the clock; it dies when used or when the server restarts. */
 const NEVER = '9999-12-31T23:59:59.999Z';
-
-/** 32 random bytes, base64url: the shape of every secret the server hands out. */
-export function newSecret(): string {
-  return randomBytes(32).toString('base64url');
-}
-
-/** Secrets are stored only as their SHA-256, so a leaked database cannot sign anyone in. */
-export function sha256(secret: string): string {
-  return createHash('sha256').update(secret).digest('hex');
-}
 
 export function mintCode(
   db: Db,
@@ -34,10 +24,7 @@ export function mintCode(
   return { code, expiresAt };
 }
 
-/**
- * Marks an unused, unexpired code of this kind as used and returns the Account it carries,
- * or null when there is no such code. A code of another kind is left untouched.
- */
+/** A code of another kind is left unspent, so a device code never passes as an Invite. */
 export function spendCode(
   db: Db,
   code: string,
@@ -67,7 +54,7 @@ export function ownerExists(db: Db): boolean {
   );
 }
 
-/** At startup: while there is no Owner, replaces any earlier setup code with a fresh one. */
+/** At startup, while there is no Owner, a fresh setup code replaces any earlier one (ADR 0001). */
 export function ensureSetupCode(db: Db, now: Date): string | null {
   if (ownerExists(db)) return null;
   db.delete(codes).where(eq(codes.kind, 'setup')).run();

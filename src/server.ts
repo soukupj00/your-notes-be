@@ -25,7 +25,9 @@ import { rootRoutes } from './routes/root.ts';
 import { sessionRoutes } from './routes/session.ts';
 import { setupRoutes } from './routes/setup.ts';
 import { shareRoutes } from './routes/shares.ts';
-import { LiveUpdates, streamRoutes } from './routes/stream.ts';
+import { streamRoutes } from './routes/stream.ts';
+import type { Clock } from './shared/clock.ts';
+import { LiveUpdates } from './sync/liveUpdates.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -33,7 +35,7 @@ declare module 'fastify' {
     db: Db;
     blobs: BlobStore;
     /** The clock every expiry is measured against; tests pass their own. */
-    now: () => Date;
+    now: Clock;
     live: LiveUpdates;
   }
 }
@@ -43,7 +45,7 @@ export type ServerDeps = {
   db: Db;
   blobs: BlobStore;
   logger?: FastifyServerOptions['logger'];
-  now?: () => Date;
+  now?: Clock;
 };
 
 /** The whole application, ready for `inject()` or `listen()`; it never listens itself. */
