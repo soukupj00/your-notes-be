@@ -11,6 +11,9 @@ Fastify + SQLite (Drizzle) in one container behind Caddy; it serves the built PW
 - No `Co-Authored-By` trailers.
 - Plain dash, never an em dash.
   In long Markdown, one sentence per line.
+- Comments are short, plain and high level.
+  Clean names and small functions say what the code does; a comment adds only what the code cannot: why, a decision (link the ADR), or a trap.
+  Never narrate the next line, and write no comment where the code is already clear.
 
 ## Documentation map
 
@@ -41,12 +44,14 @@ pnpm only; no npm, no yarn.
 See `PLAN.md` "Structure".
 The rules that matter most:
 
-- `buildServer()` never calls `listen()`; tests use `app.inject()` against an in-memory SQLite.
+- `buildServer()` never calls `listen()`; tests use `app.inject()` against real databases (SQLite in memory, PGlite).
   Never mock the database.
-- `src/sync/` is pure: no HTTP, no Drizzle.
-- `src/contract/index.ts` imports nothing from the server; the frontend consumes it in the browser.
-- An interface exists only where a second implementation does (`BlobStore`).
-  No repository layer.
+- Records go through the `Store` interface and bytes through `BlobStore` (ADR 0006).
+  Routes call services, services call the two interfaces, and only `src/infra/` imports a driver or SDK (ADR 0007).
+- No byte or network I/O inside `transaction(fn)`, and never the outer Store inside it.
+- The sync rules (`decide.ts`) are pure: no HTTP, no Store.
+- `src/contract/index.ts` imports nothing from the server and keeps its path; the frontend pulls it from there.
+- Until the rework slices R1 to R6 in `PLAN.md` land, parts of the tree still follow the old layout.
 - Validate at the boundary with the contract's Zod schemas; the auth hook is the only code that reads the cookie.
 - Security measures listed in `PLAN.md` are requirements, not polish.
 - Files under 500 lines.
