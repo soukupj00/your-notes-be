@@ -19,5 +19,11 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "scripts", "drizzle.config.ts", "vitest.config.ts"]
+  "include": [
+    "src",
+    "scripts",
+    "drizzle.sqlite.config.ts",
+    "drizzle.postgres.config.ts",
+    "vitest.config.ts"
+  ]
 }

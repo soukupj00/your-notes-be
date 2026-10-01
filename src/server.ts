@@ -1,61 +1,77 @@
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
-import Fastify, { type FastifyServerOptions } from 'fastify';
+import Fastify, { type FastifyBaseLogger } from 'fastify';
 import {
   serializerCompiler,
   validatorCompiler,
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
-import type { BlobStore } from './blobs/BlobStore.ts';
 import type { Config } from './config.ts';
-import type { Db } from './db/client.ts';
-import { registerAuth } from './plugins/auth.ts';
-import { registerDocs } from './plugins/docs.ts';
-import { genReqId, registerSecurity } from './plugins/security.ts';
-import { registerStatic } from './plugins/static.ts';
-import { registerErrorHandler } from './problem.ts';
-import { accountRoutes } from './routes/accounts.ts';
-import { blobRoutes } from './routes/blobs.ts';
-import { changeRoutes } from './routes/changes.ts';
-import { codeRoutes } from './routes/codes.ts';
-import { deviceRoutes } from './routes/devices.ts';
-import { healthRoutes } from './routes/health.ts';
-import { rootRoutes } from './routes/root.ts';
-import { sessionRoutes } from './routes/session.ts';
-import { setupRoutes } from './routes/setup.ts';
-import { shareRoutes } from './routes/shares.ts';
-import { LiveUpdates, streamRoutes } from './routes/stream.ts';
+import { registerAuth } from './http/auth.ts';
+import { registerDocs } from './http/docs.ts';
+import { registerErrorHandler } from './http/errors.ts';
+import { genReqId, registerSecurity } from './http/security.ts';
+import { registerStatic } from './http/static.ts';
+import { accountRoutes } from './modules/accounts/routes.ts';
+import { AccountService } from './modules/accounts/service.ts';
+import { blobRoutes } from './modules/blobs/routes.ts';
+import { BlobService } from './modules/blobs/service.ts';
+import { HousekeepingService } from './modules/housekeeping/service.ts';
+import { metaRoutes } from './modules/meta/routes.ts';
+import { pairingRoutes } from './modules/pairing/routes.ts';
+import { PairingService } from './modules/pairing/service.ts';
+import { sessionRoutes } from './modules/sessions/routes.ts';
+import { SessionService } from './modules/sessions/service.ts';
+import { shareRoutes } from './modules/shares/routes.ts';
+import { ShareService } from './modules/shares/service.ts';
+import { LiveUpdates } from './modules/sync/liveUpdates.ts';
+import { syncRoutes } from './modules/sync/routes.ts';
+import { SyncService } from './modules/sync/service.ts';
+import type { Clock } from './shared/clock.ts';
+import type { BlobStore } from './store/BlobStore.ts';
+import type { Store } from './store/Store.ts';
+
+export type Services = {
+  pairing: PairingService;
+  accounts: AccountService;
+  sessions: SessionService;
+  sync: SyncService;
+  blobs: BlobService;
+  shares: ShareService;
+  housekeeping: HousekeepingService;
+};
 
 declare module 'fastify' {
   interface FastifyInstance {
     config: Config;
-    db: Db;
-    blobs: BlobStore;
-    /** The clock every expiry is measured against; tests pass their own. */
-    now: () => Date;
-    live: LiveUpdates;
+    services: Services;
   }
 }
 
 export type ServerDeps = {
   config: Config;
-  db: Db;
+  store: Store;
   blobs: BlobStore;
-  logger?: FastifyServerOptions['logger'];
-  now?: () => Date;
+  /**
+   * The logger `main.ts` makes before the server, with `LOG_SERIALIZERS`, so startup logs the same
+   * way; false in tests.
+   */
+  logger: FastifyBaseLogger | false;
+  /** The clock every expiry is measured against; tests pass their own. */
+  now?: Clock;
 };
 
 /** The whole application, ready for `inject()` or `listen()`; it never listens itself. */
 export async function buildServer({
   config,
-  db,
+  store,
   blobs,
   logger,
   now = () => new Date(),
 }: ServerDeps) {
   const app = Fastify({
-    logger: logger ?? { level: config.logLevel },
+    ...(logger ? { loggerInstance: logger } : { logger: false }),
     bodyLimit: config.bodyLimitBytes,
     trustProxy: config.trustProxy,
     genReqId,
@@ -64,13 +80,25 @@ export async function buildServer({
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
+
+  // Every service is built here, once, and reached by routes through `app.services` (ADR 0007).
+  const live = new LiveUpdates();
+  const pairing = new PairingService(store, now);
+  const accounts = new AccountService(store, now, pairing);
+  const blobService = new BlobService(store, blobs, now);
+  const services: Services = {
+    pairing,
+    accounts,
+    sessions: new SessionService(store, now, accounts, pairing, config.sessionTtlDays),
+    sync: new SyncService(store, now, live, config.pageSize),
+    blobs: blobService,
+    shares: new ShareService(store, now, blobService),
+    housekeeping: new HousekeepingService(store, blobs, config.tombstoneDays),
+  };
   app.decorate('config', config);
-  app.decorate('db', db);
-  app.decorate('blobs', blobs);
-  app.decorate('now', now);
-  app.decorate('live', new LiveUpdates());
+  app.decorate('services', services);
   // Open streams would otherwise hold `close()` until their clients leave.
-  app.addHook('preClose', async () => app.live.closeAll());
+  app.addHook('preClose', async () => live.closeAll());
 
   registerErrorHandler(app);
   registerSecurity(app);
@@ -78,19 +106,15 @@ export async function buildServer({
   await app.register(sensible);
   await app.register(cookie);
   registerAuth(app);
-  // Limits are opted into per route (sign-in, code redemption), not applied globally.
+  // Routes opt in through `config.rateLimit`: sign-in, code redemption, public Share Links.
   await app.register(rateLimit, { global: false });
   await registerDocs(app);
 
-  await app.register(rootRoutes);
-  await app.register(healthRoutes);
-  await app.register(setupRoutes);
+  await app.register(metaRoutes);
+  await app.register(pairingRoutes);
   await app.register(sessionRoutes);
-  await app.register(deviceRoutes);
-  await app.register(codeRoutes);
   await app.register(accountRoutes);
-  await app.register(changeRoutes);
-  await app.register(streamRoutes);
+  await app.register(syncRoutes);
   await app.register(blobRoutes);
   await app.register(shareRoutes);
   await registerStatic(app, config.publicDir);

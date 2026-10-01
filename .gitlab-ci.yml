@@ -57,7 +57,7 @@ typecheck:
     - pnpm exec tsc --noEmit
 
 # Generated files must be committed: a stale OpenAPI document or a schema change
-# without its migration fails here.
+# without its migration, for either database, fails here.
 contract:
   <<: *pnpm-setup
   stage: quality
@@ -65,13 +65,36 @@ contract:
     - pnpm openapi
     - git diff --exit-code docs/openapi.json
     - pnpm db:generate
-    # A new migration is an untracked file, which `git diff` would not see.
+    # A new migration is an untracked file, which `git diff` would not see; this covers
+    # drizzle/sqlite/ and drizzle/postgres/.
     - test -z "$(git status --porcelain drizzle/)" || { git status drizzle/; exit 1; }
 
 # --- Tests ---
+# SeaweedFS, an S3-compatible server, runs the BlobStore contract against S3; PostgreSQL runs
+# the Store contract and the concurrency tests, which PGlite cannot (ADR 0006).
 test:unit:
   <<: *pnpm-setup
   stage: test
+  services:
+    - name: chrislusf/seaweedfs:4.48
+      alias: s3
+      variables:
+        AWS_ACCESS_KEY_ID: younotes
+        AWS_SECRET_ACCESS_KEY: younotes-ci
+        # The image exposes many ports; the job waits for the S3 one.
+        HEALTHCHECK_TCP_PORT: "8333"
+    - name: postgres:17-alpine
+      alias: postgres
+      variables:
+        POSTGRES_USER: younotes
+        POSTGRES_PASSWORD: younotes-ci
+        POSTGRES_DB: younotes
+  variables:
+    S3_TEST_ENDPOINT: http://s3:8333
+    S3_TEST_ACCESS_KEY_ID: younotes
+    S3_TEST_SECRET_ACCESS_KEY: younotes-ci
+    # The tests create a database of their own per file on this server.
+    PG_TEST_URL: postgres://younotes:younotes-ci@postgres:5432/younotes
   script:
     - pnpm test
 

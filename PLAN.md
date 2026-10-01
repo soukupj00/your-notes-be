@@ -3,7 +3,7 @@
 The backend half of M5 in the frontend's [`PLAN.md`](../ni-dip-fe/PLAN.md).
 Scoped by a `/grill-with-docs` session on 2026-09-28.
 Product decisions taken as given: frontend ADR 0017 (conflict model), 0018 (the server serves the PWA), 0020 (the `Remote` and `AccountService` seams), the thesis ADR 0002 (bytes are files on disk), and [`../ni-dip-fe/docs/architecture/04-sync.md`](../ni-dip-fe/docs/architecture/04-sync.md) and [`05-server.md`](../ni-dip-fe/docs/architecture/05-server.md).
-Decisions made here: [`docs/adr/`](./docs/adr/) 0001 to 0005.
+Decisions made here: [`docs/adr/`](./docs/adr/) 0001 to 0007.
 Vocabulary: [`CONTEXT.md`](./CONTEXT.md), with product terms canonical in [`../ni-dip-fe/CONTEXT.md`](../ni-dip-fe/CONTEXT.md).
 
 ## Decided
@@ -11,18 +11,20 @@ Vocabulary: [`CONTEXT.md`](./CONTEXT.md), with product terms canonical in [`../n
 ### Toolchain
 - Node 24 LTS, pnpm via corepack, TypeScript strict, Biome, Vitest.
   The same as the frontend so one person can move between the repos.
-- `better-sqlite3` behind Drizzle.
-  A single-executable build is future work, not started; `node:sqlite` behind the same Drizzle schema is the path if it ever is.
+- Drizzle over `better-sqlite3` (the default) or `pg` (ADR 0006); `@aws-sdk/client-s3` for S3-compatible blob storage.
+  A single-executable build is future work, not started; `node:sqlite` behind the SQLite Store is the path if it ever is.
 
 ### What a contributor can change, and how
 | Change | Mechanism |
 |---|---|
 | Paths, port, page size, tombstone window, session TTL, body limits, log level | `src/config.ts`: env vars with Zod-validated defaults, documented in `compose.yml` |
-| The database engine | Drizzle is the seam; the schema is portable, the product ships SQLite and its docs assume it |
-| Where bytes live | `BlobStore` interface: disk (default) and memory (tests), one contract test suite |
-| The sync rules | `src/sync/`: pure functions over rows, no HTTP, no Drizzle |
+| The database | `Store` interface (ADR 0006): SQLite (default) and PostgreSQL via `DATABASE_URL`, one contract suite |
+| Where bytes live | `BlobStore` interface: disk (default), S3 via `BLOB_STORE=s3`, memory (tests), one contract suite |
+| Moving between backends | CLI `migrate`, through the portable Server Backup format |
+| The sync rules | `src/modules/sync/decide.ts`: pure functions over rows, no HTTP, no Store |
 
-No repository layer, no pluggable strategies: an interface exists only where a second implementation does.
+Routes call services, services call the two interfaces, and only `src/infra/` imports a driver (ADR 0007).
+One server instance; a second is refused at startup when the Store is PostgreSQL.
 
 ### Contract and API docs
 - `src/contract/index.ts` is the one shared Zod 4 file: entities, request and response schemas, the problem-details error shape.
@@ -66,14 +68,16 @@ Single-resource `GET`s exist as HAL link targets with an `ETag`; per-resource `P
 - Same 401 and same cost for a wrong username and a wrong password.
 
 ### Data
-- `DATA_DIR` holds `younotes.db` (WAL, foreign keys on, `busy_timeout`) and `blobs/<id>`; that directory is the backup unit.
-- Drizzle schema in `src/db/schema.ts`; `drizzle-kit` migrations committed under `drizzle/` and applied at startup.
+- By default `DATA_DIR` holds `younotes.db` (WAL, foreign keys on, `busy_timeout`) and `blobs/<id>`.
+  `DATABASE_URL` moves the records to PostgreSQL and `BLOB_STORE=s3` moves the bytes to a bucket.
+- One Drizzle schema per database under `src/infra/`; `drizzle-kit` migrations committed under `drizzle/sqlite/` and `drizzle/postgres/`, applied at startup.
+- Timestamps are ISO 8601 text in both databases.
 - Tables: `accounts` (with the Sequence counter), `sessions`, `codes`, `notes`, `tags`, `note_tags`, `tombstones`, `blobs`, `shares`.
 - Every synced row carries `rev` and `seq`; the feed is read from the rows, no change log (ADR 0002).
 - Attachment metadata is a JSON column on `notes`; `blobs` records ownership and existence (ADR 0003); an Attachment references its bytes by `id` and, for images, its thumbnail by `thumbnailId`, and the orphan sweep keeps both.
-- CLI `backup <dir>`: `VACUUM INTO` plus a copy of `blobs/`; no scheduler, the guide shows the cron line.
+- CLI `backup <dir>`, `restore <dir>`, `migrate`: the portable Server Backup (ADR 0006), whatever the backends; no scheduler, the guide shows the cron line.
 
-### Sync rules (`src/sync/`)
+### Sync rules (`src/modules/sync/`)
 | Device sends | Server has | Outcome |
 |---|---|---|
 | no `rev` | nothing | `accepted`, rev 1 |
@@ -91,38 +95,22 @@ Tombstones expire after 90 days; a daily in-process sweep also removes blob file
 `PUT /api/blobs/:id` writes to a temp file, verifies, moves into place; a repeat is 204 without reading the body; upload before or after the Note both work.
 
 ### Structure
-```
-src/
-  contract/index.ts   shared Zod contract
-  config.ts           env -> Config
-  server.ts           buildServer(config, deps), no listen()
-  main.ts             migrate, sweep, listen, print the first-run Pairing Link
-  cli.ts              backup, reset-owner-password
-  sweep.ts            daily: expired Tombstones, Sessions, codes, orphan blobs
-  db/                 schema.ts, client.ts, migrate.ts, rows.ts
-  blobs/              BlobStore.ts, disk.ts, memory.ts, blobStore.contract.test.ts
-  auth/               passwords.ts, sessions.ts, codes.ts
-  sync/               decide.ts
-  hal.ts, problem.ts
-  routes/             one file per route group
-  plugins/            auth.ts, security.ts, static.ts, docs.ts
-  test/               helpers.ts, shared by the API tests
-drizzle/              generated migrations
-docs/                 openapi.json, setup.md, adr/, architecture/structure.md
-```
+The layout and its rules are in [`docs/architecture/structure.md`](./docs/architecture/structure.md) (ADR 0007).
 Plugins: `fastify-type-provider-zod`, `@fastify/swagger`, `@fastify/swagger-ui`, `@fastify/cookie`, `@fastify/static`, `@fastify/rate-limit`, `@fastify/sensible`.
 SSE is ~20 lines on `reply.raw`.
 Logging is Fastify's pino; `pino-pretty` in dev only; `X-Request-Id` echoed.
 
 ### Testing
-No mocked database: a real in-memory SQLite with migrations applied, per test file.
+No mocked database: real databases with migrations applied, per test file.
 
 | Tier | Against | Share |
 |---|---|---|
-| API over `app.inject()` | `buildServer()`, memory SQLite, memory `BlobStore`; every response parsed with the contract schema | most |
-| Unit | `sync/`, `hal.ts`, `auth/`, `config.ts` | second |
-| Database | migrations from empty, schema snapshot, feed queries | small |
-| `BlobStore` contract | disk (temp dir) and memory | one file |
+| API over `app.inject()` | `buildServer()` on each Store (SQLite in memory, PGlite), memory `BlobStore`; every response parsed with the contract schema | most |
+| Unit | `modules/sync/decide.ts`, the pairing and housekeeping services, `http/hal.ts`, `shared/passwords.ts`, `config.ts` | second |
+| `Store` contract | SQLite in memory and PGlite; migrations from empty | one file |
+| Concurrency | a real PostgreSQL in CI: two pushes at once never share a Sequence | small |
+| `BlobStore` contract | disk (temp dir), memory, and S3 against SeaweedFS in CI | one file |
+| Server Backup | round trips SQLite to PostgreSQL and back, disk to S3 and back | small |
 | Container smoke | the built image in CI: `/health`, the Pairing Link in the log | one job |
 
 ### Delivery
@@ -159,3 +147,35 @@ End-to-end encryption, sharing a Note into another Account, email, a WAF, a sing
 - [x] **B6 Share Links** (after sync works): `shares` table, mint, revoke and list routes, the unauthenticated `GET /api/public/shares/:token` and its blob route, the frontend `/share/$token` read-only route rendered through DOMPurify.
   Only reaches strangers in the own-domain mode; documented as such.
   Server side done; the `/share/$token` page is the frontend's. Tokens are stored in clear (ADR 0005), one share per Note.
+
+## Rework: Stores, modules, backends (ADR 0006, 0007)
+
+Every slice keeps `docs/openapi.json` byte for byte: the API does not change.
+Each slice updates `docs/architecture/structure.md` and `CLAUDE.md` for what it moved, and trims the comments of every file it touches to the rule in `CLAUDE.md`.
+
+- [x] **R1 Groundwork**, no behaviour change: `shared/` (secrets and hashing, clock, the server's errors mapped once to problem details), the ETag helper, `LiveUpdates` out of its route file, duplicates removed (`accountColumns`, `DAY_MS`, the `If-None-Match` check).
+  Done when the suite passes untouched and no handler builds a 404, 403 or 409 itself.
+  `BlobSizeMismatchError` is a `BadRequest`, so the upload route no longer maps it; `sendProblem` stays only where an answer must close or drain the connection, and in the hooks.
+- [x] **R2 Modules and services**: the tree above, services as classes built in `server.ts` and reached through `app.decorate`, presenters, no route importing another route.
+  Services still use Drizzle directly.
+  Done when every route file is HTTP only.
+  `createOwner` lives in the accounts service, so pairing sits below accounts and accounts below sessions with no cycle; API tests reach rules through `app.services` and live in `src/test/`.
+- [x] **R3 The Store**: the async `Store` interface, the SQLite Store with its lock and `transaction(fn)` (a nested outer call throws), `/health` through `store.ping()`, the contract suite, Biome keeping drivers inside `src/infra/`.
+  Done when no service imports Drizzle.
+  A feed page is read in one transaction too, so a push cannot split it; without the lock the contract's isolation test fails, as the spike predicted.
+- [x] **R4 PostgreSQL**: its schema and migrations (existing migrations move to `drizzle/sqlite/`, checked against an install made before the move), `DATABASE_URL`, the Account row lock on push, the advisory lock for one instance, waiting for the database at startup, secrets redacted from logs, the API suite on PGlite, a real PostgreSQL in CI, a Compose profile, its section of `docs/setup-backends.md`, and `docs/architecture/` "Adding a Store".
+  Done when the whole suite passes on both Stores and the concurrency test passes on PostgreSQL.
+  `accounts.lock(id, 'write' | 'read')` is `FOR NO KEY UPDATE` or `FOR SHARE` on the Account row: pushes to one Account serialize, a feed page never shows a row above its Sequence, and pages do not block each other; each lock was proven by removing it.
+  Unique-key violations become the server's errors in the Postgres Store; a `tx` used after its transaction ends throws on both Stores.
+  The API and contract suites run on SQLite and PGlite in plain `pnpm test`; the real-PostgreSQL suites need `PG_TEST_URL`.
+- [x] **R5 S3**: `s3BlobStore` (bucket private, bytes always streamed through the server), `BLOB_STORE` and its settings, an S3-compatible server in CI and in a Compose profile, its section of `docs/setup-backends.md`.
+  Done when the `BlobStore` contract passes on S3.
+  Built in parallel with R3 and merged after it; `BlobStore.ts` moved to `src/store/`, the stores to `src/infra/blobs/`.
+  MinIO left Docker Hub on 2026-09-11, so CI and Compose use SeaweedFS 4.48; versitygw 1.8 failed the contract by keeping a cut-off upload.
+  `put` holds back the last chunk until the size checks out and aborts the request on failure, since S3 stores an object once it has all its bytes.
+  Until R6, `backup` with S3 copies the database only and warns; the `younotes-local` profile now inherits the shared environment.
+- [x] **R6 Server Backup and migrate**: `backup`, `restore`, `migrate` over the portable format, Sequences and Sessions copied exactly, `VACUUM INTO` removed, the setup guide's backup and restore section rewritten.
+  Done when a SQLite and disk install moves to PostgreSQL and S3 and every Device keeps syncing without a resync.
+  The format is a directory: `manifest.json` (written last, so a folder without one is incomplete), one JSON Lines file per kind, `blobs/<id>`; every line is checked with a strict schema before a restore writes anything.
+  `migrate` streams Store to Store and BlobStore to BlobStore with no temp copy; the target is the server's own environment with each `TARGET_X` replacing `X`, so records and bytes can move separately.
+  `restore` and `migrate` take the PostgreSQL instance lock and refuse while a server runs; `backup` works on a running server.

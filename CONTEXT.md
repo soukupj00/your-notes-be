@@ -19,3 +19,17 @@ _Avoid_: setup token, invite code, magic link
 The Account's count of accepted changes, one number per Account, advanced by every accepted push.
 A Sequence orders the change feed and is what a Device's cursor and a Live Update hint carry; it is distinct from a Revision, which counts the changes of one thing.
 _Avoid_: version, cursor (a cursor is a position in the feed, expressed as a Sequence)
+
+**Store**:
+Where the server keeps its records (Accounts, Sessions, Notes, Tags, Tombstones, Share Links), whichever database holds them: SQLite by default, or PostgreSQL.
+_Avoid_: repository, database (a database is what one Store is built on), Local Store (that is the Device's copy)
+
+**Blob Store**:
+Where the server keeps the bytes of Attachments: files on disk by default, or an S3-compatible bucket.
+The Store records which Account owns which bytes; the Blob Store holds the bytes.
+_Avoid_: file storage, bucket (a bucket is what one Blob Store is built on)
+
+**Server Backup**:
+A portable copy of one server's Store and Blob Store, made by the `backup` command and put back by `restore`; the same format moves a server between backends.
+Distinct from a Backup, which is one person's copy of their own Device.
+_Avoid_: dump, export, snapshot

@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 The Self-hosted Server for the YouNotes PWA (`../ni-dip-fe`).
-Fastify + SQLite (Drizzle) in one container behind Caddy; it serves the built PWA and syncs Notes between a person's Devices.
+Fastify + SQLite or PostgreSQL (Drizzle) in one container behind Caddy; it serves the built PWA and syncs Notes between a person's Devices.
 
 ## Hard rules
 
@@ -11,6 +11,9 @@ Fastify + SQLite (Drizzle) in one container behind Caddy; it serves the built PW
 - No `Co-Authored-By` trailers.
 - Plain dash, never an em dash.
   In long Markdown, one sentence per line.
+- Comments are short, plain and high level.
+  Clean names and small functions say what the code does; a comment adds only what the code cannot: why, a decision (link the ADR), or a trap.
+  Never narrate the next line, and write no comment where the code is already clear.
 
 ## Documentation map
 
@@ -24,13 +27,15 @@ Fastify + SQLite (Drizzle) in one container behind Caddy; it serves the built PW
 
 ```bash
 pnpm dev            # tsx watch src/main.ts, DATA_DIR=./data
-pnpm build          # tsc
+pnpm build          # empties dist/, then tsc
 pnpm check          # biome check --write
 pnpm check:ci       # biome ci .
 pnpm test           # vitest run
 pnpm openapi        # regenerate docs/openapi.json
-pnpm db:generate    # drizzle-kit generate (migrations are applied at startup)
-node dist/cli.js backup <dir>            # after pnpm build
+pnpm db:generate    # drizzle-kit generate, both databases (migrations are applied at startup)
+node dist/cli.js backup <dir>            # after pnpm build; the portable Server Backup
+node dist/cli.js restore <dir>           # into an empty Store and BlobStore
+node dist/cli.js migrate                 # to where the TARGET_ variables say
 node dist/cli.js reset-owner-password    # prints a new Owner password once
 ```
 
@@ -38,15 +43,18 @@ pnpm only; no npm, no yarn.
 
 ## Structure and rules of the code
 
-See `PLAN.md` "Structure".
+See [`docs/architecture/structure.md`](./docs/architecture/structure.md).
 The rules that matter most:
 
-- `buildServer()` never calls `listen()`; tests use `app.inject()` against an in-memory SQLite.
-  Never mock the database.
-- `src/sync/` is pure: no HTTP, no Drizzle.
-- `src/contract/index.ts` imports nothing from the server; the frontend consumes it in the browser.
-- An interface exists only where a second implementation does (`BlobStore`).
-  No repository layer.
+- `buildServer()` never calls `listen()`; tests use `app.inject()` against a real Store, SQLite in memory and PGlite, one Vitest project each.
+  `PG_TEST_URL` adds a real PostgreSQL to the Store contract and runs the concurrency tests.
+  Never mock the database; set up and inspect state through the Store.
+- Records go through the `Store` interface and bytes through `BlobStore` (ADR 0006).
+  Routes call services, services call the two interfaces, and only `src/infra/` imports a driver or SDK (ADR 0007); Biome enforces it.
+- Store calls are async, so reads and writes that must not interleave with another request share one `transaction(fn)`; one that decides on an Account's rows takes `accounts.lock` first, since PostgreSQL reads what others committed.
+  Inside it no byte or network I/O, and only its `tx`: a service method that joins a transaction takes `tx` as a parameter.
+- The sync rules (`decide.ts`) are pure: no HTTP, no Store.
+- `src/contract/index.ts` imports nothing from the server and keeps its path; the frontend pulls it from there.
 - Validate at the boundary with the contract's Zod schemas; the auth hook is the only code that reads the cookie.
 - Security measures listed in `PLAN.md` are requirements, not polish.
 - Files under 500 lines.

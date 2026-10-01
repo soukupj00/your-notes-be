@@ -1,32 +1,45 @@
-// Shared by the API tests: a real server over in-memory SQLite, and the sign-up steps they all need.
+// Shared by the tests: a real Store and server, and the sign-ups they need. The Store is SQLite in
+// memory, or PGlite in the Vitest project that sets TEST_STORE=pglite (vitest.config.ts).
 import { expect } from 'vitest';
-import { ensureSetupCode } from '../auth/codes.ts';
-import { SESSION_COOKIE } from '../auth/sessions.ts';
-import { memoryBlobStore } from '../blobs/memory.ts';
 import { loadConfig } from '../config.ts';
 import { CodeResponse, Problem } from '../contract/index.ts';
-import { type Db, openDatabase } from '../db/client.ts';
-import { migrateDatabase } from '../db/migrate.ts';
+import { SESSION_COOKIE } from '../http/sessionCookie.ts';
+import { memoryBlobStore } from '../infra/blobs/memory.ts';
+import { openSqliteStore } from '../infra/sqlite/store.ts';
 import { type App, buildServer } from '../server.ts';
+import type { Clock } from '../shared/clock.ts';
+import type { BlobStore } from '../store/BlobStore.ts';
+import type { Store } from '../store/Store.ts';
 
 export const PASSWORD = 'correct horse';
 
 export type Response = Awaited<ReturnType<App['inject']>>;
 
+/** Empty and migrated. Under PGlite the test file shares one database, emptied by each call. */
+export async function testStore(): Promise<Store> {
+  if (process.env.TEST_STORE !== 'pglite') return openSqliteStore(':memory:');
+  return (await import('../infra/postgres/testing.ts')).pgliteTestStore();
+}
+
+export function testBlobs(): BlobStore {
+  return memoryBlobStore();
+}
+
 export async function testServer(
   env: Record<string, string> = {},
-  now?: () => Date
-): Promise<{ app: App; db: Db }> {
-  const db = openDatabase(':memory:');
-  migrateDatabase(db);
+  now?: Clock
+): Promise<{ app: App; store: Store; blobs: BlobStore }> {
+  const store = await testStore();
+  const blobs = testBlobs();
   const app = await buildServer({
     config: loadConfig({ PUBLIC_DIR: '/nonexistent', ...env }),
-    db,
-    blobs: memoryBlobStore(),
+    store,
+    blobs,
     logger: false,
     ...(now ? { now } : {}),
   });
-  return { app, db };
+  app.addHook('onClose', () => store.close());
+  return { app, store, blobs };
 }
 
 /** Signed in as `cookie`, or signed out. */
@@ -49,12 +62,12 @@ export function expectProblem(response: Response, status: number): Problem {
 }
 
 /** Creates the Owner `olga` through a fresh setup code; returns the Laptop's cookie. */
-export async function signUpOwner(app: App, db: Db, now = new Date()): Promise<string> {
+export async function signUpOwner(app: App): Promise<string> {
   const response = await app.inject({
     method: 'POST',
     url: '/api/setup',
     payload: {
-      code: ensureSetupCode(db, now),
+      code: await app.services.pairing.ensureSetupCode(),
       username: 'olga',
       password: PASSWORD,
       deviceName: 'Laptop',
