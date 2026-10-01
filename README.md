@@ -22,7 +22,7 @@ The API reference is at `/api/docs`; the same document is committed as [`docs/op
 ### Try it on your phone
 
 Phones only run the app over `https`, so `http://localhost:3000` is not enough.
-With Tailscale on this machine and the phone (HTTPS Certificates on, see [`docs/setup.md`](./docs/setup.md) 3a), `tailscale serve` gives the dev server a real certificate without Docker:
+With Tailscale on this machine and the phone (HTTPS Certificates on, see [`docs/setup.md`](./docs/setup.md) section 3a), `tailscale serve` gives the dev server a real certificate without Docker:
 
 ```bash
 # 1. Build the app and let the server serve it; repeat after every frontend change
@@ -57,10 +57,15 @@ To try the server alone on `http://localhost:3000` without Caddy:
 docker compose --profile local up younotes-local
 ```
 
+`--profile` replaces `COMPOSE_PROFILES`, so if `.env` sets it, name those profiles too, for example `docker compose --profile local --profile postgres up younotes-local`; otherwise the server waits for a database that never starts.
+Stop it with the same flags: `docker compose --profile local down`, or `docker compose --profile local --profile postgres down`.
+A plain `docker compose down` leaves it behind without its network, and its next start fails.
+
 On first start the server log prints a Pairing Link and a QR code; open it on your phone to create the Owner.
 To reset a forgotten Owner password, run `docker compose exec younotes node dist/cli.js reset-owner-password`.
 
 The step-by-step guide for people running it at home, including the three TLS modes and backups, is [`docs/setup.md`](./docs/setup.md).
+Keeping the records in PostgreSQL or the Attachments in an S3 bucket, and moving a running server there, is in [`docs/setup-backends.md`](./docs/setup-backends.md).
 
 ## Release
 

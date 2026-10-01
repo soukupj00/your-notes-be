@@ -95,28 +95,7 @@ Tombstones expire after 90 days; a daily in-process sweep also removes blob file
 `PUT /api/blobs/:id` writes to a temp file, verifies, moves into place; a repeat is 204 without reading the body; upload before or after the Note both work.
 
 ### Structure
-The target of slices R1 to R6 (ADR 0007).
-```
-src/
-  contract/index.ts   shared Zod contract; the frontend pulls it from this path
-  config.ts           env -> Config
-  server.ts           buildServer(config, deps): builds Stores and services, never listens
-  main.ts             migrate, sweep, listen, print the first-run Pairing Link
-  cli.ts              backup, restore, migrate, reset-owner-password
-  modules/<feature>/  routes.ts, service.ts, presenter.ts
-    accounts, sessions (and devices), pairing (codes, setup), sync (decide, live updates, stream),
-    blobs, shares, housekeeping (the sweep), backup
-  store/              Store.ts, BlobStore.ts, one contract suite each
-  infra/
-    sqlite/           schema, migrate, the Store and its lock
-    postgres/         schema, migrate, the Store
-    blobs/            disk.ts, memory.ts, s3.ts
-  http/               auth, security, errors, docs, static, hal, etag
-  shared/             crypto, clock, errors
-  test/               the test server, once per Store
-drizzle/sqlite/, drizzle/postgres/   generated migrations
-docs/                 openapi.json, setup.md, adr/, architecture/
-```
+The layout and its rules are in [`docs/architecture/structure.md`](./docs/architecture/structure.md) (ADR 0007).
 Plugins: `fastify-type-provider-zod`, `@fastify/swagger`, `@fastify/swagger-ui`, `@fastify/cookie`, `@fastify/static`, `@fastify/rate-limit`, `@fastify/sensible`.
 SSE is ~20 lines on `reply.raw`.
 Logging is Fastify's pino; `pino-pretty` in dev only; `X-Request-Id` echoed.
@@ -130,7 +109,7 @@ No mocked database: real databases with migrations applied, per test file.
 | Unit | `modules/sync/decide.ts`, the pairing and housekeeping services, `http/hal.ts`, `shared/passwords.ts`, `config.ts` | second |
 | `Store` contract | SQLite in memory and PGlite; migrations from empty | one file |
 | Concurrency | a real PostgreSQL in CI: two pushes at once never share a Sequence | small |
-| `BlobStore` contract | disk (temp dir), memory, and S3 against MinIO in CI | one file |
+| `BlobStore` contract | disk (temp dir), memory, and S3 against SeaweedFS in CI | one file |
 | Server Backup | round trips SQLite to PostgreSQL and back, disk to S3 and back | small |
 | Container smoke | the built image in CI: `/health`, the Pairing Link in the log | one job |
 
@@ -181,11 +160,22 @@ Each slice updates `docs/architecture/structure.md` and `CLAUDE.md` for what it 
   Services still use Drizzle directly.
   Done when every route file is HTTP only.
   `createOwner` lives in the accounts service, so pairing sits below accounts and accounts below sessions with no cycle; API tests reach rules through `app.services` and live in `src/test/`.
-- [ ] **R3 The Store**: the async `Store` interface, the SQLite Store with its lock and `transaction(fn)` (a nested outer call throws), `/health` through `store.ping()`, the contract suite, Biome keeping drivers inside `src/infra/`.
+- [x] **R3 The Store**: the async `Store` interface, the SQLite Store with its lock and `transaction(fn)` (a nested outer call throws), `/health` through `store.ping()`, the contract suite, Biome keeping drivers inside `src/infra/`.
   Done when no service imports Drizzle.
-- [ ] **R4 PostgreSQL**: its schema and migrations (existing migrations move to `drizzle/sqlite/`, checked against an install made before the move), `DATABASE_URL`, the Account row lock on push, the advisory lock for one instance, waiting for the database at startup, secrets redacted from logs, the API suite on PGlite, a real PostgreSQL in CI, a Compose profile, the setup guide section, and `docs/architecture/` "Adding a Store".
+  A feed page is read in one transaction too, so a push cannot split it; without the lock the contract's isolation test fails, as the spike predicted.
+- [x] **R4 PostgreSQL**: its schema and migrations (existing migrations move to `drizzle/sqlite/`, checked against an install made before the move), `DATABASE_URL`, the Account row lock on push, the advisory lock for one instance, waiting for the database at startup, secrets redacted from logs, the API suite on PGlite, a real PostgreSQL in CI, a Compose profile, its section of `docs/setup-backends.md`, and `docs/architecture/` "Adding a Store".
   Done when the whole suite passes on both Stores and the concurrency test passes on PostgreSQL.
-- [ ] **R5 S3**: `s3BlobStore` (bucket private, bytes always streamed through the server), `BLOB_STORE` and its settings, MinIO in CI and in a Compose profile, the setup guide section.
+  `accounts.lock(id, 'write' | 'read')` is `FOR NO KEY UPDATE` or `FOR SHARE` on the Account row: pushes to one Account serialize, a feed page never shows a row above its Sequence, and pages do not block each other; each lock was proven by removing it.
+  Unique-key violations become the server's errors in the Postgres Store; a `tx` used after its transaction ends throws on both Stores.
+  The API and contract suites run on SQLite and PGlite in plain `pnpm test`; the real-PostgreSQL suites need `PG_TEST_URL`.
+- [x] **R5 S3**: `s3BlobStore` (bucket private, bytes always streamed through the server), `BLOB_STORE` and its settings, an S3-compatible server in CI and in a Compose profile, its section of `docs/setup-backends.md`.
   Done when the `BlobStore` contract passes on S3.
-- [ ] **R6 Server Backup and migrate**: `backup`, `restore`, `migrate` over the portable format, Sequences and Sessions copied exactly, `VACUUM INTO` removed, the setup guide's backup and restore section rewritten.
+  Built in parallel with R3 and merged after it; `BlobStore.ts` moved to `src/store/`, the stores to `src/infra/blobs/`.
+  MinIO left Docker Hub on 2026-09-11, so CI and Compose use SeaweedFS 4.48; versitygw 1.8 failed the contract by keeping a cut-off upload.
+  `put` holds back the last chunk until the size checks out and aborts the request on failure, since S3 stores an object once it has all its bytes.
+  Until R6, `backup` with S3 copies the database only and warns; the `younotes-local` profile now inherits the shared environment.
+- [x] **R6 Server Backup and migrate**: `backup`, `restore`, `migrate` over the portable format, Sequences and Sessions copied exactly, `VACUUM INTO` removed, the setup guide's backup and restore section rewritten.
   Done when a SQLite and disk install moves to PostgreSQL and S3 and every Device keeps syncing without a resync.
+  The format is a directory: `manifest.json` (written last, so a folder without one is incomplete), one JSON Lines file per kind, `blobs/<id>`; every line is checked with a strict schema before a restore writes anything.
+  `migrate` streams Store to Store and BlobStore to BlobStore with no temp copy; the target is the server's own environment with each `TARGET_X` replacing `X`, so records and bytes can move separately.
+  `restore` and `migrate` take the PostgreSQL instance lock and refuse while a server runs; `backup` works on a running server.

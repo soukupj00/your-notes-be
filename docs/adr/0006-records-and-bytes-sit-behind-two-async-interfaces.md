@@ -18,10 +18,12 @@ Rules found by a spike on 2026-09-30, which every implementation keeps:
   The SQLite Store therefore runs every call through one async lock, a wrapper around the Store rather than code in each method; it cost about 3.5% on trivial reads.
 - Calling the outer Store inside `transaction(fn)` would wait on its own lock under SQLite, so it throws instead of hanging.
 - No byte or network I/O inside a transaction: under SQLite it holds the lock for every request.
-- PostgreSQL isolates transactions but not the Sequence, so a push locks its Account row (`FOR UPDATE`) and two pushes cannot hand out the same Sequence.
+- PostgreSQL isolates transactions but not the Sequence, so a push locks its Account row and two pushes cannot hand out the same Sequence.
+  Amended 2026-10-01: the push takes `FOR NO KEY UPDATE`, so inserts that only reference the Account (sign-ins, uploads) do not wait, and a feed page takes `FOR SHARE`, so it never returns a row above the Sequence it reports.
   This is tested against a real PostgreSQL, because PGlite runs one transaction at a time and cannot show the race.
 - Timestamps stay ISO 8601 text in both databases, because the code compares them as strings.
 - A Store turns its database's unique-key violations into the server's own errors.
+- Added 2026-10-01: no error leaves a Store quoting its query's values, which hold Note bodies and password and token hashes.
 - Engine-specific SQL (`json_each`, two-argument `max`) lives only in its Store.
   Drivers and SDKs are imported only under `src/infra/`, enforced by Biome, and loaded with a dynamic `import()`, so a SQLite and disk install never loads `pg` or the AWS SDK.
 
@@ -31,6 +33,7 @@ That duplication is the price of typed per-database schemas; the contract suite 
 The server runs as **one instance**.
 Live Update hints, rate-limit counters, the daily sweep and the first-run setup code live in the process, and with PostgreSQL a second instance is refused at startup by an advisory lock.
 Running several would need `LISTEN/NOTIFY` for the hints and a shared rate-limit store; the Live Update registry sits behind a small interface so that can be added later.
+Amended 2026-10-01, wording only: the registry is one class, `LiveUpdates`, with no interface in front; its three methods (`add`, `notify`, `closeAll`) are the seam a `LISTEN/NOTIFY` version would keep.
 
 **A Server Backup and a move between backends are one format.**
 `backup <dir>` writes every record, read in one transaction, then the bytes those records list, into a portable directory: one JSON Lines file per table, the blobs, and a manifest with a format version.
