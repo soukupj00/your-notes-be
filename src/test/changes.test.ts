@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { setTimeout } from 'node:timers/promises';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   ChangesPage,
@@ -7,16 +8,15 @@ import {
   type PushBatch,
   PushResponse,
 } from '../contract/index.ts';
-import type { Db } from '../db/client.ts';
-import { accounts } from '../db/schema.ts';
 import { SESSION_COOKIE } from '../http/sessionCookie.ts';
 import type { App } from '../server.ts';
+import type { Store } from '../store/Store.ts';
 import { as, cookieOf, inviteMember, pairDevice, signUpOwner, testServer } from './helpers.ts';
 
 const T = '2026-09-28T10:00:00.000Z';
 
 let clock: Date;
-let db: Db;
+let store: Store;
 let app: App;
 
 afterEach(async () => {
@@ -25,13 +25,15 @@ afterEach(async () => {
 
 async function start(env: Record<string, string> = {}) {
   clock = new Date(T);
-  ({ app, db } = await testServer(env, () => clock));
+  ({ app, store } = await testServer(env, () => clock));
 }
 
 /** The Owner's first Device; `pair` adds another Device, `invite` another Account. */
 const owner = () => signUpOwner(app);
 const pair = async (cookie: string) => cookieOf(await pairDevice(app, cookie));
 const invite = async (cookie: string) => cookieOf(await inviteMember(app, cookie));
+/** For state the API cannot reach, set through the Store. */
+const ownerId = async () => (await store.accounts.owner())?.id ?? '';
 
 const note = (id: string, extra: object = {}) => ({
   id,
@@ -290,7 +292,7 @@ describe('the feed', () => {
     const { resume } = (await pull(laptop))._links;
     expect(resume.href).toBe('/api/changes?since=1');
     // A restore rewinds the Sequence below the kept cursor.
-    db.update(accounts).set({ seq: 0 }).run();
+    await store.sync.setSequence(await ownerId(), 0);
     expect(
       Problem.parse((await app.inject({ url: resume.href, ...as(laptop) })).json()).status
     ).toBe(410);
@@ -303,7 +305,9 @@ describe('the feed', () => {
     const laptop = await owner();
     for (let i = 0; i < 5; i++) await push(laptop, { notes: [note(randomUUID())] });
     // As if the sweep had removed Tombstones up to Sequence 4.
-    db.update(accounts).set({ prunedSeq: 4 }).run();
+    const old = { kind: 'note' as const, id: randomUUID(), deletedAt: '2000-01-01T00:00:00.000Z' };
+    await store.sync.addTombstone(await ownerId(), old, 4);
+    await store.housekeeping.pruneTombstones(T);
 
     let href: string | undefined = '/api/changes';
     const ids: string[] = [];
@@ -362,42 +366,63 @@ describe('the feed', () => {
 });
 
 describe('Live Update', () => {
+  /** Opens the stream as `cookie`; each call of the result reads one event, null once it ends. */
+  async function open(cookie: string) {
+    const base = app.server.listening
+      ? `http://127.0.0.1:${(app.server.address() as { port: number }).port}`
+      : await app.listen({ port: 0, host: '127.0.0.1' });
+    const response = await fetch(`${base}/api/changes/stream`, {
+      headers: { cookie: `${SESSION_COOKIE}=${cookie}` },
+    });
+    expect(response.headers.get('content-type')).toBe('text/event-stream');
+    const reader = (response.body as ReadableStream<Uint8Array>)
+      .pipeThrough(new TextDecoderStream())
+      .getReader();
+    let buffer = '';
+    return async (): Promise<string | null> => {
+      while (!buffer.includes('\n\n')) {
+        const { value, done } = await reader.read();
+        if (done) return null;
+        buffer += value;
+      }
+      const [event, ...rest] = buffer.split('\n\n');
+      buffer = rest.join('\n\n');
+      return event as string;
+    };
+  }
+
   it('sends the current Sequence, then a hint per push from another Device, one stream per Device', async () => {
     await start();
     const laptop = await owner();
     const phone = await pair(laptop);
     await push(laptop, { notes: [note(randomUUID())] });
-    const base = await app.listen({ port: 0, host: '127.0.0.1' });
 
-    const open = async () => {
-      const response = await fetch(`${base}/api/changes/stream`, {
-        headers: { cookie: `${SESSION_COOKIE}=${laptop}` },
-      });
-      expect(response.headers.get('content-type')).toBe('text/event-stream');
-      const reader = (response.body as ReadableStream<Uint8Array>)
-        .pipeThrough(new TextDecoderStream())
-        .getReader();
-      let buffer = '';
-      return async (): Promise<string | null> => {
-        while (!buffer.includes('\n\n')) {
-          const { value, done } = await reader.read();
-          if (done) return null;
-          buffer += value;
-        }
-        const [event, ...rest] = buffer.split('\n\n');
-        buffer = rest.join('\n\n');
-        return event as string;
-      };
-    };
-
-    const next = await open();
+    const next = await open(laptop);
     expect(await next()).toBe('id: 1\nevent: change\ndata:');
     await push(laptop, { notes: [note(randomUUID())] }); // its own push: no hint
     await push(phone, { notes: [note(randomUUID())] });
     expect(await next()).toBe('id: 3\nevent: change\ndata:');
 
-    const replacement = await open();
+    const replacement = await open(laptop);
     expect(await next()).toBeNull();
     expect(await replacement()).toBe('id: 3\nevent: change\ndata:');
+  });
+
+  it('sends the hint of a push made while the stream opens', async () => {
+    await start();
+    const laptop = await owner();
+    const phone = await pair(laptop);
+    const sync = app.services.sync;
+    const seq = sync.seq.bind(sync);
+    // A push from the phone lands just after the stream reads the Sequence.
+    sync.seq = async (accountId) => {
+      const read = await seq(accountId);
+      await push(phone, { notes: [note(randomUUID())] });
+      return read;
+    };
+
+    const next = await open(laptop);
+    const first = await Promise.race([next(), setTimeout(1000, 'no event')]);
+    expect(first).toBe('id: 1\nevent: change\ndata:');
   });
 });

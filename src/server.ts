@@ -1,15 +1,13 @@
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
-import Fastify, { type FastifyServerOptions } from 'fastify';
+import Fastify, { type FastifyBaseLogger } from 'fastify';
 import {
   serializerCompiler,
   validatorCompiler,
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
-import type { BlobStore } from './blobs/BlobStore.ts';
 import type { Config } from './config.ts';
-import type { Db } from './db/client.ts';
 import { registerAuth } from './http/auth.ts';
 import { registerDocs } from './http/docs.ts';
 import { registerErrorHandler } from './http/errors.ts';
@@ -21,7 +19,6 @@ import { blobRoutes } from './modules/blobs/routes.ts';
 import { BlobService } from './modules/blobs/service.ts';
 import { HousekeepingService } from './modules/housekeeping/service.ts';
 import { metaRoutes } from './modules/meta/routes.ts';
-import { MetaService } from './modules/meta/service.ts';
 import { pairingRoutes } from './modules/pairing/routes.ts';
 import { PairingService } from './modules/pairing/service.ts';
 import { sessionRoutes } from './modules/sessions/routes.ts';
@@ -32,6 +29,8 @@ import { LiveUpdates } from './modules/sync/liveUpdates.ts';
 import { syncRoutes } from './modules/sync/routes.ts';
 import { SyncService } from './modules/sync/service.ts';
 import type { Clock } from './shared/clock.ts';
+import type { BlobStore } from './store/BlobStore.ts';
+import type { Store } from './store/Store.ts';
 
 export type Services = {
   pairing: PairingService;
@@ -41,23 +40,24 @@ export type Services = {
   blobs: BlobService;
   shares: ShareService;
   housekeeping: HousekeepingService;
-  meta: MetaService;
 };
 
 declare module 'fastify' {
   interface FastifyInstance {
     config: Config;
-    /** For the API tests, which look at stored bytes; routes go through `services.blobs`. */
-    blobs: BlobStore;
     services: Services;
   }
 }
 
 export type ServerDeps = {
   config: Config;
-  db: Db;
+  store: Store;
   blobs: BlobStore;
-  logger?: FastifyServerOptions['logger'];
+  /**
+   * The logger `main.ts` makes before the server, with `LOG_SERIALIZERS`, so startup logs the same
+   * way; false in tests.
+   */
+  logger: FastifyBaseLogger | false;
   /** The clock every expiry is measured against; tests pass their own. */
   now?: Clock;
 };
@@ -65,13 +65,13 @@ export type ServerDeps = {
 /** The whole application, ready for `inject()` or `listen()`; it never listens itself. */
 export async function buildServer({
   config,
-  db,
+  store,
   blobs,
   logger,
   now = () => new Date(),
 }: ServerDeps) {
   const app = Fastify({
-    logger: logger ?? { level: config.logLevel },
+    ...(logger ? { loggerInstance: logger } : { logger: false }),
     bodyLimit: config.bodyLimitBytes,
     trustProxy: config.trustProxy,
     genReqId,
@@ -83,21 +83,19 @@ export async function buildServer({
 
   // Every service is built here, once, and reached by routes through `app.services` (ADR 0007).
   const live = new LiveUpdates();
-  const pairing = new PairingService(db, now);
-  const accounts = new AccountService(db, now, pairing);
-  const blobService = new BlobService(db, blobs, now);
+  const pairing = new PairingService(store, now);
+  const accounts = new AccountService(store, now, pairing);
+  const blobService = new BlobService(store, blobs, now);
   const services: Services = {
     pairing,
     accounts,
-    sessions: new SessionService(db, now, accounts, pairing, config.sessionTtlDays),
-    sync: new SyncService(db, now, live, config.pageSize),
+    sessions: new SessionService(store, now, accounts, pairing, config.sessionTtlDays),
+    sync: new SyncService(store, now, live, config.pageSize),
     blobs: blobService,
-    shares: new ShareService(db, now, blobService),
-    housekeeping: new HousekeepingService(db, blobs, config.tombstoneDays),
-    meta: new MetaService(db),
+    shares: new ShareService(store, now, blobService),
+    housekeeping: new HousekeepingService(store, blobs, config.tombstoneDays),
   };
   app.decorate('config', config);
-  app.decorate('blobs', blobs);
   app.decorate('services', services);
   // Open streams would otherwise hold `close()` until their clients leave.
   app.addHook('preClose', async () => live.closeAll());

@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { BlobRow } from '../modules/blobs/service.ts';
+import type { BlobRecord } from '../store/records.ts';
 import { sendProblem } from './errors.ts';
 import { notModified } from './etag.ts';
 
@@ -7,9 +7,9 @@ import { notModified } from './etag.ts';
 export async function sendBlob(
   request: FastifyRequest,
   reply: FastifyReply,
-  row: BlobRow
+  blob: BlobRecord
 ): Promise<FastifyReply> {
-  const etag = `"${row.id}"`;
+  const etag = `"${blob.id}"`;
   reply.headers({
     etag,
     'cache-control': 'private, max-age=31536000, immutable',
@@ -17,11 +17,11 @@ export async function sendBlob(
     'content-security-policy': "default-src 'none'; sandbox",
   });
   if (notModified(request, etag)) return reply.code(304).send();
-  reply.headers({ 'content-type': row.mime, 'content-length': row.size });
+  reply.headers({ 'content-type': blob.mime, 'content-length': blob.size });
   if (request.method === 'HEAD') return reply.send();
-  const bytes = await request.server.services.blobs.bytes(row.id);
+  const bytes = await request.server.services.blobs.bytes(blob.id);
   if (!bytes) {
-    request.log.error({ blobId: row.id }, 'blob row without a file');
+    request.log.error({ blobId: blob.id }, 'blob record without a file');
     return sendProblem(reply, 500);
   }
   return reply.send(bytes);

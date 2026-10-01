@@ -4,7 +4,12 @@ import { mkdir, readdir, rename, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { assertBlobId, BlobSizeMismatchError, type BlobStore, SAFE_ID } from './BlobStore.ts';
+import {
+  assertBlobId,
+  BlobSizeMismatchError,
+  type BlobStore,
+  SAFE_ID,
+} from '../../store/BlobStore.ts';
 
 /**
  * Bytes as files, `<dir>/<id>` (thesis ADR 0002). A write lands in `<dir>/.tmp` first and is

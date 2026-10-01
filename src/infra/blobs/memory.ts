@@ -1,6 +1,6 @@
 import { Readable } from 'node:stream';
 import { buffer } from 'node:stream/consumers';
-import { assertBlobId, BlobSizeMismatchError, type BlobStore } from './BlobStore.ts';
+import { assertBlobId, BlobSizeMismatchError, type BlobStore } from '../../store/BlobStore.ts';
 
 /** For tests: the same contract as the disk store, held in a Map. */
 export function memoryBlobStore(): BlobStore {

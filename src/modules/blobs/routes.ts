@@ -71,8 +71,8 @@ export const blobRoutes: FastifyPluginAsyncZod = async (app) => {
       params: Params,
     },
     handler: async (request, reply) => {
-      const row = app.services.blobs.mine(sessionOf(request).account.id, request.params.id);
-      return sendBlob(request, reply, row);
+      const blob = await app.services.blobs.mine(sessionOf(request).account.id, request.params.id);
+      return sendBlob(request, reply, blob);
     },
   });
 };

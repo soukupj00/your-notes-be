@@ -6,7 +6,7 @@ import {
   text,
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
-import type { AttachmentMeta } from '../contract/index.ts';
+import type { AttachmentMeta } from '../../contract/index.ts';
 
 // Ids are text UUIDs; timestamps are ISO 8601 strings, the same as on the wire.
 // Synced rows are keyed by (account, id) so one Account can never collide with another's ids.
@@ -132,7 +132,7 @@ export const tombstones = sqliteTable(
   ]
 );
 
-/** Which Account owns which bytes, and that they exist (ADR 0003); the bytes are in the BlobStore. */
+/** Which Account owns which bytes, and that they exist (ADR 0003); bytes live in the BlobStore. */
 export const blobs = sqliteTable(
   'blobs',
   {

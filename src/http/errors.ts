@@ -46,6 +46,12 @@ export function registerErrorHandler(app: FastifyInstance): void {
     const status =
       STATUS_OF.find(([type]) => error instanceof type)?.[1] ?? error.statusCode ?? 500;
     if (status >= 400 && status < 500) return sendProblem(reply, status, error.message);
+    // A client that hangs up mid-body, as when an upload is cancelled, is not a server failure.
+    // Only the request's own error matches, never a reset from S3 or the database.
+    if (request.raw.errored === error && (error as NodeJS.ErrnoException).code === 'ECONNRESET') {
+      request.log.info('the client closed the connection before the request ended');
+      return sendProblem(reply, 400, 'The request ended early');
+    }
     request.log.error({ err: error }, 'request failed');
     return sendProblem(reply, 500);
   });

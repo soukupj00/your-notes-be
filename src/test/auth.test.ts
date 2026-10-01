@@ -28,7 +28,7 @@ let setupCode: string;
 beforeEach(async () => {
   clock = new Date('2026-09-28T10:00:00.000Z');
   ({ app } = await testServer({}, () => clock));
-  setupCode = app.services.pairing.ensureSetupCode() ?? '';
+  setupCode = (await app.services.pairing.ensureSetupCode()) ?? '';
 });
 
 afterEach(async () => {
@@ -97,7 +97,7 @@ describe('first run', () => {
   it('answers 404 to a second setup, even with a code that would be good', async () => {
     await setUp();
     // An unspent setup code, as if one had survived in the database.
-    const { code } = app.services.pairing.mint('setup', null);
+    const { code } = await app.services.pairing.mint('setup');
     const response = await post('/api/setup', {
       code,
       username: 'eve',
@@ -188,6 +188,8 @@ describe('devices and pairing', () => {
   it('pairs a second Device with a device code; both are listed, one current', async () => {
     const laptop = await setUp();
     const code = await mint(laptop, 'device');
+    // Later than the Laptop, since Devices are listed oldest first.
+    clock = new Date(clock.getTime() + 1000);
     const paired = await post('/api/session', { code, deviceName: 'Phone' });
     expect(paired.statusCode).toBe(201);
     const phone = sessionCookie(paired)?.value ?? '';
@@ -258,6 +260,8 @@ describe('devices and pairing', () => {
 describe('invites and passwords', () => {
   it('lists every Account to the Owner, with the links to manage each', async () => {
     const owner = await setUp();
+    // Later than the Owner, since Accounts are listed oldest first.
+    clock = new Date(clock.getTime() + 1000);
     await invite(owner);
     const response = await app.inject({ url: '/api/accounts', ...as(owner) });
     const list = AccountsResponse.parse(response.json())._embedded.accounts;

@@ -1,6 +1,6 @@
 /**
  * The sync rules (PLAN.md "Sync rules"): what the server does with one pushed row.
- * Pure: no HTTP, no Drizzle; the push route gathers the server's state and applies the decision.
+ * Pure: no HTTP, no Store; the push in the sync service gathers the state and applies the decision.
  */
 
 export type Incoming =

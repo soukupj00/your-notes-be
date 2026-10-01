@@ -49,7 +49,7 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
       schema: { summary: 'Sign this Device out', tags: ['session'] },
     },
     async (request, reply) => {
-      app.services.sessions.end(sessionOf(request).device.id);
+      await app.services.sessions.end(sessionOf(request).device.id);
       clearSessionCookie(reply);
       return reply.code(204).send();
     }
@@ -67,7 +67,7 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request) => {
       const { account, device } = sessionOf(request);
-      return devicesBody(app.services.sessions.devices(account.id), device.id);
+      return devicesBody(await app.services.sessions.devices(account.id), device.id);
     }
   );
 
@@ -83,7 +83,7 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const { account, device } = sessionOf(request);
-      app.services.sessions.revoke(account.id, request.params.id);
+      await app.services.sessions.revoke(account.id, request.params.id);
       if (request.params.id === device.id) clearSessionCookie(reply);
       return reply.code(204).send();
     }

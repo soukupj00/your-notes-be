@@ -22,7 +22,7 @@ export const syncRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request) => {
       const { account, device } = sessionOf(request);
-      const { outcomes, seq } = app.services.sync.push(account.id, device.id, request.body);
+      const { outcomes, seq } = await app.services.sync.push(account.id, device.id, request.body);
       return pushBody(outcomes, seq);
     }
   );
@@ -47,7 +47,7 @@ export const syncRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const { since, from } = request.query;
-      const page = app.services.sync.page(sessionOf(request).account.id, since, from);
+      const page = await app.services.sync.page(sessionOf(request).account.id, since, from);
       const body = pageBody(page, since, from);
       const etag = etagOf(body);
       reply.header('etag', etag).header('cache-control', 'private, no-cache');
@@ -68,7 +68,6 @@ export const syncRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const { account, device } = sessionOf(request);
-      const current = app.services.sync.seq(account.id);
       const lastEventId = Number(request.headers['last-event-id']);
 
       // Hijacked, so the `onSend` hook never runs; its headers are written here.
@@ -81,10 +80,15 @@ export const syncRoutes: FastifyPluginAsyncZod = async (app) => {
         'cache-control': 'no-cache',
         'x-accel-buffering': 'no',
       });
-      const send = (seq: number) => raw.write(`id: ${seq}\nevent: change\ndata:\n\n`);
-      if (!Number.isInteger(lastEventId) || lastEventId < current) send(current);
+      let sent = -1;
+      const send = (seq: number) => {
+        if (seq <= sent || raw.writableEnded) return;
+        sent = seq;
+        raw.write(`id: ${seq}\nevent: change\ndata:\n\n`);
+      };
 
       const ping = setInterval(() => raw.write(': ping\n\n'), PING_MS);
+      // Subscribed before the Sequence is read, so a push in between still sends its hint.
       const remove = app.services.sync.subscribe(account.id, device.id, {
         send,
         close: () => raw.end(),
@@ -93,6 +97,13 @@ export const syncRoutes: FastifyPluginAsyncZod = async (app) => {
         clearInterval(ping);
         remove();
       });
+      try {
+        const current = await app.services.sync.seq(account.id);
+        if (!Number.isInteger(lastEventId) || lastEventId < current) send(current);
+      } catch (error) {
+        request.log.error({ err: error }, 'could not read the Sequence for a Live Update stream');
+        raw.end();
+      }
     }
   );
 };

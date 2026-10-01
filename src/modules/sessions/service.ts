@@ -1,39 +1,40 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq, gt } from 'drizzle-orm';
 import type { SignInRequest } from '../../contract/index.ts';
-import type { Db } from '../../db/client.ts';
-import { accounts, sessions } from '../../db/schema.ts';
 import { type Clock, DAY_MS } from '../../shared/clock.ts';
 import { newSecret, sha256 } from '../../shared/crypto.ts';
 import { NotFound, Unauthorized } from '../../shared/errors.ts';
 import { verifyPassword } from '../../shared/passwords.ts';
-import { type AccountService, WRONG_CREDENTIALS } from '../accounts/service.ts';
+import type { SessionRecord } from '../../store/records.ts';
+import type { Store } from '../../store/Store.ts';
+import {
+  type AccountService,
+  type SessionAccount,
+  WRONG_CREDENTIALS,
+} from '../accounts/service.ts';
 import type { PairingService } from '../pairing/service.ts';
 
 const TOUCH_EVERY_MS = 5 * 60 * 1000;
 
-export type SessionAccount = { id: string; username: string; role: 'owner' | 'member' };
 export type SessionDevice = { id: string; name: string };
-export type DeviceRow = typeof sessions.$inferSelect;
 /** `token` is the cookie value; only its SHA-256 is stored. */
 export type OpenedSession = { token: string; account: SessionAccount; device: SessionDevice };
 
 /** One Session per Device; a Device is a Session seen from the person's side. */
 export class SessionService {
-  readonly #db: Db;
+  readonly #store: Store;
   readonly #clock: Clock;
   readonly #accounts: AccountService;
   readonly #pairing: PairingService;
   readonly #ttlDays: number;
 
   constructor(
-    db: Db,
+    store: Store,
     clock: Clock,
     accounts: AccountService,
     pairing: PairingService,
     ttlDays: number
   ) {
-    this.#db = db;
+    this.#store = store;
     this.#clock = clock;
     this.#accounts = accounts;
     this.#pairing = pairing;
@@ -43,94 +44,66 @@ export class SessionService {
   async signIn(body: SignInRequest): Promise<OpenedSession> {
     let account: SessionAccount | undefined;
     if ('password' in body) {
-      const row = this.#accounts.findWithPassword(body.username);
+      const row = await this.#accounts.findWithPassword(body.username);
       // Exactly one scrypt either way, so a wrong username costs what a wrong password does.
       const ok = await verifyPassword(body.password, row?.passwordHash);
       if (row && ok) account = { id: row.id, username: row.username, role: row.role };
     } else {
-      const spent = this.#pairing.spend(body.code, 'device');
-      if (spent?.accountId) account = this.#accounts.find(spent.accountId);
+      const spent = await this.#pairing.spend(body.code, 'device');
+      if (spent?.accountId) account = await this.#accounts.find(spent.accountId);
     }
     if (!account) throw new Unauthorized(WRONG_CREDENTIALS);
     return this.open(account, body.deviceName);
   }
 
   /** The Session's id is the Device's id. */
-  open(account: SessionAccount, deviceName: string): OpenedSession {
+  async open(account: SessionAccount, deviceName: string): Promise<OpenedSession> {
     const now = this.#clock();
     const token = newSecret();
     const deviceId = randomUUID();
     const at = now.toISOString();
-    this.#db
-      .insert(sessions)
-      .values({
-        id: deviceId,
-        accountId: account.id,
-        tokenHash: sha256(token),
-        deviceName,
-        createdAt: at,
-        lastSeenAt: at,
-        expiresAt: new Date(now.getTime() + this.#ttlDays * DAY_MS).toISOString(),
-      })
-      .run();
+    await this.#store.sessions.add({
+      id: deviceId,
+      accountId: account.id,
+      tokenHash: sha256(token),
+      deviceName,
+      createdAt: at,
+      lastSeenAt: at,
+      expiresAt: new Date(now.getTime() + this.#ttlDays * DAY_MS).toISOString(),
+    });
     return { token, account, device: { id: deviceId, name: deviceName } };
   }
 
   /** An expired Session is deleted on sight. */
-  resolve(token: string): { account: SessionAccount; device: SessionDevice } | null {
+  async resolve(token: string): Promise<{ account: SessionAccount; device: SessionDevice } | null> {
     const now = this.#clock();
-    const row = this.#db
-      .select({
-        id: sessions.id,
-        name: sessions.deviceName,
-        lastSeenAt: sessions.lastSeenAt,
-        expiresAt: sessions.expiresAt,
-        accountId: accounts.id,
-        username: accounts.username,
-        role: accounts.role,
-      })
-      .from(sessions)
-      .innerJoin(accounts, eq(accounts.id, sessions.accountId))
-      .where(eq(sessions.tokenHash, sha256(token)))
-      .get();
-    if (!row) return null;
-    if (row.expiresAt <= now.toISOString()) {
-      this.#db.delete(sessions).where(eq(sessions.id, row.id)).run();
+    const found = await this.#store.sessions.findByTokenHash(sha256(token));
+    if (!found) return null;
+    const { session, account } = found;
+    if (session.expiresAt <= now.toISOString()) {
+      await this.#store.sessions.remove(session.id);
       return null;
     }
-    if (now.getTime() - Date.parse(row.lastSeenAt) >= TOUCH_EVERY_MS) {
-      this.#db
-        .update(sessions)
-        .set({ lastSeenAt: now.toISOString() })
-        .where(eq(sessions.id, row.id))
-        .run();
+    if (now.getTime() - Date.parse(session.lastSeenAt) >= TOUCH_EVERY_MS) {
+      await this.#store.sessions.touch(session.id, now.toISOString());
     }
     return {
-      account: { id: row.accountId, username: row.username, role: row.role },
-      device: { id: row.id, name: row.name },
+      account: { id: account.id, username: account.username, role: account.role },
+      device: { id: session.id, name: session.deviceName },
     };
   }
 
-  end(deviceId: string): void {
-    this.#db.delete(sessions).where(eq(sessions.id, deviceId)).run();
+  end(deviceId: string): Promise<void> {
+    return this.#store.sessions.remove(deviceId);
   }
 
-  devices(accountId: string): DeviceRow[] {
-    const now = this.#clock().toISOString();
-    return this.#db
-      .select()
-      .from(sessions)
-      .where(and(eq(sessions.accountId, accountId), gt(sessions.expiresAt, now)))
-      .orderBy(sessions.createdAt)
-      .all();
+  devices(accountId: string): Promise<SessionRecord[]> {
+    return this.#store.sessions.listLive(accountId, this.#clock().toISOString());
   }
 
-  revoke(accountId: string, deviceId: string): void {
-    const deleted = this.#db
-      .delete(sessions)
-      .where(and(eq(sessions.id, deviceId), eq(sessions.accountId, accountId)))
-      .returning({ id: sessions.id })
-      .get();
-    if (!deleted) throw new NotFound('No such Device');
+  async revoke(accountId: string, deviceId: string): Promise<void> {
+    if (!(await this.#store.sessions.removeOwned(accountId, deviceId))) {
+      throw new NotFound('No such Device');
+    }
   }
 }

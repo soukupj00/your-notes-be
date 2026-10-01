@@ -28,7 +28,7 @@ export const accountRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       const { deviceName, ...account } = request.body;
       const member = await app.services.accounts.createMember(account);
-      const { token, device } = app.services.sessions.open(member, deviceName);
+      const { token, device } = await app.services.sessions.open(member, deviceName);
       setSessionCookie(reply, token, app.config.sessionTtlDays);
       reply.code(201);
       return sessionBody(member, device);
@@ -45,7 +45,7 @@ export const accountRoutes: FastifyPluginAsyncZod = async (app) => {
         response: { 200: AccountsResponse },
       },
     },
-    async () => accountsBody(app.services.accounts.list())
+    async () => accountsBody(await app.services.accounts.list())
   );
 
   app.get(
@@ -59,7 +59,7 @@ export const accountRoutes: FastifyPluginAsyncZod = async (app) => {
         response: { 200: Account },
       },
     },
-    async (request) => accountBody(app.services.accounts.get(request.params.id))
+    async (request) => accountBody(await app.services.accounts.get(request.params.id))
   );
 
   app.put(

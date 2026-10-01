@@ -1,109 +1,94 @@
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
-import type { Account } from '../../contract/index.ts';
-import type { Db } from '../../db/client.ts';
-import { accounts } from '../../db/schema.ts';
 import type { Clock } from '../../shared/clock.ts';
-import { Conflict, NotFound, Unauthorized } from '../../shared/errors.ts';
+import { NotFound, Unauthorized } from '../../shared/errors.ts';
 import { hashPassword } from '../../shared/passwords.ts';
+import type { AccountRecord, Role } from '../../store/records.ts';
+import type { Store, StoreTx } from '../../store/Store.ts';
 import type { PairingService } from '../pairing/service.ts';
-import type { SessionAccount } from '../sessions/service.ts';
+
+/** An Account as a Session sees it. */
+export type SessionAccount = Pick<AccountRecord, 'id' | 'username' | 'role'>;
 
 /** One answer for a wrong username, a wrong password and a bad code, so none can be told apart. */
 export const WRONG_CREDENTIALS = 'Wrong credentials';
 
-export type AccountRow = Omit<Account, '_links'>;
-
 type NewAccount = { code: string; username: string; password: string };
-
-const sessionAccountColumns = { id: accounts.id, username: accounts.username, role: accounts.role };
-const accountColumns = { ...sessionAccountColumns, createdAt: accounts.createdAt };
 
 /** Local Accounts; both kinds are created by spending a Pairing Code (ADR 0001). */
 export class AccountService {
-  readonly #db: Db;
+  readonly #store: Store;
   readonly #clock: Clock;
   readonly #pairing: PairingService;
 
-  constructor(db: Db, clock: Clock, pairing: PairingService) {
-    this.#db = db;
+  constructor(store: Store, clock: Clock, pairing: PairingService) {
+    this.#store = store;
     this.#clock = clock;
     this.#pairing = pairing;
   }
 
   /** First run: only the setup code printed at startup can create the Owner. */
   async createOwner({ code, username, password }: NewAccount): Promise<SessionAccount> {
-    this.#pairing.requireSetup();
+    await this.#pairing.requireSetup();
     const passwordHash = await hashPassword(password);
-    const owner = this.#db.$client.transaction(() => {
-      if (!this.#pairing.spend(code, 'setup')) return null;
-      return this.#insert(username, passwordHash, 'owner');
-    })();
+    const owner = await this.#store.transaction(async (tx) => {
+      if (!(await this.#pairing.spend(code, 'setup', tx))) return null;
+      return this.#insert(tx, username, passwordHash, 'owner');
+    });
     if (!owner) throw new Unauthorized(WRONG_CREDENTIALS);
     return owner;
   }
 
   async createMember({ code, username, password }: NewAccount): Promise<SessionAccount> {
     const passwordHash = await hashPassword(password);
-    const member = this.#db.$client.transaction(() => {
+    const member = await this.#store.transaction(async (tx) => {
       // Code first, so only a holder of a good Invite learns whether a username is taken.
-      if (!this.#pairing.spend(code, 'invite')) return null;
-      const taken = this.#db
-        .select({ id: accounts.id })
-        .from(accounts)
-        .where(eq(accounts.username, username))
-        .get();
-      // Throwing rolls the spend back, so a taken name does not cost the Invite.
-      if (taken) throw new Conflict('That username is taken');
-      return this.#insert(username, passwordHash, 'member');
-    })();
+      if (!(await this.#pairing.spend(code, 'invite', tx))) return null;
+      // A taken name throws, which rolls the spend back, so it does not cost the Invite.
+      return this.#insert(tx, username, passwordHash, 'member');
+    });
     if (!member) throw new Unauthorized(WRONG_CREDENTIALS);
     return member;
   }
 
-  list(): AccountRow[] {
-    return this.#db.select(accountColumns).from(accounts).orderBy(accounts.createdAt).all();
+  list(): Promise<AccountRecord[]> {
+    return this.#store.accounts.list();
   }
 
-  get(id: string): AccountRow {
-    const row = this.#db.select(accountColumns).from(accounts).where(eq(accounts.id, id)).get();
-    if (!row) throw new NotFound('No such Account');
-    return row;
+  async get(id: string): Promise<AccountRecord> {
+    const account = await this.#store.accounts.find(id);
+    if (!account) throw new NotFound('No such Account');
+    return account;
   }
 
   /** The Account's Devices stay signed in. */
   async setPassword(id: string, password: string): Promise<void> {
     const passwordHash = await hashPassword(password);
-    const updated = this.#db
-      .update(accounts)
-      .set({ passwordHash, updatedAt: this.#clock().toISOString() })
-      .where(eq(accounts.id, id))
-      .returning({ id: accounts.id })
-      .get();
-    if (!updated) throw new NotFound('No such Account');
+    const at = this.#clock().toISOString();
+    if (!(await this.#store.accounts.setPassword(id, passwordHash, at))) {
+      throw new NotFound('No such Account');
+    }
   }
 
-  find(id: string): SessionAccount | undefined {
-    return this.#db.select(sessionAccountColumns).from(accounts).where(eq(accounts.id, id)).get();
+  async find(id: string): Promise<SessionAccount | undefined> {
+    const account = await this.#store.accounts.find(id);
+    return account && { id: account.id, username: account.username, role: account.role };
   }
 
   findWithPassword(
     username: string
-  ): (SessionAccount & { passwordHash: string | null }) | undefined {
-    return this.#db
-      .select({ ...sessionAccountColumns, passwordHash: accounts.passwordHash })
-      .from(accounts)
-      .where(eq(accounts.username, username))
-      .get();
+  ): Promise<(SessionAccount & { passwordHash?: string }) | undefined> {
+    return this.#store.accounts.findByUsername(username);
   }
 
-  #insert(username: string, passwordHash: string, role: SessionAccount['role']): SessionAccount {
+  async #insert(
+    store: StoreTx,
+    username: string,
+    passwordHash: string,
+    role: Role
+  ): Promise<SessionAccount> {
     const id = randomUUID();
-    const at = this.#clock().toISOString();
-    this.#db
-      .insert(accounts)
-      .values({ id, username, passwordHash, role, createdAt: at, updatedAt: at })
-      .run();
+    const createdAt = this.#clock().toISOString();
+    await store.accounts.add({ id, username, passwordHash, role, createdAt });
     return { id, username, role };
   }
 }

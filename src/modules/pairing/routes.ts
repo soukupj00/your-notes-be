@@ -27,7 +27,8 @@ export const pairingRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const { kind } = request.body;
-      const { code, expiresAt } = app.services.pairing.mintFor(sessionOf(request).account, kind);
+      const { account } = sessionOf(request);
+      const { code, expiresAt } = await app.services.pairing.mintFor(account, kind);
       return reply.code(201).send({ code, kind, expiresAt });
     }
   );
@@ -42,7 +43,7 @@ export const pairingRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async () => {
-      app.services.pairing.requireSetup();
+      await app.services.pairing.requireSetup();
       return hal({ needsSetup: true as const }, { self: link('/api/setup') });
     }
   );
@@ -61,7 +62,7 @@ export const pairingRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       const { deviceName, ...account } = request.body;
       const owner = await app.services.accounts.createOwner(account);
-      const { token, device } = app.services.sessions.open(owner, deviceName);
+      const { token, device } = await app.services.sessions.open(owner, deviceName);
       setSessionCookie(reply, token, app.config.sessionTtlDays);
       reply.code(201);
       return sessionBody(owner, device);

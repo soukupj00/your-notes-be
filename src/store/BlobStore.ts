@@ -3,7 +3,7 @@ import { BadRequest } from '../shared/errors.ts';
 
 /** Where Attachment bytes live. Bytes are write-once by id (frontend ADR 0017). */
 export interface BlobStore {
-  /** Stores exactly `size` bytes under `id`; rejects, storing nothing, if the data is another size. */
+  /** Stores exactly `size` bytes under `id`; rejects, storing nothing, on any other size. */
   put(id: string, data: Readable | Buffer, size: number): Promise<void>;
   get(id: string): Promise<Readable | undefined>;
   has(id: string): Promise<boolean>;
@@ -15,7 +15,7 @@ export interface BlobStore {
 
 export const SAFE_ID = /^[A-Za-z0-9-]{1,64}$/;
 
-/** Blob ids become file names, so anything but a plain token is refused before it reaches a path. */
+/** Blob ids become file names, so anything but a plain token is refused before reaching a path. */
 export function assertBlobId(id: string): void {
   if (!SAFE_ID.test(id)) throw new Error(`Invalid blob id: ${JSON.stringify(id)}`);
 }

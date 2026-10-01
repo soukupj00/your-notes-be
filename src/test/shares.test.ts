@@ -1,9 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Problem, Share, SharedNote, SharesResponse, shareLink } from '../contract/index.ts';
-import type { Db } from '../db/client.ts';
-import { shares } from '../db/schema.ts';
 import type { App } from '../server.ts';
+import type { Store } from '../store/Store.ts';
 import {
   as,
   cookieOf,
@@ -18,11 +17,11 @@ const T = '2026-09-28T10:00:00.000Z';
 const BYTES = Buffer.from('a picture');
 
 let app: App;
-let db: Db;
+let store: Store;
 let olga: string;
 
 beforeEach(async () => {
-  ({ app, db } = await testServer());
+  ({ app, store } = await testServer());
   olga = await signUpOwner(app);
 });
 
@@ -227,8 +226,8 @@ describe('Share Links', () => {
       ...as(olga),
     });
     await app.services.housekeeping.sweep(new Date());
-    expect(db.select({ noteId: shares.noteId }).from(shares).all()).toEqual([
-      { noteId: kept.noteId },
-    ]);
+    const olgaId = (await store.accounts.owner())?.id ?? '';
+    const shares = await store.shares.list(olgaId);
+    expect(shares.map(({ noteId }) => ({ noteId }))).toEqual([{ noteId: kept.noteId }]);
   });
 });

@@ -25,7 +25,7 @@ export const shareRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const { account } = sessionOf(request);
-      const { share, created } = app.services.shares.create(account.id, request.body.noteId);
+      const { share, created } = await app.services.shares.create(account.id, request.body.noteId);
       return reply.code(created ? 201 : 200).send(shareBody(share));
     }
   );
@@ -40,7 +40,7 @@ export const shareRoutes: FastifyPluginAsyncZod = async (app) => {
         response: { 200: SharesResponse },
       },
     },
-    async (request) => sharesBody(app.services.shares.list(sessionOf(request).account.id))
+    async (request) => sharesBody(await app.services.shares.list(sessionOf(request).account.id))
   );
 
   app.get(
@@ -56,7 +56,7 @@ export const shareRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request) => {
       const { account } = sessionOf(request);
-      return shareBody(app.services.shares.get(account.id, request.params.id));
+      return shareBody(await app.services.shares.get(account.id, request.params.id));
     }
   );
 
@@ -71,7 +71,7 @@ export const shareRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (request, reply) => {
-      app.services.shares.revoke(sessionOf(request).account.id, request.params.id);
+      await app.services.shares.revoke(sessionOf(request).account.id, request.params.id);
       return reply.code(204).send();
     }
   );
@@ -89,7 +89,7 @@ export const shareRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const { token } = request.params;
-      const note = app.services.shares.sharedNote(token);
+      const note = await app.services.shares.sharedNote(token);
       reply.header('cache-control', 'private, no-cache');
       return sharedNoteBody(token, note);
     }
@@ -106,7 +106,7 @@ export const shareRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     handler: async (request, reply) => {
       const { token, id } = request.params;
-      return sendBlob(request, reply, app.services.shares.sharedBlob(token, id));
+      return sendBlob(request, reply, await app.services.shares.sharedBlob(token, id));
     },
   });
 };

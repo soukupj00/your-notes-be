@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import type { SessionAccount, SessionDevice } from '../modules/sessions/service.ts';
+import type { SessionAccount } from '../modules/accounts/service.ts';
+import type { SessionDevice } from '../modules/sessions/service.ts';
 import { sendProblem } from './errors.ts';
 import { clearSessionCookie, SESSION_COOKIE } from './sessionCookie.ts';
 
@@ -26,7 +27,7 @@ export function registerAuth(app: FastifyInstance): void {
     if (!required) return;
     const token = request.cookies[SESSION_COOKIE];
     if (token) {
-      const session = app.services.sessions.resolve(token);
+      const session = await app.services.sessions.resolve(token);
       if (session) {
         request.account = session.account;
         request.device = session.device;

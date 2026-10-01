@@ -21,7 +21,7 @@ export const metaRoutes: FastifyPluginAsyncZod = async (app) => {
           health: link('/health'),
           docs: link('/api/docs', { title: 'API reference' }),
           openapi: link('/api/docs/json', { title: 'OpenAPI document' }),
-          ...(app.services.pairing.ownerExists()
+          ...((await app.services.pairing.ownerExists())
             ? {}
             : { setup: link('/api/setup', { title: 'First run' }) }),
           session: link('/api/session'),
@@ -39,6 +39,9 @@ export const metaRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
     '/health',
     {
+      // The image's healthcheck asks every 30 s; at info its lines would push the first-run
+      // Pairing Link out of `docker compose logs --tail 40` (docs/setup.md).
+      logLevel: 'warn',
       schema: {
         summary: 'Liveness, including a database round trip',
         tags: ['meta'],
@@ -46,7 +49,7 @@ export const metaRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async () => {
-      app.services.meta.ping();
+      await app.services.housekeeping.ping();
       return { status: 'ok' as const, version: VERSION };
     }
   );

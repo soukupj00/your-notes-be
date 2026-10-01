@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { FastifyInstance, RawRequestDefaultExpression } from 'fastify';
+import type { FastifyInstance, FastifyRequest, RawRequestDefaultExpression } from 'fastify';
 import { sendProblem } from './errors.ts';
 
 /**
@@ -18,6 +18,23 @@ export const SIGN_IN_RATE_LIMIT = { max: 10, timeWindow: '1 minute' };
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const REQUEST_ID = /^[A-Za-z0-9._-]{1,128}$/;
+// The PWA's page (/share/<token>, shareLink in the contract) and the API it reads. Unanchored, so
+// a doubled slash (//share/<token>) is masked too.
+const SHARE_TOKEN = /(\/share\/|\/api\/public\/shares\/)[^/?#]+/;
+
+/**
+ * Fastify's request line without the Share Link token in the path, since the guide asks people
+ * to paste their logs (setup.md); `main.ts` builds the one logger with it.
+ */
+export const LOG_SERIALIZERS = {
+  req: (request: FastifyRequest) => ({
+    method: request.method,
+    url: request.url.replace(SHARE_TOKEN, '$1***'),
+    host: request.host,
+    remoteAddress: request.ip,
+    remotePort: request.socket?.remotePort,
+  }),
+};
 
 /** A well-formed incoming `X-Request-Id` is kept, so a proxy's id follows the request. */
 export function genReqId(req: RawRequestDefaultExpression): string {

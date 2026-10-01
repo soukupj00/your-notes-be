@@ -1,22 +1,21 @@
 import type { Share, SharedNote, SharesResponse } from '../../contract/index.ts';
-import { noteFromRow } from '../../db/rows.ts';
 import { hal, link } from '../../http/hal.ts';
-import type { NoteRow, ShareRow } from './service.ts';
+import type { ShareRecord, StoredNote } from '../../store/records.ts';
 
-export function shareBody(row: ShareRow): Share {
+export function shareBody(share: ShareRecord): Share {
   return hal(
-    { id: row.id, noteId: row.noteId, token: row.token, createdAt: row.createdAt },
-    { self: link(`/api/shares/${row.id}`), public: link(`/api/public/shares/${row.token}`) }
+    { id: share.id, noteId: share.noteId, token: share.token, createdAt: share.createdAt },
+    { self: link(`/api/shares/${share.id}`), public: link(`/api/public/shares/${share.token}`) }
   );
 }
 
-export function sharesBody(rows: ShareRow[]): SharesResponse {
-  return hal({}, { self: link('/api/shares') }, { shares: rows.map(shareBody) });
+export function sharesBody(shares: ShareRecord[]): SharesResponse {
+  return hal({}, { self: link('/api/shares') }, { shares: shares.map(shareBody) });
 }
 
 /** The Note without its Revision. */
-export function sharedNoteBody(token: string, note: NoteRow): SharedNote {
-  const { rev: _rev, ...shown } = noteFromRow(note);
+export function sharedNoteBody(token: string, note: StoredNote): SharedNote {
+  const { rev: _rev, ...shown } = note;
   return hal(
     { note: shown },
     {

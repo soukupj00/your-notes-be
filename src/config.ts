@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { S3Settings } from './infra/blobs/s3.ts';
 
 const MIB = 1024 * 1024;
 
@@ -28,6 +29,32 @@ const ConfigSchema = z.object({
   TRUST_PROXY: bool.default(false),
   /** The origin Devices open; printed Pairing Links point here. */
   PUBLIC_URL: z.url().optional(),
+  /** Moves the records from the SQLite file in DATA_DIR to PostgreSQL (ADR 0006). */
+  DATABASE_URL: z
+    .url({ protocol: /^postgres(ql)?$/, error: 'must be a valid postgres:// or postgresql:// URL' })
+    .optional(),
+  BLOB_STORE: z.enum(['disk', 's3']).default('disk'),
+  S3_ENDPOINT: z.url().optional(),
+  S3_REGION: z.string().min(1).default('us-east-1'),
+  S3_BUCKET: z.string().min(1).optional(),
+  S3_ACCESS_KEY_ID: z.string().min(1).optional(),
+  S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  S3_FORCE_PATH_STYLE: bool.default(false),
+});
+
+const EnvSchema = ConfigSchema.superRefine((env, ctx) => {
+  const problem = (variable: string, message: string) =>
+    ctx.addIssue({ code: 'custom', path: [variable], message });
+  if (env.BLOB_STORE === 's3' && !env.S3_BUCKET) {
+    problem('S3_BUCKET', 'required when BLOB_STORE=s3');
+  }
+  // One key without the other is a typo, not a request for the SDK's default credentials.
+  if (env.S3_ACCESS_KEY_ID && !env.S3_SECRET_ACCESS_KEY) {
+    problem('S3_SECRET_ACCESS_KEY', 'required with S3_ACCESS_KEY_ID');
+  }
+  if (env.S3_SECRET_ACCESS_KEY && !env.S3_ACCESS_KEY_ID) {
+    problem('S3_ACCESS_KEY_ID', 'required with S3_SECRET_ACCESS_KEY');
+  }
 });
 
 export type Config = {
@@ -43,18 +70,42 @@ export type Config = {
   logLevel: z.infer<typeof ConfigSchema>['LOG_LEVEL'];
   trustProxy: boolean;
   publicUrl: string;
+  /** `url` carries the database password, so it is redacted from every log (`REDACT`). */
+  database: { kind: 'sqlite' } | { kind: 'postgres'; url: string };
+  blobStore: { kind: 'disk' } | ({ kind: 's3' } & S3Settings);
 };
 
-/** Reads the environment into a validated Config; throws listing every bad variable. */
-export function loadConfig(env: Record<string, string | undefined>): Config {
+/**
+ * pino paths that could hold DATABASE_URL or the S3 secret key: a Config, or an environment,
+ * logged whole or nested.
+ */
+export const REDACT = [
+  'database.url',
+  '*.database.url',
+  'DATABASE_URL',
+  '*.DATABASE_URL',
+  'blobStore.credentials.secretAccessKey',
+  '*.blobStore.credentials.secretAccessKey',
+  'S3_SECRET_ACCESS_KEY',
+  '*.S3_SECRET_ACCESS_KEY',
+];
+
+/**
+ * Reads the environment into a validated Config; throws listing every bad variable by name, never
+ * by value, so a secret cannot reach a log.
+ */
+export function loadConfig(
+  env: Record<string, string | undefined>,
+  what = 'configuration'
+): Config {
   // An empty variable (`PORT=` in an env file) means "use the default", not "invalid".
   const present = Object.fromEntries(Object.entries(env).filter(([, value]) => value !== ''));
-  const result = ConfigSchema.safeParse(present);
+  const result = EnvSchema.safeParse(present);
   if (!result.success) {
     const problems = result.error.issues.map(
       (issue) => `${issue.path.join('.')}: ${issue.message}`
     );
-    throw new Error(`Invalid configuration:\n  ${problems.join('\n  ')}`);
+    throw new Error(`Invalid ${what}:\n  ${problems.join('\n  ')}`);
   }
   const c = result.data;
   return {
@@ -70,5 +121,33 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     logLevel: c.LOG_LEVEL,
     trustProxy: c.TRUST_PROXY,
     publicUrl: c.PUBLIC_URL ?? `http://localhost:${c.PORT}`,
+    database: c.DATABASE_URL ? { kind: 'postgres', url: c.DATABASE_URL } : { kind: 'sqlite' },
+    blobStore:
+      c.BLOB_STORE === 's3'
+        ? {
+            kind: 's3',
+            endpoint: c.S3_ENDPOINT,
+            region: c.S3_REGION,
+            bucket: c.S3_BUCKET!,
+            forcePathStyle: c.S3_FORCE_PATH_STYLE,
+            credentials:
+              c.S3_ACCESS_KEY_ID && c.S3_SECRET_ACCESS_KEY
+                ? { accessKeyId: c.S3_ACCESS_KEY_ID, secretAccessKey: c.S3_SECRET_ACCESS_KEY }
+                : undefined,
+          }
+        : { kind: 'disk' },
   };
+}
+
+const TARGET = 'TARGET_';
+
+/**
+ * Where `migrate` copies to: each TARGET_ variable stands in for its unprefixed twin, and what it
+ * leaves out stays as the server has it.
+ */
+export function loadTargetConfig(env: Record<string, string | undefined>): Config {
+  const target = Object.entries(env)
+    .filter(([name]) => name.startsWith(TARGET))
+    .map(([name, value]) => [name.slice(TARGET.length), value]);
+  return loadConfig({ ...env, ...Object.fromEntries(target) }, 'target (TARGET_ variables)');
 }

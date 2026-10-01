@@ -35,7 +35,25 @@
     "rules": {
       "preset": "recommended",
       "style": {
-        "noNonNullAssertion": "off"
+        "noNonNullAssertion": "off",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": [
+                  "better-sqlite3",
+                  "pg",
+                  "@electric-sql/**",
+                  "drizzle-orm",
+                  "drizzle-orm/**",
+                  "@aws-sdk/**"
+                ],
+                "message": "Database drivers and SDKs are imported only under src/infra/; go through the Store or the BlobStore (ADR 0006)."
+              }
+            ]
+          }
+        }
       }
     }
   },
@@ -46,5 +64,48 @@
       "semicolons": "always",
       "arrowParentheses": "always"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["src/modules/**", "src/http/**", "src/store/**", "src/shared/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "better-sqlite3",
+                      "pg",
+                      "@electric-sql/**",
+                      "drizzle-orm",
+                      "drizzle-orm/**",
+                      "@aws-sdk/**"
+                    ],
+                    "message": "Database drivers and SDKs are imported only under src/infra/; go through the Store or the BlobStore (ADR 0006)."
+                  },
+                  {
+                    "group": ["**/infra/**"],
+                    "message": "Routes, services and the interfaces they use reach records through the Store and bytes through the BlobStore, never src/infra/ (ADR 0007)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/infra/**", "src/store/*.contract.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": "off"
+          }
+        }
+      }
+    }
+  ]
 }

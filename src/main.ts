@@ -1,37 +1,53 @@
-import { mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import pino from 'pino';
 import QRCode from 'qrcode';
-import { diskBlobStore } from './blobs/disk.ts';
-import { loadConfig } from './config.ts';
+import { type Config, loadConfig, REDACT } from './config.ts';
 import { pairingLink } from './contract/index.ts';
-import { openDatabase } from './db/client.ts';
-import { migrateDatabase } from './db/migrate.ts';
+import { LOG_SERIALIZERS } from './http/security.ts';
+import { openBlobStore, openStore } from './infra/open.ts';
 import { SWEEP_EVERY_MS } from './modules/housekeeping/service.ts';
 import { buildServer } from './server.ts';
 
-const config = loadConfig(process.env);
-mkdirSync(config.dataDir, { recursive: true });
-
-const db = openDatabase(join(config.dataDir, 'younotes.db'));
-migrateDatabase(db);
-const blobs = await diskBlobStore(join(config.dataDir, 'blobs'));
+let config: Config;
+try {
+  config = loadConfig(process.env);
+} catch (error) {
+  // Before the logger, whose level the config sets; the message names every bad variable.
+  console.error((error as Error).message);
+  process.exit(1);
+}
 
 const pretty = process.env.NODE_ENV !== 'production' && process.stdout.isTTY;
-const app = await buildServer({
-  config,
-  db,
-  blobs,
-  logger: {
-    level: config.logLevel,
-    ...(pretty ? { transport: { target: 'pino-pretty' } } : {}),
-  },
+// Made before the server, so waiting for the database logs the same way as everything after.
+const log = pino({
+  level: config.logLevel,
+  redact: REDACT,
+  serializers: LOG_SERIALIZERS,
+  ...(pretty ? { transport: { target: 'pino-pretty' } } : {}),
 });
-await app.services.housekeeping.sweep(new Date());
+const fail = (error: Error): never => {
+  log.fatal(error.message);
+  process.exit(1);
+};
+
+const store = await openStore(config, {
+  warn: (message) => log.warn(message),
+  // A second instance would split Live Updates, rate limits and the sweep (ADR 0006).
+  oneInstance: { onLost: fail },
+}).catch(fail);
+const blobs = await openBlobStore(config, (message) => log.warn(message)).catch(fail);
+
+const app = await buildServer({ config, store, blobs, logger: log });
+// A failed sweep, say S3 briefly unreachable, waits for the next one rather than stopping us.
+const sweep = () =>
+  app.services.housekeeping
+    .sweep(new Date())
+    .catch((error) => app.log.error({ err: error }, 'sweep failed'));
+await sweep();
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, async () => {
     await app.close();
-    db.$client.close();
+    await store.close();
     process.exit(0);
   });
 }
@@ -39,14 +55,10 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 // `listen` logs the address it bound to.
 await app.listen({ port: config.port, host: config.host });
 
-setInterval(() => {
-  app.services.housekeeping
-    .sweep(new Date())
-    .catch((error) => app.log.error({ err: error }, 'sweep failed'));
-}, SWEEP_EVERY_MS).unref();
+setInterval(sweep, SWEEP_EVERY_MS).unref();
 
 // First run (ADR 0001): a new link on every start until the Owner exists.
-const setupCode = app.services.pairing.ensureSetupCode();
+const setupCode = await app.services.pairing.ensureSetupCode();
 if (setupCode) {
   const url = pairingLink(config.publicUrl, setupCode);
   app.log.info({ pairingLink: url }, 'No Owner yet: open the Pairing Link to create one');
