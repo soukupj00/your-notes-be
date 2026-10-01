@@ -1,30 +1,32 @@
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import pino from 'pino';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { memoryBlobStore } from './blobs/memory.ts';
 import { loadConfig } from './config.ts';
 import { HealthResponse, Problem, RootResponse } from './contract/index.ts';
-import { openDatabase } from './db/client.ts';
-import { migrateDatabase } from './db/migrate.ts';
+import { LOG_SERIALIZERS } from './http/security.ts';
+import { memoryBlobStore } from './infra/blobs/memory.ts';
 import { type App, buildServer } from './server.ts';
+import type { Store } from './store/Store.ts';
+import { testStore } from './test/helpers.ts';
 
 const INDEX_HTML = '<!doctype html><title>YouNotes</title>';
 const BODY_LIMIT = 2048;
 
 let app: App;
+let store: Store;
 let publicDir: string;
 
 beforeAll(async () => {
   publicDir = await mkdtemp(join(tmpdir(), 'younotes-public-'));
   await writeFile(join(publicDir, 'index.html'), INDEX_HTML);
   await writeFile(join(publicDir, 'app.js'), 'console.log(1)');
+  store = await testStore();
 
-  const db = openDatabase(':memory:');
-  migrateDatabase(db);
   app = await buildServer({
     config: loadConfig({ PUBLIC_DIR: publicDir, BODY_LIMIT_BYTES: String(BODY_LIMIT) }),
-    db,
+    store,
     blobs: memoryBlobStore(),
     logger: false,
   });
@@ -36,6 +38,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
+  await store.close();
   await rm(publicDir, { recursive: true, force: true });
 });
 
@@ -165,6 +168,28 @@ describe('security', () => {
     expectProblem(response, 413);
   });
 
+  it('never logs a Share Link token', async () => {
+    const lines: string[] = [];
+    const logged = await buildServer({
+      config: loadConfig({ PUBLIC_DIR: publicDir }),
+      store,
+      blobs: memoryBlobStore(),
+      logger: pino({ serializers: LOG_SERIALIZERS }, { write: (line: string) => lines.push(line) }),
+    });
+    // The PWA's Share Link page, which this server sends before the service worker takes over.
+    await logged.inject('/share/secret-token-value');
+    await logged.inject('/api/public/shares/secret-token-value');
+    await logged.inject('/api/public/shares/secret-token-value/blobs/b1?download=1');
+    await logged.close();
+    const urls = lines.map((line) => JSON.parse(line).req?.url).filter(Boolean);
+    expect(urls).toEqual([
+      '/share/***',
+      '/api/public/shares/***',
+      '/api/public/shares/***/blobs/b1?download=1',
+    ]);
+    expect(lines.join('\n')).not.toContain('secret-token-value');
+  });
+
   it('answers 401 on a route that needs a Session when there is none', async () => {
     expectProblem(await app.inject('/api/private'), 401);
   });
@@ -182,11 +207,9 @@ describe('security', () => {
 
 describe('without a built PWA', () => {
   it('still serves the API and answers / with a problem', async () => {
-    const db = openDatabase(':memory:');
-    migrateDatabase(db);
     const bare = await buildServer({
       config: loadConfig({ PUBLIC_DIR: join(publicDir, 'missing') }),
-      db,
+      store,
       blobs: memoryBlobStore(),
       logger: false,
     });

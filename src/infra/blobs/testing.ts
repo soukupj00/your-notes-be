@@ -1,0 +1,44 @@
+// For tests only, and left out of the build: the S3 bucket the tests share.
+import { CreateBucketCommand, S3Client, S3ServiceException } from '@aws-sdk/client-s3';
+import type { S3Settings } from './s3.ts';
+
+/*
+ * Set for the tests that run against S3, for example SeaweedFS as in CI:
+ *   S3_TEST_ENDPOINT=http://127.0.0.1:8333   (required)
+ *   S3_TEST_BUCKET=younotes-test              (default; created when missing)
+ *   S3_TEST_ACCESS_KEY_ID, S3_TEST_SECRET_ACCESS_KEY
+ * Each test store takes a random key prefix of its own, so tests and runs never collide.
+ */
+export const s3TestEndpoint = process.env.S3_TEST_ENDPOINT;
+
+let bucket: Promise<S3Settings> | undefined;
+
+/** The settings of the test bucket, created on first use. */
+export function s3TestSettings(): Promise<S3Settings> {
+  bucket ??= createBucket();
+  return bucket;
+}
+
+async function createBucket(): Promise<S3Settings> {
+  const env = process.env;
+  const settings: S3Settings = {
+    endpoint: s3TestEndpoint,
+    region: 'us-east-1',
+    bucket: env.S3_TEST_BUCKET ?? 'younotes-test',
+    forcePathStyle: true,
+    credentials:
+      env.S3_TEST_ACCESS_KEY_ID && env.S3_TEST_SECRET_ACCESS_KEY
+        ? { accessKeyId: env.S3_TEST_ACCESS_KEY_ID, secretAccessKey: env.S3_TEST_SECRET_ACCESS_KEY }
+        : undefined,
+  };
+  const client = new S3Client(settings);
+  try {
+    await client.send(new CreateBucketCommand({ Bucket: settings.bucket }));
+  } catch (error) {
+    const owned = ['BucketAlreadyOwnedByYou', 'BucketAlreadyExists'];
+    if (!(error instanceof S3ServiceException && owned.includes(error.name))) throw error;
+  } finally {
+    client.destroy();
+  }
+  return settings;
+}

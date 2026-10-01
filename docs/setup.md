@@ -38,7 +38,7 @@ If it says `docker: 'compose' is not a docker command`, Docker's install page ab
 
 Browsers only allow an app to work offline and use the microphone and camera when the address is secure (it starts with `https://` and has a trusted certificate).
 So the first choice is how your Devices get that secure address.
-Pick one of the three ways below and remember its two settings; you will type them in step 4.
+Pick one of the three ways below and remember its two settings; you will type them in section 4.
 
 | Way | Works away from home | Extra app on each Device | Router changes | Certificate to install on each Device |
 |---|---|---|---|---|
@@ -71,7 +71,7 @@ YOUNOTES_TLS=auto
 ```
 
 Use your own machine's name, not the example.
-There is one more change in `compose.yml`, shown in step 4.
+There is one more change in `compose.yml`, shown in section 4.
 
 ### 3b. Your own domain
 
@@ -93,7 +93,7 @@ YOUNOTES_TLS=auto
 
 Use this if the machine should never be reachable from outside your home network.
 Your Devices sync only while they are on the same Wi-Fi as the machine; away from home they keep working offline and catch up when they are back.
-The server makes its own certificate, and each Device has to be told to trust it once, in step 4.
+The server makes its own certificate, and each Device has to be told to trust it once, in section 4.
 
 1. Find the machine's local address:
 
@@ -134,7 +134,7 @@ cp .env.example .env
 nano .env
 ```
 
-Change the `YOUNOTES_HOST` and `YOUNOTES_TLS` lines to the two settings from step 3.
+Change the `YOUNOTES_HOST` and `YOUNOTES_TLS` lines to the two settings from section 3.
 Leave everything else as it is.
 Save with `Ctrl+O` and `Enter`, then close the editor with `Ctrl+X`.
 
@@ -165,7 +165,7 @@ docker compose logs younotes
 
 Near the end you will see "No Owner yet", a link, and a large square QR code.
 The link looks like `https://homebox.tail1234.ts.net/pair#…` with a long code at the end.
-Check that the address in it is the one you chose in step 3.
+Check that the address in it is the one you chose in section 3.
 If it says `localhost` or something else, `YOUNOTES_HOST` in `.env` is not set right: fix it and run `docker compose up -d` again.
 
 <!-- screenshot: the server log showing "No Owner yet", the Pairing Link and the QR code -->
@@ -213,7 +213,7 @@ Pick the Device you want to use YouNotes on first, for example your phone.
 
 1. With Tailscale, make sure the Tailscale app on it is switched on.
    At home, make sure it is on your home Wi-Fi.
-2. Scan the QR code from step 4 with its camera, or type the link into its browser exactly, including everything after the `#`.
+2. Scan the QR code from section 4 with its camera, or type the link into its browser exactly, including everything after the `#`.
 3. The page "Create the Owner" opens.
    Choose a username and a password, then tap "Create the Owner".
 4. You are now the Owner, and this Device is signed in.
@@ -225,7 +225,7 @@ New Devices normally join by scanning a link from a Device that is already signe
 But when no signed-in Device is left to show a link, for example after losing your only phone, the password is the way back in.
 
 This first link is now used up.
-Opening it on a second Device only shows "This link has expired or was already used"; add every other Device through step 6 instead.
+Opening it on a second Device only shows "This link has expired or was already used"; add every other Device through section 6 instead.
 
 To install YouNotes as an app, open the browser's menu and choose "Add to Home Screen" (phones) or "Install" (laptops).
 Always install it from the server's address, as above.
@@ -244,7 +244,7 @@ Do this for each phone, tablet or laptop you want to sync.
    A laptop has no camera to scan with: tap "Copy link" ("Kopírovat odkaz") instead, send the link to the laptop, for example by email to yourself, and open it in the laptop's browser.
 4. The page "Add this Device" opens; tap "Sign in".
    The Device is signed in to your account, without typing a password, and your Notes start to arrive.
-5. Install it as an app, as in step 5.
+5. Install it as an app, as in section 5.
 
 <!-- screenshot: Settings, Devices with the "Add a Device" button -->
 <!-- screenshot: the Pairing Link QR code shown by "Add a Device" -->
@@ -262,7 +262,7 @@ If you lose one, remove it there; it is signed out and nothing else changes.
 
 1. As the Owner, open Settings ("Nastavení"), scroll to Members ("Členové") and tap "Invite" ("Pozvat").
    It shows a QR code.
-2. The other person makes sure their phone can reach the server, as in step 6.
+2. The other person makes sure their phone can reach the server, as in section 6.
    With Tailscale, that means you share the machine with them in Tailscale, or they sign in to the same Tailscale account.
 3. They scan the QR code, see the page "Join", choose their own username and password, and tap "Create my account".
 
@@ -274,18 +274,26 @@ The invitation works once and for ten minutes.
 Everything YouNotes knows is stored inside Docker, in a place called a volume.
 A backup copies it into a `backups` folder next to your settings, where you can copy it onto a USB stick or another computer.
 
-Make a backup now, from inside the `younotes` folder:
+The first time, from inside the `younotes` folder, make the folder and hand it to the account YouNotes runs as inside Docker, number 1000:
 
 ```bash
-mkdir -p backups
-docker compose run -T --rm --user root -v ./backups:/backups younotes node dist/cli.js backup /backups/$(date +%F)
+mkdir -p backups && sudo chown 1000:1000 backups
 ```
 
-It makes a folder named after today's date, for example `backups/2026-09-28`, and prints "Backed up".
-It is safe to run while YouNotes is in use.
-A second backup on the same day needs a different name, for example `/backups/$(date +%F)-evening`.
+Make a backup now:
 
-The backup files belong to the system administrator account, so deleting an old one needs `sudo`:
+```bash
+docker compose run -T --rm -v ./backups:/backups younotes node dist/cli.js backup /backups/$(date +%F)
+```
+
+It makes a folder named after today's date, for example `backups/2026-09-28`, and prints "Backed up" with how many records of each kind it copied.
+It is safe to run while YouNotes is in use.
+It works the same with the records in PostgreSQL or the Attachments in an S3 bucket ([the backends page](setup-backends.md)): the folder holds both.
+A second backup on the same day needs a different name, for example `/backups/$(date +%F)-evening`.
+If a backup stops halfway, its folder has no `manifest.json` in it; delete the folder and run the command again.
+
+Only that account may read a backup, since it holds everything, Share Links included.
+On most machines it is your own account; if it is not, copying or deleting a backup needs `sudo`:
 
 ```bash
 sudo rm -r backups/2026-09-28
@@ -300,7 +308,7 @@ crontab -e
 Add this line at the bottom, replacing `/home/you/younotes` with your folder (`pwd` prints it):
 
 ```bash
-0 3 * * * cd /home/you/younotes && docker compose run -T --rm --user root -v ./backups:/backups younotes node dist/cli.js backup /backups/$(date +\%F)
+0 3 * * * cd /home/you/younotes && docker compose run -T --rm -v ./backups:/backups younotes node dist/cli.js backup /backups/$(date +\%F)
 ```
 
 The `\%` is on purpose: the scheduler needs it.
@@ -310,27 +318,51 @@ To restore a backup, replacing everything on the server with it:
 
 ```bash
 docker compose down
-docker compose run --rm --user root -v ./backups/2026-09-28:/backup:ro younotes sh -c 'rm -rf /data/* && cp -a /backup/. /data/ && chown -R node:node /data'
+docker compose run --rm -v ./backups/2026-09-28:/backup:ro younotes sh -c 'rm -rf /data/* && node dist/cli.js restore /backup'
 docker compose up -d
 ```
 
 Use the date of the backup you want.
+The second line empties the server's data and loads the backup into it, then prints "Restored".
+If the backup is damaged or incomplete, it says so and loads none of it; restore an older backup instead.
 Anything written after that backup is gone from the server.
 Devices that synced after that backup will re-download everything on their next sync.
+Devices added after that backup are signed out and must be added again, as section 6 shows.
 Restoring is for when the machine's data is lost or broken, not for undoing one change.
+
+Restore fills only an empty server, so with PostgreSQL or an S3 bucket, empty those too before the second line:
+
+- For the PostgreSQL in `compose.yml`, run `docker volume rm younotes_postgres-data` after `docker compose down`; the second line starts it again, empty.
+- For the SeaweedFS bucket in `compose.yml` (section 1 of [the backends page](setup-backends.md#1-keep-attachments-in-an-s3-bucket)), run `docker volume rm younotes_s3-data` after `docker compose down`, then `docker compose up -d s3`, which makes the bucket again, empty; the second line does not start it.
+- For a PostgreSQL server of your own, delete the database and create it again, empty.
+- Empty a bucket of your own with your provider's tools.
+
+A backup folder with a `younotes.db` file in it and no `manifest.json` was made by an earlier version of YouNotes.
+Restore cannot read it; put it back the way that version did, by copying the files:
+
+```bash
+docker compose down
+docker compose run --rm --user root -v ./backups/2026-09-28:/backup:ro younotes sh -c 'rm -rf /data/* && cp -a /backup/. /data/ && chown -R node:node /data'
+docker compose up -d
+```
 
 ## 9. Upgrade
 
 Each release has a version number such as `v0.2.0`.
-To move to a new one, open your settings (`nano .env`), change the `YOUNOTES_VERSION` line to the new number, save, and run:
+There is no way back to an older version except restoring a backup, so every upgrade starts with one.
 
-```bash
-docker compose pull
-docker compose up -d
-```
+1. Make a backup as section 8 shows, before you change anything.
+   Not after editing `.env`: the backup command runs the version `.env` names, and a newer one would update the data under the server still running, so the backup would hold the new layout.
+2. Open your settings (`nano .env`), change the `YOUNOTES_VERSION` line to the new number, and save.
+3. Run:
+
+   ```bash
+   docker compose pull
+   docker compose up -d
+   ```
 
 The server updates its data on start by itself.
-Make a backup (step 8) before every upgrade: there is no way back to an older version except restoring that backup.
+To go back, set `YOUNOTES_VERSION` to the old number again, then restore the backup as section 8 shows.
 
 ## 10. Forgot the Owner password
 
@@ -362,6 +394,8 @@ Some things to know plainly:
 - A Share Link, a read-only link to one Note, opens for anyone who can reach the server, signed in or not.
   With your own domain (3b) that is the whole internet.
 - Backups are complete copies; keep them as safe as the machine itself.
+- If you keep Attachments in an S3 bucket (section 1 of [the backends page](setup-backends.md#1-keep-attachments-in-an-s3-bucket)), the storage provider holds them too and can read them.
+- If you keep the records on a PostgreSQL server someone else runs (section 2 of [the backends page](setup-backends.md#2-keep-the-records-in-postgresql)), they can read your Notes too.
 
 ## 12. When something goes wrong
 
@@ -374,7 +408,7 @@ The Device cannot reach the server: with Tailscale, check the Tailscale app is s
 
 **The page says "This link has expired or was already used".**
 Every link works once.
-If you already created the Owner on another Device, this is expected: add this Device from a signed-in one instead (step 6).
+If you already created the Owner on another Device, this is expected: add this Device from a signed-in one instead (section 6).
 A link from "Add a Device" or "Invite" also runs out after ten minutes; tap the button again for a new one.
 If nobody has created the Owner yet, run `docker compose restart younotes` and use the new link from `docker compose logs younotes`.
 
@@ -384,7 +418,7 @@ Scan the QR code instead, or copy the whole link.
 
 **Notes do not appear on the other Device.**
 Check that both Devices are listed in Settings, Devices, and that both can reach the server.
-Check that the app on both was opened from the same address (step 5): a copy installed from another address syncs with nothing.
+Check that the app on both was opened from the same address (section 5): a copy installed from another address syncs with nothing.
 Sync happens in the background; switching to another app and back makes it try again at once.
 
 **`docker compose up -d` says "address already in use".**
@@ -406,4 +440,9 @@ docker compose logs --tail 40 younotes
 
 If the newest start still says "No Owner yet", the server is starting with empty data.
 That happens after `docker compose down -v`: the `-v` deletes all stored data, so never add it.
-Restore a backup (step 8) to get your Notes back.
+Restore a backup (section 8) to get your Notes back.
+
+## 13. Optional: PostgreSQL, an S3 bucket, or moving between them
+
+By default YouNotes keeps the records and the Attachments on the machine, and that is the right choice for almost every home.
+To keep the Attachments in an S3 bucket, the records in PostgreSQL, or to move a running server to either, follow [YouNotes with PostgreSQL or an S3 bucket](setup-backends.md).

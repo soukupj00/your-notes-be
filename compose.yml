@@ -3,6 +3,12 @@
 #
 #   docker compose up -d                      # the full stack over HTTPS
 #   docker compose --profile local up younotes-local   # just the server on http://localhost:3000
+#   (if `.env` sets COMPOSE_PROFILES, name those too: --profile local --profile postgres up ...,
+#   and the same flags for down; never add `local` to COMPOSE_PROFILES, or `up -d` runs two
+#   servers on one data volume)
+#
+# COMPOSE_PROFILES=s3, postgres or postgres,s3 in `.env` adds an S3 bucket or PostgreSQL on this
+# machine (docs/setup-backends.md). Set it there: `--profile` on the command line replaces it.
 #
 # Building the image yourself: see compose.override.yml, which Compose merges in when present.
 
@@ -17,7 +23,12 @@ x-younotes: &younotes
     - /tmp
   volumes:
     - younotes-data:/data
-  environment:
+  # Only with the `postgres` profile; without it, Compose skips this.
+  depends_on:
+    postgres:
+      condition: service_healthy
+      required: false
+  environment: &younotes-environment
     # Every variable is optional; these are the defaults (src/config.ts).
     PORT: 3000
     PAGE_SIZE: ${PAGE_SIZE:-50}
@@ -29,6 +40,16 @@ x-younotes: &younotes
     TRUST_PROXY: ${TRUST_PROXY:-true}
     # Where the first-run Pairing Link points.
     PUBLIC_URL: https://${YOUNOTES_HOST:-localhost}
+    # The records in PostgreSQL instead of the data volume (docs/setup-backends.md); empty: unset.
+    DATABASE_URL: ${DATABASE_URL:-}
+    # Attachments in an S3 bucket instead of the data volume (docs/setup-backends.md); empty: unset.
+    BLOB_STORE: ${BLOB_STORE:-disk}
+    S3_ENDPOINT: ${S3_ENDPOINT:-}
+    S3_REGION: ${S3_REGION:-us-east-1}
+    S3_BUCKET: ${S3_BUCKET:-}
+    S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+    S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+    S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-false}
 
 services:
   # No published port: only Caddy reaches it.
@@ -59,12 +80,50 @@ services:
   younotes-local:
     <<: *younotes
     profiles: [local]
+    # Merged, not replaced, so the settings in `.env` apply here too.
     environment:
+      <<: *younotes-environment
       TRUST_PROXY: "false"
+      PUBLIC_URL: http://localhost:3000
     ports:
       - "127.0.0.1:3000:3000"
+
+  # SeaweedFS, an S3-compatible bucket on this machine, for trying BLOB_STORE=s3. In `.env`:
+  # COMPOSE_PROFILES=s3, BLOB_STORE=s3, S3_ENDPOINT=http://s3:8333, S3_BUCKET=younotes,
+  # S3_FORCE_PATH_STYLE=true, and the two S3 keys. SeaweedFS takes the keys as its own login and
+  # makes the bucket once it is up; the server waits for it.
+  s3:
+    image: chrislusf/seaweedfs:4.48
+    profiles: [s3]
+    restart: unless-stopped
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_BUCKET: ${S3_BUCKET:-younotes}
+    volumes:
+      - s3-data:/data
+
+  # PostgreSQL on this machine, for the records. In `.env`: POSTGRES_PASSWORD, and
+  # DATABASE_URL=postgres://younotes:<that password>@postgres:5432/younotes.
+  postgres:
+    image: postgres:17-alpine
+    profiles: [postgres]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: younotes
+      POSTGRES_DB: younotes
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U younotes -d younotes"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
 volumes:
   younotes-data:
   caddy-data:
   caddy-config:
+  s3-data:
+  postgres-data:
