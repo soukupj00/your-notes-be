@@ -28,11 +28,9 @@ export interface Store extends StoreTx {
   /** Waits for calls in flight. */
   close(): Promise<void>;
   /**
-   * Runs `fn` against a Store bound to one transaction: commits when it resolves, rolls back and
-   * rethrows when it rejects. Inside `fn` only `tx` may be used; the outer Store throws, and so
-   * does `tx` once `fn` has ended. Reads see what other transactions committed before each read
-   * (PostgreSQL's READ COMMITTED), so work that must not interleave with another request's takes
-   * `accounts.lock` first.
+   * Commits when `fn` resolves, rolls back and rethrows when it rejects. Inside `fn` the outer
+   * Store throws, and `tx` throws once `fn` has ended. Reads see others' commits (READ COMMITTED),
+   * so work that must not interleave with another request takes `accounts.lock` first.
    */
   transaction<T>(fn: (tx: StoreTx) => Promise<T>): Promise<T>;
   /** What the Server Backup reads and writes (ADR 0006): every record as stored, whole. */
@@ -56,11 +54,9 @@ export interface StoreTx {
     /** Throws `UsernameTaken` (a `Conflict`) when the username is taken. */
     add(account: NewAccount): Promise<void>;
     /**
-     * Holds the Account until the transaction ends: `write` waits for and keeps out every other
-     * holder, `read` only writers. A push takes `write` before it reads anything, so two pushes
-     * never hand out the same Sequence or both accept an edit of one row; a feed page takes
-     * `read`, so every row it reads is at or below the Sequence it reports. Under SQLite the one
-     * lock already holds every Account.
+     * Held until the transaction ends; `write` keeps out every other holder, `read` only writers.
+     * A push takes `write` before any read, so two pushes never share a Sequence or both accept
+     * one row's edit; a feed page takes `read`, so it never shows a row above its Sequence.
      */
     lock(id: string, mode: 'write' | 'read'): Promise<void>;
     find(id: string): Promise<AccountRecord | undefined>;

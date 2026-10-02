@@ -162,7 +162,6 @@ it('refuses to reset when there is no Owner', async () => {
   await expect(resetOwnerPassword(loadConfig({ DATA_DIR: root }))).rejects.toThrow(/no Owner/);
 });
 
-// Runs when PG_TEST_URL is set, as for the Store contract.
 const pgUrl = process.env.PG_TEST_URL;
 describe.skipIf(!pgUrl)('on a real PostgreSQL (PG_TEST_URL)', () => {
   it('resets the Owner password', async () => {

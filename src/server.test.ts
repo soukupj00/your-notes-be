@@ -30,7 +30,7 @@ beforeAll(async () => {
     blobs: memoryBlobStore(),
     logger: false,
   });
-  // A stand-in for the unsafe routes later slices add, to exercise the hooks around them.
+  // Stand-ins for an unsafe route and a private one, to exercise the hooks around them.
   app.post('/api/echo', async (request) => ({ received: request.body }));
   app.get('/api/private', { config: { auth: true } }, async () => ({ secret: true }));
   await app.ready();

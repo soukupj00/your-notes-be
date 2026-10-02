@@ -5,7 +5,6 @@ import type { Store, StoreTx } from '../store/Store.ts';
 type Group = Record<string, (...args: never[]) => Promise<unknown>>;
 export type Queue = <T>(call: () => Promise<T>) => Promise<T>;
 
-/** Every method of every group, called through `run`. */
 function wrapped(store: StoreTx, run: Queue): StoreTx {
   const wrap = <G extends Group>(group: G): G =>
     Object.fromEntries(
@@ -37,10 +36,8 @@ function withoutParams(error: unknown): unknown {
 }
 
 /**
- * Wraps a Store so the transaction rules in Store.ts hold whatever the database: the outer Store
- * throws inside `transaction(fn)`, and the `tx` it passes throws once `fn` has ended. Every outer
- * call runs through `queue`, which the SQLite Store uses for its lock, and no error leaves it
- * quoting query values.
+ * Enforces the transaction rules of Store.ts on any database, and no error leaves it quoting query
+ * values. Every outer call runs through `queue`, which the SQLite Store uses for its lock.
  */
 export function guarded(inner: Store, queue: Queue = (call) => call()): Store {
   const inTransaction = new AsyncLocalStorage<{ open: boolean }>();
@@ -57,9 +54,8 @@ export function guarded(inner: Store, queue: Queue = (call) => call()): Store {
   };
 
   /**
-   * Runs `fn` as a transaction's body. `state` is cleared at the end, so work `fn` left behind
-   * may use the outer Store again, and a kept `tx` cannot run outside its transaction (or, under
-   * SQLite, outside the lock).
+   * `state` closes when `fn` ends, so work `fn` left behind may use the outer Store again, and a
+   * kept `tx` cannot run outside its transaction (or, under SQLite, outside the lock).
    */
   const body = <T>(fn: (state: { open: boolean }) => Promise<T>): Promise<T> => {
     const state = { open: true };

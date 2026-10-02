@@ -11,9 +11,13 @@ Fastify + SQLite or PostgreSQL (Drizzle) in one container behind Caddy; it serve
 - No `Co-Authored-By` trailers.
 - Plain dash, never an em dash.
   In long Markdown, one sentence per line.
-- Comments are short, plain and high level.
-  Clean names and small functions say what the code does; a comment adds only what the code cannot: why, a decision (link the ADR), or a trap.
-  Never narrate the next line, and write no comment where the code is already clear.
+- Comments are for the human developer reading the code, never for agents.
+  Agents get their context from the `.md` files (this file, `CONTEXT.md`, the ADRs, `docs/`), so a comment never briefs an agent.
+- Code explains itself first: clean names and small functions say what the code does.
+  A comment adds only what the code cannot say: why, a decision (link the ADR), a trap, or a constraint from outside the code.
+- A comment is one to three lines.
+  An explanation that needs more belongs in `CONTEXT.md`, an ADR or the area's doc, with a one-line pointer in the code.
+- Never narrate the next line, never explain styling or layout, and write no comment where the code is already clear.
 
 ## Documentation map
 
@@ -47,7 +51,11 @@ See [`docs/architecture/structure.md`](./docs/architecture/structure.md).
 The rules that matter most:
 
 - `buildServer()` never calls `listen()`; tests use `app.inject()` against a real Store, SQLite in memory and PGlite, one Vitest project each.
-  `PG_TEST_URL` adds a real PostgreSQL to the Store contract and runs the concurrency tests.
+  `PG_TEST_URL` adds a real PostgreSQL to the Store and Server Backup contracts and the CLI tests, and runs the concurrency tests.
+  It names a server the tests may create databases on, such as `postgres://postgres:postgres@127.0.0.1:5432/postgres`.
+  `S3_TEST_ENDPOINT` adds S3 to the BlobStore contract and the Server Backup tests, such as SeaweedFS at `http://127.0.0.1:8333` as in CI.
+  It takes its keys from `S3_TEST_ACCESS_KEY_ID` and `S3_TEST_SECRET_ACCESS_KEY`, and uses the bucket `S3_TEST_BUCKET` (default `younotes-test`, created when missing).
+  Each test store works under its own random key prefix, so tests and runs never collide.
   Never mock the database; set up and inspect state through the Store.
 - Records go through the `Store` interface and bytes through `BlobStore` (ADR 0006).
   Routes call services, services call the two interfaces, and only `src/infra/` imports a driver or SDK (ADR 0007); Biome enforces it.

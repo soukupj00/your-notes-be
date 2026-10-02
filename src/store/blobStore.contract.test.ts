@@ -13,8 +13,6 @@ import { s3BlobStore } from '../infra/blobs/s3.ts';
 import { s3TestEndpoint, s3TestSettings } from '../infra/blobs/testing.ts';
 import { BlobSizeMismatchError, type BlobStore } from './BlobStore.ts';
 
-// The S3 store runs only when S3_TEST_ENDPOINT is set (src/infra/blobs/testing.ts).
-
 const ID = '0b7e3e52-4c3a-4f8e-9a57-1f7a2a0f9c11';
 const BYTES = Buffer.from('hello, attachment');
 

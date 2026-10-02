@@ -52,7 +52,6 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   });
 }
 
-// `listen` logs the address it bound to.
 await app.listen({ port: config.port, host: config.host });
 
 setInterval(sweep, SWEEP_EVERY_MS).unref();

@@ -14,7 +14,6 @@ export type Decision =
   | { status: 'gone' };
 
 /**
- * @param existing the server's row for this id, if any
  * @param tombstoned for a Note, Tag or Tombstone: the server has a Tombstone for this id;
  *   for a NoteTag: its Note or Tag is tombstoned or missing
  */
