@@ -92,7 +92,6 @@ export function bytesPath(dir: string, id: string): string {
   return join(dir, BLOBS, id);
 }
 
-/** Writes one JSON object per line into a new file; returns how many. */
 export async function writeLines(
   dir: string,
   kind: BackupKind,
@@ -111,7 +110,6 @@ export async function writeLines(
   return count;
 }
 
-/** The records of one file, each checked against its schema; throws naming the line. */
 export async function* readLines<K extends BackupKind>(
   dir: string,
   kind: K

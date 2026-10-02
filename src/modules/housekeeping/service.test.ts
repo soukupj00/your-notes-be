@@ -85,7 +85,7 @@ it('removes expired Sessions and spent or expired Pairing Codes', async () => {
   await store.codes.spend('used', 'device', daysAgo(1));
   await store.codes.add(code('live', daysAgo(-1)));
   await housekeeping.sweep(NOW);
-  // Each check would pass on a row still there, so only its removal fails it.
+  // Each check would find a row the sweep left, so it passes only once the row is gone.
   const live = await store.sessions.listLive('a', daysAgo(1));
   expect(live.map(({ id }) => ({ id }))).toEqual([{ id: 'kept' }]);
   expect(await store.codes.spend('expired', 'device', daysAgo(1))).toBeUndefined();

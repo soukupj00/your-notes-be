@@ -44,7 +44,6 @@ async function admin(url: string, statement: string): Promise<void> {
   }
 }
 
-/** A new, empty database on the server `url` points at; `drop` removes it. */
 export async function testDatabase(url: string): Promise<{ url: string; drop(): Promise<void> }> {
   const name = `younotes_test_${randomUUID().replaceAll('-', '')}`;
   await admin(url, `create database ${name}`);

@@ -31,7 +31,6 @@ function retryable(error: unknown): boolean {
   return !code.startsWith('28') && code !== '3D000';
 }
 
-/** One connection, waiting for the database to come up (`waitFor`). */
 export function connect(url: string, warn: Warn): Promise<pg.Client> {
   return waitFor(
     `PostgreSQL at ${where(url)}`,

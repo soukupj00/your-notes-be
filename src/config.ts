@@ -90,10 +90,7 @@ export const REDACT = [
   '*.S3_SECRET_ACCESS_KEY',
 ];
 
-/**
- * Reads the environment into a validated Config; throws listing every bad variable by name, never
- * by value, so a secret cannot reach a log.
- */
+/** Throws naming every bad variable, never its value, so a secret cannot reach a log. */
 export function loadConfig(
   env: Record<string, string | undefined>,
   what = 'configuration'

@@ -42,7 +42,6 @@ export async function testServer(
   return { app, store, blobs };
 }
 
-/** Signed in as `cookie`, or signed out. */
 export function as(cookie?: string) {
   return cookie ? { cookies: { [SESSION_COOKIE]: cookie } } : {};
 }

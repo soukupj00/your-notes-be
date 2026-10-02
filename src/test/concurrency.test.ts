@@ -14,10 +14,7 @@ import { SyncService } from '../modules/sync/service.ts';
 import { Conflict } from '../shared/errors.ts';
 import type { Store } from '../store/Store.ts';
 
-/*
- * PGlite runs one transaction at a time, so only a real PostgreSQL shows these races (ADR 0006).
- * They run when PG_TEST_URL is set, as for the Store contract.
- */
+// PGlite runs one transaction at a time, so only a real PostgreSQL shows these races (ADR 0006).
 const pgUrl = process.env.PG_TEST_URL;
 
 const T = '2026-09-28T10:00:00.000Z';

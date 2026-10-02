@@ -2,10 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest, RawRequestDefaultExpression } from 'fastify';
 import { sendProblem } from './errors.ts';
 
-/**
- * Static headers every response carries. A real Content-Security-Policy is its own later task,
- * tested against the built PWA (PLAN.md "Security").
- */
+/** No CSP for the PWA yet, a later task (PLAN.md "Security"); blob responses send their own. */
 export const SECURITY_HEADERS = {
   'x-content-type-options': 'nosniff',
   'x-frame-options': 'DENY',

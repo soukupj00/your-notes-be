@@ -51,7 +51,7 @@ async function open(config: Config, options: PostgresOptions): Promise<Server> {
 const serverBackup = (server: Server) =>
   new ServerBackupService(server, () => new Date(), console.warn);
 
-/** Runs while the server does. */
+/** Works on a running server, so it takes no one-instance lock. */
 export async function backup(config: Config, dir: string): Promise<Counts> {
   requireDatabase(config);
   const server = await open(config, { warn: console.warn });
@@ -81,7 +81,7 @@ export async function restore(config: Config, dir: string): Promise<Counts> {
   }
 }
 
-/** The stopped server `source` names into the places `target` changes. */
+/** Copies the stopped server that `source` names to wherever `target` differs from it. */
 export async function migrate(
   source: Config,
   target: Config

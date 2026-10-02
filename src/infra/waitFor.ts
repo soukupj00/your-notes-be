@@ -11,10 +11,7 @@ const WAIT_S = 30;
 const TRY_MS = 6000;
 const PAUSE_MS = 1000;
 
-/**
- * Tries `attempt` until it succeeds or 30 s have passed, warning of each failure `judge` thinks a
- * retry may fix; any other fails at once. `attempt` is given the most time one try may take.
- */
+/** Retries only the failures `judge` says a retry may fix, warning of each; others fail at once. */
 export async function waitFor<T>(
   what: string,
   attempt: (timeoutMs: number) => Promise<T>,

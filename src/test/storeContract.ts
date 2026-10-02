@@ -90,10 +90,6 @@ export const attachment = (id: string, thumbnailId?: string) => ({
   updatedAt: T,
 });
 
-/*
- * A real PostgreSQL runs too when PG_TEST_URL names a server the tests may create databases on,
- * for example postgres://postgres:postgres@127.0.0.1:5432/postgres; CI sets it.
- */
 const pgUrl = process.env.PG_TEST_URL;
 
 /**
