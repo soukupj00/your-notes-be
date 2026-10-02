@@ -103,7 +103,6 @@ export function recordsOf(
   ) as AllRecords;
 }
 
-/** The writing half: every kind in `BACKUP_KINDS` order, up to `PAGE` records per `insert`. */
 export async function writeEach(
   records: AllRecords,
   insert: (kind: BackupKind, batch: object[]) => unknown

@@ -13,7 +13,6 @@ export function sharesBody(shares: ShareRecord[]): SharesResponse {
   return hal({}, { self: link('/api/shares') }, { shares: shares.map(shareBody) });
 }
 
-/** The Note without its Revision. */
 export function sharedNoteBody(token: string, note: StoredNote): SharedNote {
   const { rev: _rev, ...shown } = note;
   return hal(

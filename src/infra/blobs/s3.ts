@@ -32,11 +32,9 @@ export type S3Settings = {
 };
 
 /**
- * Bytes as objects `<prefix><id>` in any S3-compatible bucket (ADR 0006). The bucket stays private
- * and every byte streams through the server: no presigned URLs, no public ACLs, because Share Link
- * checks and the blob CSP header only hold for bytes the server sends itself.
- * Waits for the bucket as for PostgreSQL (`waitFor`), since Compose starts SeaweedFS beside the
- * server and SeaweedFS makes the bucket only once it is up.
+ * The bucket stays private and bytes always stream through the server (PLAN.md "Rework", R5).
+ * No presigned URLs: Share Link checks and the blob CSP header hold only for bytes it sends.
+ * Waits for the bucket, which SeaweedFS in Compose makes only once it is up beside the server.
  */
 export async function s3BlobStore(
   settings: S3Settings,

@@ -8,9 +8,8 @@ import { diskBlobStore } from './blobs/disk.ts';
 import type { PostgresOptions } from './postgres/store.ts';
 import { openSqliteStore } from './sqlite/store.ts';
 
-// Which Store and BlobStore a deployment runs on. A backend other than the default is loaded only
-// when chosen, so a SQLite and disk install never loads pg or the AWS SDK (ADR 0006). The switches
-// have no default case, so a new backend does not compile until every one names it.
+// A non-default backend loads only when chosen, so a SQLite and disk install never loads pg or
+// the AWS SDK (ADR 0006). No switch has a default case: tsc fails until each names a new backend.
 
 /** The SQLite file in DATA_DIR, unless DATABASE_URL names a PostgreSQL; migrated either way. */
 export async function openStore(config: Config, options: PostgresOptions): Promise<Store> {
@@ -39,10 +38,9 @@ export async function openBlobStore(config: Config, warn: Warn): Promise<BlobSto
   }
 }
 
-// Where a Config keeps its records and its bytes, as strings `migrate` compares to move only what
-// changes place. Two spellings of one place (localhost and 127.0.0.1) compare unequal; migrate
-// then finds its target holding data, or, on PostgreSQL, finds it locked, and refuses, so the
-// mistake is safe.
+// Where a Config keeps records and bytes, compared by `migrate` to move only what changes place.
+// Two spellings of one place (localhost, 127.0.0.1) compare unequal, which is safe: migrate then
+// finds the target holding data, or locked on PostgreSQL, and refuses.
 
 export function storeLocation(config: Config): string {
   switch (config.database.kind) {

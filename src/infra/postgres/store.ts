@@ -435,7 +435,7 @@ function transactionStore(db: Db): StoreTx {
         await db.delete(shares).where(notExists(note));
       },
       async unreferencedBlobs(cutoff) {
-        // Attachments are a JSON column (ADR 0003), unpacked here with jsonb_array_elements.
+        // Attachments are a JSON column (ADR 0003).
         const rows = await db
           .select({ id: blobs.id })
           .from(blobs)

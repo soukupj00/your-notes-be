@@ -376,7 +376,7 @@ function unlockedStore(db: Db): Store {
           )`);
       },
       async unreferencedBlobs(cutoff) {
-        // Attachments are a JSON column (ADR 0003), unpacked here with SQLite's json_each.
+        // Attachments are a JSON column (ADR 0003).
         const rows = db.all<{ id: string }>(sql`
           select b.id from ${blobs} b
           where b.created_at < ${cutoff}

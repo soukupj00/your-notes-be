@@ -16,9 +16,9 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 /**
- * False for a wrong password. With no stored hash (an unknown username) it still derives one key
- * from a random salt, so a wrong username costs the same as a wrong password (PLAN.md "Security").
- * A malformed stored hash is data corruption, not a user path, and returns false without work.
+ * With no stored hash (an unknown username) it still derives one key from a random salt, so a
+ * wrong username costs the same as a wrong password (PLAN.md "Security"). A malformed stored hash
+ * is data corruption, not a user path, and returns false without work.
  */
 export async function verifyPassword(
   password: string,
