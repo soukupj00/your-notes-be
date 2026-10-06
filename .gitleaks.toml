@@ -1,0 +1,6 @@
+[extend]
+useDefault = true
+
+# The start of the example secret key in AWS's own documentation, used as a test fixture.
+[[allowlists]]
+regexes = ['''wJalrXUtnFEMI/K7MDENG''']
