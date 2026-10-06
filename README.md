@@ -16,7 +16,7 @@ pnpm check        # Biome: lint and format
 ```
 
 `docker compose --profile local build` builds the image from this checkout through `compose.override.yml`, which only developers have; set `FE_IMAGE` in `.env` if the frontend image cannot be pulled.
-`pnpm dev` serves the API only until a built PWA is in `./public`, for example `cp -r ../ni-dip-fe/dist public`.
+`pnpm dev` serves the API only until a built PWA is in `./public`, for example `cp -r ../ni-dip-fe/dist public`, where `../ni-dip-fe` is the [frontend repository](https://gitlab.fit.cvut.cz/soukuj26/ni-dip-fe) checked out next to this one.
 The API reference is at `/api/docs`; the same document is committed as [`docs/openapi.json`](./docs/openapi.json) for import into any HTTP client.
 
 ### Try it on your phone

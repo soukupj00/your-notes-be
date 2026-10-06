@@ -1,7 +1,7 @@
 # Self-hosted Server
 
 The language of the sync server.
-Product terms (Note, Tag, Local Account, Owner, Invite, Device, Revision, Tombstone, Pairing Link) are canonical in the frontend glossary, `../ni-dip-fe/CONTEXT.md`; this file records only the terms the server needs and the app does not.
+Product terms (Note, Tag, Local Account, Owner, Invite, Device, Revision, Tombstone, Pairing Link) are canonical in the frontend repository's glossary, its `CONTEXT.md`; this file records only the terms the server needs and the app does not.
 
 ## Language
 

@@ -1,10 +1,10 @@
 # PLAN - the Self-hosted Server
 
-The backend half of M5 in the frontend's [`PLAN.md`](../ni-dip-fe/PLAN.md).
+The backend half of M5 in the frontend repository's `PLAN.md`.
 Scoped by a `/grill-with-docs` session on 2026-09-28.
-Product decisions taken as given: frontend ADR 0017 (conflict model), 0018 (the server serves the PWA), 0020 (the `Remote` and `AccountService` seams), the thesis ADR 0002 (bytes are files on disk), and [`../ni-dip-fe/docs/architecture/04-sync.md`](../ni-dip-fe/docs/architecture/04-sync.md) and [`05-server.md`](../ni-dip-fe/docs/architecture/05-server.md).
+Product decisions taken as given: frontend ADR 0017 (conflict model), 0018 (the server serves the PWA), 0020 (the `Remote` and `AccountService` seams), the thesis ADR 0002 (bytes are files on disk), and the frontend repository's architecture chapters `docs/architecture/04-sync.md` and `05-server.md`.
 Decisions made here: [`docs/adr/`](./docs/adr/) 0001 to 0007.
-Vocabulary: [`CONTEXT.md`](./CONTEXT.md), with product terms canonical in [`../ni-dip-fe/CONTEXT.md`](../ni-dip-fe/CONTEXT.md).
+Vocabulary: [`CONTEXT.md`](./CONTEXT.md), with product terms canonical in the frontend repository's `CONTEXT.md`.
 
 ## Decided
 
