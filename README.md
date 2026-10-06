@@ -1,6 +1,6 @@
 # YouNotes Self-hosted Server
 
-The sync server for the [YouNotes](../ni-dip-fe) PWA.
+The sync server for the [YouNotes](https://gitlab.fit.cvut.cz/soukuj26/ni-dip-fe) PWA.
 It keeps a household's Notes in step across their Devices and serves the app itself from the same origin.
 Fastify and SQLite in one container, with Caddy in front for TLS.
 
@@ -78,3 +78,12 @@ Keeping the records in PostgreSQL or the Attachments in an S3 bucket, and moving
 - [`PLAN.md`](./PLAN.md): what is decided and what is being built.
 - [`docs/architecture/`](./docs/architecture/README.md): how the code is laid out.
 - [`docs/adr/`](./docs/adr/): the decisions and why.
+
+## License
+
+[MIT](./LICENSE).
+
+<img src="https://fit.cvut.cz/static/images/fit-cvut-logo-en.svg" alt="FIT CTU logo" height="200">
+
+This software was developed with the support of the **Faculty of Information Technology, Czech Technical University in Prague**.
+For more information, visit [fit.cvut.cz](https://fit.cvut.cz/en).
