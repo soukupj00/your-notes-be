@@ -1,6 +1,6 @@
 # YouNotes Self-hosted Server
 
-The sync server for the [YouNotes](../ni-dip-fe) PWA.
+The sync server for the [YouNotes](https://gitlab.fit.cvut.cz/soukuj26/ni-dip-fe) PWA.
 It keeps a household's Notes in step across their Devices and serves the app itself from the same origin.
 Fastify and SQLite in one container, with Caddy in front for TLS.
 
@@ -16,7 +16,7 @@ pnpm check        # Biome: lint and format
 ```
 
 `docker compose --profile local build` builds the image from this checkout through `compose.override.yml`, which only developers have; set `FE_IMAGE` in `.env` if the frontend image cannot be pulled.
-`pnpm dev` serves the API only until a built PWA is in `./public`, for example `cp -r ../ni-dip-fe/dist public`.
+`pnpm dev` serves the API only until a built PWA is in `./public`, for example `cp -r ../ni-dip-fe/dist public`, where `../ni-dip-fe` is the [frontend repository](https://gitlab.fit.cvut.cz/soukuj26/ni-dip-fe) checked out next to this one.
 The API reference is at `/api/docs`; the same document is committed as [`docs/openapi.json`](./docs/openapi.json) for import into any HTTP client.
 
 ### Try it on your phone
@@ -78,3 +78,12 @@ Keeping the records in PostgreSQL or the Attachments in an S3 bucket, and moving
 - [`PLAN.md`](./PLAN.md): what is decided and what is being built.
 - [`docs/architecture/`](./docs/architecture/README.md): how the code is laid out.
 - [`docs/adr/`](./docs/adr/): the decisions and why.
+
+## License
+
+[MIT](./LICENSE).
+
+<img src="https://fit.cvut.cz/static/images/fit-cvut-logo-en.svg" alt="FIT CTU logo" height="200">
+
+This software was developed with the support of the **Faculty of Information Technology, Czech Technical University in Prague**.
+For more information, visit [fit.cvut.cz](https://fit.cvut.cz/en).

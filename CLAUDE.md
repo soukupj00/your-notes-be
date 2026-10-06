@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-The Self-hosted Server for the YouNotes PWA (`../ni-dip-fe`).
+The Self-hosted Server for the YouNotes PWA, which lives in the frontend repository, `ni-dip-fe`.
 Fastify + SQLite or PostgreSQL (Drizzle) in one container behind Caddy; it serves the built PWA and syncs Notes between a person's Devices.
 
 ## Hard rules
@@ -21,7 +21,7 @@ Fastify + SQLite or PostgreSQL (Drizzle) in one container behind Caddy; it serve
 
 ## Documentation map
 
-- [`CONTEXT.md`](./CONTEXT.md): server-only terms; product terms are canonical in [`../ni-dip-fe/CONTEXT.md`](../ni-dip-fe/CONTEXT.md).
+- [`CONTEXT.md`](./CONTEXT.md): server-only terms; product terms are canonical in the frontend repository's `CONTEXT.md`.
 - [`PLAN.md`](./PLAN.md): everything decided, and the slices B1 to B6.
 - [`docs/adr/`](./docs/adr/): decisions made in this repo; frontend ADRs 0017, 0018, 0020 are taken as given.
 - `docs/openapi.json` is generated; never edit it by hand.

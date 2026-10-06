@@ -4,3 +4,7 @@ data/
 public/
 coverage/
 .env
+
+# Editor and agent tooling, per machine
+.idea/
+.claude-flow/
