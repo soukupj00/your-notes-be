@@ -3,10 +3,9 @@ import { request as httpRequest } from 'node:http';
 import { buffer } from 'node:stream/consumers';
 import pino from 'pino';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { loadConfig } from '../config.ts';
 import { Problem } from '../contract/index.ts';
 import { SESSION_COOKIE } from '../http/sessionCookie.ts';
-import { type App, buildServer } from '../server.ts';
+import type { App } from '../server.ts';
 import type { BlobStore } from '../store/BlobStore.ts';
 import {
   as,
@@ -16,7 +15,6 @@ import {
   signUpOwner,
   testBlobs,
   testServer,
-  testStore,
 } from './helpers.ts';
 
 const LIMIT = 1024;
@@ -151,10 +149,7 @@ describe('blobs', () => {
         return inner.put(...args);
       },
     };
-    const store = await testStore();
-    const logged = await buildServer({
-      config: loadConfig({ PUBLIC_DIR: '/nonexistent' }),
-      store,
+    const { app: logged } = await testServer({}, undefined, {
       blobs: watched,
       logger: pino({}, { write: (line: string) => lines.push(JSON.parse(line)) }),
     });
@@ -188,7 +183,6 @@ describe('blobs', () => {
       expect(await inner.list()).toEqual([]);
     } finally {
       await logged.close();
-      await store.close();
     }
   });
 

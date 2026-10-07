@@ -33,14 +33,25 @@ export async function pgliteTestStore(): Promise<Store> {
   return emptied(await pglite);
 }
 
-async function admin(url: string, statement: string): Promise<void> {
+async function admin<Row extends pg.QueryResultRow = pg.QueryResultRow>(
+  url: string,
+  statement: string
+): Promise<Row[]> {
   const client = new pg.Client({ connectionString: url });
   await client.connect();
   try {
-    await client.query(statement);
+    return (await client.query<Row>(statement)).rows;
   } finally {
     await client.end();
   }
+}
+
+export async function lockWaiters(url: string): Promise<number> {
+  const [{ n }] = await admin<{ n: number }>(
+    url,
+    "select count(*)::int as n from pg_stat_activity where wait_event_type = 'Lock' and datname = current_database()"
+  );
+  return n;
 }
 
 export async function testDatabase(url: string): Promise<{ url: string; drop(): Promise<void> }> {
@@ -50,7 +61,9 @@ export async function testDatabase(url: string): Promise<{ url: string; drop(): 
   own.pathname = `/${name}`;
   return {
     url: own.toString(),
-    drop: () => admin(url, `drop database if exists ${name} with (force)`),
+    drop: async () => {
+      await admin(url, `drop database if exists ${name} with (force)`);
+    },
   };
 }
 

@@ -15,6 +15,7 @@ import {
   expectProblem,
   inviteMember,
   mintPairingCode,
+  must,
   PASSWORD,
   sessionCookie,
   signUpOwner,
@@ -28,7 +29,7 @@ let setupCode: string;
 beforeEach(async () => {
   clock = new Date('2026-09-28T10:00:00.000Z');
   ({ app } = await testServer({}, () => clock));
-  setupCode = (await app.services.pairing.renewSetupCode()) ?? '';
+  setupCode = must(await app.services.pairing.renewSetupCode(), 'setup code');
 });
 
 afterEach(async () => {
@@ -192,7 +193,7 @@ describe('devices and pairing', () => {
     clock = new Date(clock.getTime() + 1000);
     const paired = await post('/api/session', { code, deviceName: 'Phone' });
     expect(paired.statusCode).toBe(201);
-    const phone = sessionCookie(paired)?.value ?? '';
+    const phone = cookieOf(paired);
     expect(SessionResponse.parse(paired.json()).account.username).toBe('olga');
 
     const list = DevicesResponse.parse(
@@ -228,7 +229,7 @@ describe('devices and pairing', () => {
       code: await mint(laptop, 'device'),
       deviceName: 'Phone',
     });
-    const phone = sessionCookie(paired)?.value ?? '';
+    const phone = cookieOf(paired);
     const phoneId = SessionResponse.parse(paired.json()).device.id;
 
     const revoke = await app.inject({
@@ -269,9 +270,9 @@ describe('invites and passwords', () => {
       { username: 'olga', role: 'owner' },
       { username: 'max', role: 'member' },
     ]);
-    const [, max] = list;
-    expect(max?._links.password.href).toBe(`/api/accounts/${max?.id}/password`);
-    const self = await app.inject({ url: max?._links.self.href ?? '', ...as(owner) });
+    const max = must(list[1], 'the member');
+    expect(max._links.password.href).toBe(`/api/accounts/${max.id}/password`);
+    const self = await app.inject({ url: max._links.self.href, ...as(owner) });
     expect(Account.parse(self.json())).toEqual(max);
     expectProblem(
       await app.inject({ url: `/api/accounts/${crypto.randomUUID()}`, ...as(owner) }),
@@ -296,8 +297,8 @@ describe('invites and passwords', () => {
     });
   });
 
-  it('answers 409 to a taken username and keeps the Invite unspent', async () => {
-    const owner = await setUp();
+  it('rejects a bad Invite with 401', async () => {
+    await setUp();
     const bad = await post('/api/accounts', {
       code: 'not-an-invite',
       username: 'olga',
@@ -305,6 +306,10 @@ describe('invites and passwords', () => {
       deviceName: 'Phone',
     });
     expectProblem(bad, 401);
+  });
+
+  it('answers 409 to a taken username and keeps the Invite unspent', async () => {
+    const owner = await setUp();
     const code = await mint(owner, 'invite');
     const taken = await post('/api/accounts', {
       code,

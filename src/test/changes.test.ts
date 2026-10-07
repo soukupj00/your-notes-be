@@ -1,19 +1,25 @@
 import { randomUUID } from 'node:crypto';
 import { setTimeout } from 'node:timers/promises';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  ChangesPage,
-  noteTagId,
-  Problem,
-  type PushBatch,
-  PushResponse,
-} from '../contract/index.ts';
+import { ChangesPage, noteTagId, Problem } from '../contract/index.ts';
 import { SESSION_COOKIE } from '../http/sessionCookie.ts';
 import type { App } from '../server.ts';
 import type { Store } from '../store/Store.ts';
-import { as, cookieOf, inviteMember, pairDevice, signUpOwner, testServer } from './helpers.ts';
-
-const T = '2026-09-28T10:00:00.000Z';
+import {
+  as,
+  cookieOf,
+  inviteMember,
+  link,
+  must,
+  note,
+  pairDevice,
+  pull,
+  push,
+  signUpOwner,
+  T,
+  tag,
+  testServer,
+} from './helpers.ts';
 
 let clock: Date;
 let store: Store;
@@ -31,54 +37,25 @@ async function start(env: Record<string, string> = {}) {
 const owner = () => signUpOwner(app);
 const pair = async (cookie: string) => cookieOf(await pairDevice(app, cookie));
 const invite = async (cookie: string) => cookieOf(await inviteMember(app, cookie));
-const ownerId = async () => (await store.accounts.owner())?.id ?? '';
-
-const note = (id: string, extra: object = {}) => ({
-  id,
-  state: 'active' as const,
-  createdAt: T,
-  updatedAt: T,
-  ...extra,
-});
-const tag = (id: string, extra: object = {}) => ({
-  id,
-  name: 'Work',
-  createdAt: T,
-  updatedAt: T,
-  ...extra,
-});
-const link = (noteId: string, tagId: string) => ({ noteId, tagId, createdAt: T, updatedAt: T });
-
-async function push(cookie: string, batch: Partial<PushBatch>) {
-  const response = await app.inject({
-    method: 'POST',
-    url: '/api/changes',
-    payload: { notes: [], tags: [], noteTags: [], tombstones: [], ...batch },
-    ...as(cookie),
-  });
-  expect(response.statusCode, response.body).toBe(200);
-  return PushResponse.parse(response.json());
-}
-
-async function pull(cookie: string, since = 0) {
-  const response = await app.inject({ url: `/api/changes?since=${since}`, ...as(cookie) });
-  expect(response.statusCode, response.body).toBe(200);
-  return ChangesPage.parse(response.json());
-}
+const ownerId = async () => must(await store.accounts.owner(), 'the Owner').id;
 
 describe('push', () => {
   it('accepts new rows at rev 1 and advances the Sequence once per row', async () => {
     await start();
     const laptop = await owner();
     const [n, t] = [randomUUID(), randomUUID()];
-    const result = await push(laptop, { notes: [note(n)], tags: [tag(t)], noteTags: [link(n, t)] });
+    const result = await push(app, laptop, {
+      notes: [note(n)],
+      tags: [tag(t)],
+      noteTags: [link(n, t)],
+    });
     expect(result.outcomes).toEqual([
       { kind: 'note', id: n, status: 'accepted', rev: 1 },
       { kind: 'tag', id: t, status: 'accepted', rev: 1 },
       { kind: 'noteTag', id: noteTagId(n, t), status: 'accepted', rev: 1 },
     ]);
     expect(result.seq).toBe(3);
-    const page = await pull(laptop);
+    const page = await pull(app, laptop);
     expect(page.notes).toEqual([{ ...note(n), rev: 1 }]);
     expect(page.seq).toBe(3);
     expect(page._links.next).toBeUndefined();
@@ -88,10 +65,10 @@ describe('push', () => {
     await start();
     const laptop = await owner();
     const n = randomUUID();
-    await push(laptop, { notes: [note(n)] });
-    const edited = await push(laptop, { notes: [note(n, { header: 'Two', rev: 1 })] });
+    await push(app, laptop, { notes: [note(n)] });
+    const edited = await push(app, laptop, { notes: [note(n, { header: 'Two', rev: 1 })] });
     expect(edited.outcomes[0]).toMatchObject({ status: 'accepted', rev: 2 });
-    const stale = await push(laptop, { notes: [note(n, { header: 'Stale', rev: 1 })] });
+    const stale = await push(app, laptop, { notes: [note(n, { header: 'Stale', rev: 1 })] });
     expect(stale.outcomes).toEqual([
       {
         kind: 'note',
@@ -108,20 +85,20 @@ describe('push', () => {
     const laptop = await owner();
     const phone = await pair(laptop);
     const x = randomUUID();
-    await push(laptop, { notes: [note(x, { body: 'v1' })] });
-    const cursor = (await pull(phone)).seq;
+    await push(app, laptop, { notes: [note(x, { body: 'v1' })] });
+    const cursor = (await pull(app, phone)).seq;
 
-    await push(laptop, { notes: [note(x, { body: 'laptop', rev: 1 })] });
-    const lost = await push(phone, { notes: [note(x, { body: 'phone', rev: 1 })] });
+    await push(app, laptop, { notes: [note(x, { body: 'laptop', rev: 1 })] });
+    const lost = await push(app, phone, { notes: [note(x, { body: 'phone', rev: 1 })] });
     expect(lost.outcomes[0]).toMatchObject({
       status: 'conflict',
       server: { body: 'laptop', rev: 2 },
     });
 
-    const page = await pull(phone, cursor);
+    const page = await pull(app, phone, cursor);
     expect(page.notes).toEqual([{ ...note(x, { body: 'laptop' }), rev: 2 }]);
     const copy = randomUUID();
-    const kept = await push(phone, {
+    const kept = await push(app, phone, {
       notes: [note(copy, { body: 'phone', header: 'Conflicted copy' })],
     });
     expect(kept.outcomes).toEqual([{ kind: 'note', id: copy, status: 'accepted', rev: 1 }]);
@@ -131,17 +108,17 @@ describe('push', () => {
     await start();
     const laptop = await owner();
     const [n, t] = [randomUUID(), randomUUID()];
-    await push(laptop, { notes: [note(n)], tags: [tag(t)], noteTags: [link(n, t)] });
-    const purge = await push(laptop, {
+    await push(app, laptop, { notes: [note(n)], tags: [tag(t)], noteTags: [link(n, t)] });
+    const purge = await push(app, laptop, {
       tombstones: [{ id: n, kind: 'note', deletedAt: T, rev: 1 }],
     });
     expect(purge.outcomes).toEqual([{ kind: 'note', id: n, status: 'accepted', rev: 2 }]);
-    const page = await pull(laptop);
+    const page = await pull(app, laptop);
     expect(page.notes).toEqual([]);
     expect(page.noteTags).toEqual([]);
     expect(page.tombstones).toEqual([{ id: n, kind: 'note', deletedAt: T }]);
 
-    const again = await push(laptop, {
+    const again = await push(app, laptop, {
       notes: [note(n, { rev: 1 })],
       noteTags: [link(n, t)],
       tombstones: [{ id: n, kind: 'note', deletedAt: T }],
@@ -155,24 +132,24 @@ describe('push', () => {
     const laptop = await owner();
     const phone = await pair(laptop);
     const n = randomUUID();
-    await push(laptop, { notes: [note(n, { body: 'v1' })] });
-    await push(laptop, { notes: [note(n, { body: 'v2', rev: 1 })] });
+    await push(app, laptop, { notes: [note(n, { body: 'v1' })] });
+    await push(app, laptop, { notes: [note(n, { body: 'v2', rev: 1 })] });
 
-    const stale = await push(phone, {
+    const stale = await push(app, phone, {
       tombstones: [{ id: n, kind: 'note', deletedAt: T, rev: 1 }],
     });
     expect(stale.outcomes).toEqual([
       { kind: 'note', id: n, status: 'conflict', server: { ...note(n, { body: 'v2' }), rev: 2 } },
     ]);
-    let page = await pull(phone);
+    let page = await pull(app, phone);
     expect(page.notes.map((x) => x.body)).toEqual(['v2']);
     expect(page.tombstones).toEqual([]);
 
-    const current = await push(phone, {
+    const current = await push(app, phone, {
       tombstones: [{ id: n, kind: 'note', deletedAt: T, rev: 2 }],
     });
     expect(current.outcomes).toEqual([{ kind: 'note', id: n, status: 'accepted', rev: 3 }]);
-    page = await pull(phone);
+    page = await pull(app, phone);
     expect(page.notes).toEqual([]);
     expect(page.tombstones).toEqual([{ id: n, kind: 'note', deletedAt: T }]);
   });
@@ -182,19 +159,19 @@ describe('push', () => {
     const laptop = await owner();
     const [n, t] = [randomUUID(), randomUUID()];
     const id = noteTagId(n, t);
-    await push(laptop, { notes: [note(n)], tags: [tag(t)], noteTags: [link(n, t)] });
-    await push(laptop, { tombstones: [{ id, kind: 'noteTag', deletedAt: T }] });
-    let page = await pull(laptop);
+    await push(app, laptop, { notes: [note(n)], tags: [tag(t)], noteTags: [link(n, t)] });
+    await push(app, laptop, { tombstones: [{ id, kind: 'noteTag', deletedAt: T }] });
+    let page = await pull(app, laptop);
     expect(page.noteTags).toEqual([]);
     expect(page.tombstones).toEqual([{ id, kind: 'noteTag', deletedAt: T }]);
 
-    const relink = await push(laptop, { noteTags: [{ ...link(n, t), rev: 1 }] });
+    const relink = await push(app, laptop, { noteTags: [{ ...link(n, t), rev: 1 }] });
     expect(relink.outcomes).toEqual([{ kind: 'noteTag', id, status: 'accepted', rev: 1 }]);
-    page = await pull(laptop);
+    page = await pull(app, laptop);
     expect(page.noteTags).toEqual([{ ...link(n, t), rev: 1 }]);
     expect(page.tombstones).toEqual([]);
 
-    const orphan = await push(laptop, { noteTags: [link(randomUUID(), t)] });
+    const orphan = await push(app, laptop, { noteTags: [link(randomUUID(), t)] });
     expect(orphan.outcomes[0]).toMatchObject({ kind: 'noteTag', status: 'gone' });
     const malformed = await app.inject({
       method: 'POST',
@@ -232,7 +209,7 @@ describe('push', () => {
       ...as(laptop),
     });
     expect(Problem.parse(bad.json()).status).toBe(400);
-    expect((await pull(laptop)).seq).toBe(0);
+    expect((await pull(app, laptop)).seq).toBe(0);
   });
 });
 
@@ -241,15 +218,15 @@ describe('the feed', () => {
     await start({ PAGE_SIZE: '2' });
     const laptop = await owner();
     const [a, t, b] = [randomUUID(), randomUUID(), randomUUID()];
-    await push(laptop, { notes: [note(a)] });
-    await push(laptop, { tags: [tag(t)] });
-    await push(laptop, { notes: [note(b)] });
+    await push(app, laptop, { notes: [note(a)] });
+    await push(app, laptop, { tags: [tag(t)] });
+    await push(app, laptop, { notes: [note(b)] });
 
-    const first = await pull(laptop);
+    const first = await pull(app, laptop);
     expect([first.notes.map((n) => n.id), first.tags.map((x) => x.id)]).toEqual([[a], [t]]);
     expect(first._links.next?.href).toBe('/api/changes?since=2&from=0');
     expect(first._links.resume).toEqual(first._links.next);
-    const second = await pull(laptop, 2);
+    const second = await pull(app, laptop, 2);
     expect(second.notes.map((n) => n.id)).toEqual([b]);
     expect(second._links.next).toBeUndefined();
     expect(second.seq).toBe(3);
@@ -261,7 +238,7 @@ describe('the feed', () => {
   it('answers a matching If-None-Match with 304, and a changed feed with 200', async () => {
     await start();
     const laptop = await owner();
-    await push(laptop, { notes: [note(randomUUID())] });
+    await push(app, laptop, { notes: [note(randomUUID())] });
     const first = await app.inject({ url: '/api/changes', ...as(laptop) });
     const etag = first.headers.etag as string;
     expect(etag).toMatch(/^"[A-Za-z0-9_-]{43}"$/);
@@ -273,7 +250,7 @@ describe('the feed', () => {
     });
     expect(same.statusCode).toBe(304);
     expect(same.body).toBe('');
-    await push(laptop, { notes: [note(randomUUID())] });
+    await push(app, laptop, { notes: [note(randomUUID())] });
     const changed = await app.inject({
       url: '/api/changes',
       headers: { 'if-none-match': etag },
@@ -285,9 +262,9 @@ describe('the feed', () => {
   it('answers 410 to a cursor past the Sequence, as after restoring a backup', async () => {
     await start();
     const laptop = await owner();
-    await push(laptop, { notes: [note(randomUUID())] });
-    expect((await pull(laptop, 1)).notes).toEqual([]);
-    const { resume } = (await pull(laptop))._links;
+    await push(app, laptop, { notes: [note(randomUUID())] });
+    expect((await pull(app, laptop, 1)).notes).toEqual([]);
+    const { resume } = (await pull(app, laptop))._links;
     expect(resume.href).toBe('/api/changes?since=1');
     // A restore rewinds the Sequence below the kept cursor.
     await store.sync.setSequence(await ownerId(), 0);
@@ -301,7 +278,7 @@ describe('the feed', () => {
   it('judges a paged resync by where it began, not by its current page', async () => {
     await start({ PAGE_SIZE: '2' });
     const laptop = await owner();
-    for (let i = 0; i < 5; i++) await push(laptop, { notes: [note(randomUUID())] });
+    for (let i = 0; i < 5; i++) await push(app, laptop, { notes: [note(randomUUID())] });
     // As if the sweep had removed Tombstones up to Sequence 4.
     const old = { kind: 'note' as const, id: randomUUID(), deletedAt: '2000-01-01T00:00:00.000Z' };
     await store.sync.addTombstone(await ownerId(), old, 4);
@@ -330,13 +307,13 @@ describe('the feed', () => {
     await start();
     const laptop = await owner();
     const n = randomUUID();
-    await push(laptop, { notes: [note(n)] });
-    await push(laptop, { tombstones: [{ id: n, kind: 'note', deletedAt: T, rev: 1 }] });
+    await push(app, laptop, { notes: [note(n)] });
+    await push(app, laptop, { tombstones: [{ id: n, kind: 'note', deletedAt: T, rev: 1 }] });
     await app.services.housekeeping.sweep(new Date(clock.getTime() + 91 * 86_400_000));
     const gone = await app.inject({ url: '/api/changes?since=1', ...as(laptop) });
     expect(Problem.parse(gone.json())).toMatchObject({ status: 410 });
-    expect((await pull(laptop, 2)).tombstones).toEqual([]);
-    expect((await pull(laptop, 0)).seq).toBe(2);
+    expect((await pull(app, laptop, 2)).tombstones).toEqual([]);
+    expect((await pull(app, laptop, 0)).seq).toBe(2);
   });
 
   it("never shows another Account's rows, even under the same id", async () => {
@@ -344,11 +321,11 @@ describe('the feed', () => {
     const olga = await owner();
     const max = await invite(olga);
     const shared = randomUUID();
-    await push(olga, { notes: [note(shared, { body: 'olga' })] });
-    const theirs = await push(max, { notes: [note(shared, { body: 'max' })] });
+    await push(app, olga, { notes: [note(shared, { body: 'olga' })] });
+    const theirs = await push(app, max, { notes: [note(shared, { body: 'max' })] });
     expect(theirs.outcomes[0]).toMatchObject({ status: 'accepted', rev: 1 });
-    expect((await pull(olga)).notes.map((n) => n.body)).toEqual(['olga']);
-    expect((await pull(max)).notes.map((n) => n.body)).toEqual(['max']);
+    expect((await pull(app, olga)).notes.map((n) => n.body)).toEqual(['olga']);
+    expect((await pull(app, max)).notes.map((n) => n.body)).toEqual(['max']);
   });
 
   it('answers 401 without a Session', async () => {
@@ -395,12 +372,12 @@ describe('Live Update', () => {
     await start();
     const laptop = await owner();
     const phone = await pair(laptop);
-    await push(laptop, { notes: [note(randomUUID())] });
+    await push(app, laptop, { notes: [note(randomUUID())] });
 
     const next = await open(laptop);
     expect(await next()).toBe('id: 1\nevent: change\ndata:');
-    await push(laptop, { notes: [note(randomUUID())] }); // its own push: no hint
-    await push(phone, { notes: [note(randomUUID())] });
+    await push(app, laptop, { notes: [note(randomUUID())] }); // its own push: no hint
+    await push(app, phone, { notes: [note(randomUUID())] });
     expect(await next()).toBe('id: 3\nevent: change\ndata:');
 
     const replacement = await open(laptop);
@@ -417,7 +394,7 @@ describe('Live Update', () => {
     // A push from the phone lands just after the stream reads the Sequence.
     sync.seq = async (accountId) => {
       const read = await seq(accountId);
-      await push(phone, { notes: [note(randomUUID())] });
+      await push(app, phone, { notes: [note(randomUUID())] });
       return read;
     };
 
