@@ -11,7 +11,7 @@ import type { Config } from './config.ts';
 import { registerAuth } from './http/auth.ts';
 import { registerDocs } from './http/docs.ts';
 import { registerErrorHandler } from './http/errors.ts';
-import { genReqId, registerSecurity } from './http/security.ts';
+import { genReqId, LOG_SERIALIZERS, registerSecurity } from './http/security.ts';
 import { registerStatic } from './http/static.ts';
 import { accountRoutes } from './modules/accounts/routes.ts';
 import { AccountService } from './modules/accounts/service.ts';
@@ -53,7 +53,6 @@ export type ServerDeps = {
   config: Config;
   store: Store;
   blobs: BlobStore;
-  /** Must carry `LOG_SERIALIZERS`, which mask Share Link tokens. */
   logger: FastifyBaseLogger | false;
   now?: Clock;
 };
@@ -67,7 +66,10 @@ export async function buildServer({
   now = () => new Date(),
 }: ServerDeps) {
   const app = Fastify({
-    ...(logger ? { loggerInstance: logger } : { logger: false }),
+    // Share Link tokens are masked here, so no entry point can forget it.
+    ...(logger
+      ? { loggerInstance: logger.child({}, { serializers: LOG_SERIALIZERS }) }
+      : { logger: false }),
     bodyLimit: config.bodyLimitBytes,
     trustProxy: config.trustProxy,
     genReqId,

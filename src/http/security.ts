@@ -3,12 +3,16 @@ import type { FastifyInstance, FastifyRequest, RawRequestDefaultExpression } fro
 import { sendProblem } from './errors.ts';
 
 /** No CSP for the PWA yet, a later task (PLAN.md "Security"); blob responses send their own. */
-export const SECURITY_HEADERS = {
+const SECURITY_HEADERS = {
   'x-content-type-options': 'nosniff',
   'x-frame-options': 'DENY',
   'referrer-policy': 'no-referrer',
   'cross-origin-opener-policy': 'same-origin',
 } as const;
+
+export function securityHeaders(requestId: string): Record<string, string> {
+  return { ...SECURITY_HEADERS, 'x-request-id': requestId };
+}
 
 /** Per IP, on every route that accepts a password or a Pairing Code. */
 export const SIGN_IN_RATE_LIMIT = { max: 10, timeWindow: '1 minute' };
@@ -36,16 +40,16 @@ export function genReqId(req: RawRequestDefaultExpression): string {
 }
 
 export function registerSecurity(app: FastifyInstance): void {
-  // CSRF: closes what the cookie's SameSite=Lax leaves open (PLAN.md "Security").
   app.addHook('onRequest', async (request, reply) => {
     if (SAFE_METHODS.has(request.method)) return;
-    if (request.headers['sec-fetch-site'] === 'cross-site') {
+    // CSRF: only this origin, or no browser context at all, may change anything (PLAN.md).
+    const site = request.headers['sec-fetch-site'];
+    if (site !== undefined && site !== 'same-origin' && site !== 'none') {
       return sendProblem(reply, 403, 'Cross-site requests may not change anything');
     }
   });
 
   app.addHook('onSend', async (request, reply) => {
-    reply.headers(SECURITY_HEADERS);
-    reply.header('x-request-id', request.id);
+    reply.headers(securityHeaders(request.id));
   });
 }

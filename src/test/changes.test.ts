@@ -373,6 +373,8 @@ describe('Live Update', () => {
       headers: { cookie: `${SESSION_COOKIE}=${cookie}` },
     });
     expect(response.headers.get('content-type')).toBe('text/event-stream');
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(response.headers.get('x-request-id')).toMatch(/^[0-9a-f-]{36}$/);
     const reader = (response.body as ReadableStream<Uint8Array>)
       .pipeThrough(new TextDecoderStream())
       .getReader();

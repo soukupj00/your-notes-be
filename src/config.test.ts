@@ -80,7 +80,7 @@ describe('loadConfig', () => {
     });
   });
 
-  it('moves the records to PostgreSQL with DATABASE_URL', () => {
+  it('selects PostgreSQL with DATABASE_URL', () => {
     for (const url of ['postgres://u:pw@db:5432/younotes', 'postgresql://u:pw@db/younotes']) {
       expect(loadConfig({ DATABASE_URL: url }).database).toEqual({ kind: 'postgres', url });
     }

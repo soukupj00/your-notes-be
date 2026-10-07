@@ -5,7 +5,10 @@ export function etagOf(body: unknown): string {
   return `"${createHash('sha256').update(JSON.stringify(body)).digest('base64url')}"`;
 }
 
-/** Exact match only, simpler than RFC 9110 13.1.2: a `W/` or `*` tag gets a 200, never a 304. */
+/** Weak comparison, as RFC 9110 13.1.2 requires for If-None-Match; a proxy may weaken our tag. */
 export function notModified(request: FastifyRequest, etag: string): boolean {
-  return request.headers['if-none-match']?.split(',').some((tag) => tag.trim() === etag) ?? false;
+  const header = request.headers['if-none-match'];
+  if (header === undefined) return false;
+  const tags = header.split(',').map((tag) => tag.trim().replace(/^W\//, ''));
+  return tags.includes('*') || tags.includes(etag);
 }

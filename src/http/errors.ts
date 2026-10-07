@@ -15,6 +15,10 @@ const STATUS_OF = [
 
 type HandledError = Error & Partial<Pick<FastifyError, 'statusCode'>>;
 
+export function statusOf(error: HandledError): number {
+  return STATUS_OF.find(([type]) => error instanceof type)?.[1] ?? error.statusCode ?? 500;
+}
+
 export function sendProblem(
   reply: FastifyReply,
   status: number,
@@ -42,8 +46,7 @@ export function registerErrorHandler(app: FastifyInstance): void {
       }));
       return sendProblem(reply, 400, 'The request does not match the schema', errors);
     }
-    const status =
-      STATUS_OF.find(([type]) => error instanceof type)?.[1] ?? error.statusCode ?? 500;
+    const status = statusOf(error);
     if (status >= 400 && status < 500) return sendProblem(reply, status, error.message);
     // A client that hangs up mid-body, as when an upload is cancelled, is not a server failure.
     // Only the request's own error matches, never a reset from S3 or the database.

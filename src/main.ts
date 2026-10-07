@@ -2,7 +2,6 @@ import pino from 'pino';
 import QRCode from 'qrcode';
 import { type Config, loadConfig, REDACT } from './config.ts';
 import { pairingLink } from './contract/index.ts';
-import { LOG_SERIALIZERS } from './http/security.ts';
 import { openBlobStore, openStore } from './infra/open.ts';
 import { SWEEP_EVERY_MS } from './modules/housekeeping/service.ts';
 import { buildServer } from './server.ts';
@@ -21,7 +20,6 @@ const pretty = process.env.NODE_ENV !== 'production' && process.stdout.isTTY;
 const log = pino({
   level: config.logLevel,
   redact: REDACT,
-  serializers: LOG_SERIALIZERS,
   ...(pretty ? { transport: { target: 'pino-pretty' } } : {}),
 });
 const fail = (error: Error): never => {

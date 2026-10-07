@@ -34,6 +34,7 @@ pnpm dev            # tsx watch src/main.ts, DATA_DIR=./data
 pnpm build          # empties dist/, then tsc
 pnpm check          # biome check --write
 pnpm check:ci       # biome ci .
+pnpm typecheck      # tsc over src, scripts and the tests; the build excludes the tests
 pnpm test           # vitest run
 pnpm openapi        # regenerate docs/openapi.json
 pnpm db:generate    # drizzle-kit generate, both databases (migrations are applied at startup)
