@@ -26,6 +26,8 @@ Fastify + SQLite or PostgreSQL (Drizzle) in one container behind Caddy; it serve
 - [`docs/adr/`](./docs/adr/): decisions made in this repo; frontend ADRs 0017, 0018, 0020 are taken as given.
 - `docs/openapi.json` is generated; never edit it by hand.
   The running server shows it at `/api/docs`.
+- `docs/` is also the source of the VitePress site, published to GitHub Pages from `main` (`docs/.vitepress/config.ts`, `.github/workflows/pages.yml`); `docs/superpowers/` is left out of it.
+  A page's links must resolve on the site and on GitHub alike, and the build fails on a dead one.
 
 ## Commands
 
@@ -38,6 +40,7 @@ pnpm typecheck      # tsc over src, scripts and the tests; the build excludes th
 pnpm test           # vitest run
 pnpm openapi        # regenerate docs/openapi.json
 pnpm db:generate    # drizzle-kit generate, both databases (migrations are applied at startup)
+pnpm docs:dev       # the docs site; pnpm docs:build is what Pages runs
 node dist/cli.js backup <dir>            # after pnpm build; the portable Server Backup
 node dist/cli.js restore <dir>           # into an empty Store and BlobStore
 node dist/cli.js migrate                 # to where the TARGET_ variables say

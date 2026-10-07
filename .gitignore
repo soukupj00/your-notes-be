@@ -1,9 +1,14 @@
 node_modules/
 dist/
 data/
-public/
+/public/
 coverage/
 .env
+
+# The docs site's build, and the copy of docs/openapi.json that pnpm docs:build makes
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+docs/public/openapi.json
 
 # Editor and agent tooling, per machine
 .idea/
