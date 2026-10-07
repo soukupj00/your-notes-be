@@ -167,12 +167,15 @@ export const shares = pgTable(
 
 // Both Stores share rows.ts, which is typed by the SQLite schema; this fails at the schema instead.
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
-true satisfies Same<typeof accounts.$inferSelect, typeof sqlite.accounts.$inferSelect>;
-true satisfies Same<typeof sessions.$inferSelect, typeof sqlite.sessions.$inferSelect>;
-true satisfies Same<typeof codes.$inferSelect, typeof sqlite.codes.$inferSelect>;
-true satisfies Same<typeof notes.$inferSelect, typeof sqlite.notes.$inferSelect>;
-true satisfies Same<typeof tags.$inferSelect, typeof sqlite.tags.$inferSelect>;
-true satisfies Same<typeof noteTags.$inferSelect, typeof sqlite.noteTags.$inferSelect>;
-true satisfies Same<typeof tombstones.$inferSelect, typeof sqlite.tombstones.$inferSelect>;
-true satisfies Same<typeof blobs.$inferSelect, typeof sqlite.blobs.$inferSelect>;
-true satisfies Same<typeof shares.$inferSelect, typeof sqlite.shares.$inferSelect>;
+type Agree<T extends true> = T;
+export type SchemasAgree = [
+  Agree<Same<typeof accounts.$inferSelect, typeof sqlite.accounts.$inferSelect>>,
+  Agree<Same<typeof sessions.$inferSelect, typeof sqlite.sessions.$inferSelect>>,
+  Agree<Same<typeof codes.$inferSelect, typeof sqlite.codes.$inferSelect>>,
+  Agree<Same<typeof notes.$inferSelect, typeof sqlite.notes.$inferSelect>>,
+  Agree<Same<typeof tags.$inferSelect, typeof sqlite.tags.$inferSelect>>,
+  Agree<Same<typeof noteTags.$inferSelect, typeof sqlite.noteTags.$inferSelect>>,
+  Agree<Same<typeof tombstones.$inferSelect, typeof sqlite.tombstones.$inferSelect>>,
+  Agree<Same<typeof blobs.$inferSelect, typeof sqlite.blobs.$inferSelect>>,
+  Agree<Same<typeof shares.$inferSelect, typeof sqlite.shares.$inferSelect>>,
+];

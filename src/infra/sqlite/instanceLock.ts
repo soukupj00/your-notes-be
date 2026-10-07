@@ -1,3 +1,4 @@
+import { closeSync, openSync } from 'node:fs';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
 
@@ -11,7 +12,10 @@ const held = new Set<Database.Database>();
 export function holdInstanceLock(dataDir: string): () => void {
   // A kernel lock rather than a pid in a file: it dies with its process, and a container's
   // server is pid 1 on every start, so a pid cannot tell a crashed server from a running one.
-  const lock = new Database(join(dataDir, 'younotes.lock'), { timeout: 0 });
+  const path = join(dataDir, 'younotes.lock');
+  // SQLite opens a file it cannot write read-only, where BEGIN EXCLUSIVE locks nothing.
+  closeSync(openSync(path, 'a'));
+  const lock = new Database(path, { timeout: 0 });
   try {
     // Nothing is ever written, so no journal file need sit beside it, nor outlive a crash.
     lock.pragma('journal_mode = MEMORY');

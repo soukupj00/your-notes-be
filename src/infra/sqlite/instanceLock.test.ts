@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { chmod, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
@@ -44,6 +44,13 @@ it('refuses while another process holds it, and is free once that process is kil
   }
   await once(holder, 'exit');
   holdInstanceLock(dir)();
+});
+
+it.skipIf(process.getuid?.() === 0)('refuses a lock file it cannot write', async () => {
+  const lockFile = join(dir, 'younotes.lock');
+  await writeFile(lockFile, '');
+  await chmod(lockFile, 0o444);
+  expect(() => holdInstanceLock(dir)).toThrow(/EACCES.*younotes\.lock/);
 });
 
 it('adds only the lock file to the data directory', async () => {

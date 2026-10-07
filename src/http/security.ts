@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest, RawRequestDefaultExpression } from 'fastify';
-import { sendProblem } from './errors.ts';
+import { sendEarlyProblem } from './errors.ts';
 
 /** No CSP for the PWA yet, a later task (PLAN.md "Security"); blob responses send their own. */
 const SECURITY_HEADERS = {
@@ -45,7 +45,7 @@ export function registerSecurity(app: FastifyInstance): void {
     // CSRF: only this origin, or no browser context at all, may change anything (PLAN.md).
     const site = request.headers['sec-fetch-site'];
     if (site !== undefined && site !== 'same-origin' && site !== 'none') {
-      return sendProblem(reply, 403, 'Cross-site requests may not change anything');
+      return sendEarlyProblem(request, reply, 403, 'Cross-site requests may not change anything');
     }
   });
 

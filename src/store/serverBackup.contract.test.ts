@@ -10,10 +10,10 @@ import {
   testDatabase,
 } from '../infra/postgres/testing.ts';
 import { openSqliteStore } from '../infra/sqlite/store.ts';
+import { T } from '../test/storeContract.ts';
 import { type AllRecords, BACKUP_KINDS, type BackupRecords } from './records.ts';
 import type { Store } from './Store.ts';
 
-const T = '2026-09-28T10:00:00.000Z';
 const LATER = '2026-09-29T10:00:00.000Z';
 
 type Everything = { [K in keyof BackupRecords]: BackupRecords[K][] };

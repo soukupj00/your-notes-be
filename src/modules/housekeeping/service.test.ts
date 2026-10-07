@@ -104,6 +104,12 @@ it('removes a file without a row only on its second sweep', async () => {
   expect(await blobs.list()).toEqual([]);
 });
 
+it('removes a file without a row at once on an idle sweep', async () => {
+  await blobs.put(blobId(1), Buffer.from('x'), 1);
+  await housekeeping.sweep(NOW, true);
+  expect(await blobs.list()).toEqual([]);
+});
+
 it('keeps a file whose row arrives between two sweeps', async () => {
   await blobs.put(blobId(1), Buffer.from('x'), 1);
   await housekeeping.sweep(NOW);

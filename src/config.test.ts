@@ -79,6 +79,16 @@ describe('loadConfig', () => {
     expect(loadConfig({ ...s3, S3_PREFIX: '' }).blobStore).toMatchObject({ prefix: '' });
   });
 
+  it('refuses an S3_PREFIX that does not end in a slash', () => {
+    const s3 = { BLOB_STORE: 's3', S3_BUCKET: 'shared' };
+    expect(() => loadConfig({ ...s3, S3_PREFIX: 'notes' })).toThrow(
+      'S3_PREFIX: empty or ending in /'
+    );
+    expect(loadConfig({ ...s3, S3_PREFIX: 'notes/' }).blobStore).toMatchObject({
+      prefix: 'notes/',
+    });
+  });
+
   it("leaves S3 credentials to the SDK's default chain when neither key is set", () => {
     const config = loadConfig({ BLOB_STORE: 's3', S3_BUCKET: 'younotes' });
     expect(config.blobStore).toEqual({

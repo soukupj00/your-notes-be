@@ -53,7 +53,8 @@ All under `/api`; everything else is the PWA with SPA fallback.
 | Health | `GET /health` |
 
 Batch push is the only write path in M5.
-Single-resource `GET`s exist as HAL link targets with an `ETag`; per-resource `PUT` with `If-Match` is additive later work.
+Single-resource `GET`s exist as HAL link targets.
+Only the feed and the blob routes send an `ETag` today; per-resource `PUT` with `If-Match` is additive later work.
 
 ### Security
 - Session: 32 random bytes, SHA-256 in `sessions`, `HttpOnly; Secure; SameSite=Lax` cookie, one row per Device.

@@ -37,7 +37,11 @@ const ConfigSchema = z.object({
   S3_ENDPOINT: z.url().optional(),
   S3_REGION: z.string().min(1).default('us-east-1'),
   S3_BUCKET: z.string().min(1).optional(),
-  S3_PREFIX: z.string().default('younotes/'),
+  // Without the slash, a foreign key `notes-2024` under `notes` would list as blob `-2024`.
+  S3_PREFIX: z
+    .string()
+    .regex(/^(.*\/)?$/, 'empty or ending in /')
+    .default('younotes/'),
   S3_ACCESS_KEY_ID: z.string().min(1).optional(),
   S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   S3_FORCE_PATH_STYLE: bool.default(false),

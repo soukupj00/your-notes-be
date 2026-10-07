@@ -71,7 +71,8 @@ contract:
 
 # --- Tests ---
 # SeaweedFS, an S3-compatible server, runs the BlobStore contract against S3; PostgreSQL runs
-# the Store contract and the concurrency tests, which PGlite cannot (ADR 0006).
+# the Store and Server Backup contracts, the concurrency tests and the CLI tests, which PGlite
+# cannot (ADR 0006).
 test:unit:
   <<: *pnpm-setup
   stage: test

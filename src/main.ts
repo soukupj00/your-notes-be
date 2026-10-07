@@ -36,11 +36,12 @@ const blobs = await openBlobStore(config, (message) => log.warn(message)).catch(
 
 const app = await buildServer({ config, store, blobs, logger: log });
 // A failed sweep, say S3 briefly unreachable, waits for the next one rather than stopping us.
-const sweep = () =>
+const sweep = (idle: boolean) =>
   app.services.housekeeping
-    .sweep(new Date())
+    .sweep(new Date(), idle)
     .catch((error) => app.log.error({ err: error }, 'sweep failed'));
-await sweep();
+// Before listen() and under the instance lock, so no upload can be in flight.
+await sweep(true);
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, async () => {
@@ -52,7 +53,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 
 await app.listen({ port: config.port, host: config.host });
 
-setInterval(sweep, SWEEP_EVERY_MS).unref();
+setInterval(() => sweep(false), SWEEP_EVERY_MS).unref();
 
 // First run (ADR 0001): a new link on every start until the Owner exists.
 const setupCode = await app.services.pairing.renewSetupCode();

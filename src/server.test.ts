@@ -205,6 +205,23 @@ describe('security', () => {
     expectProblem(await app.inject('/api/private'), 401);
   });
 
+  it('closes the connection on an early answer only when the body is over the limit', async () => {
+    const large = await app.inject({
+      method: 'PUT',
+      url: '/api/blobs/00000000-0000-4000-8000-000000000001',
+      headers: { 'content-length': String(BODY_LIMIT + 1) },
+    });
+    expectProblem(large, 401);
+    expect(large.headers.connection).toBe('close');
+    const small = await app.inject({
+      method: 'POST',
+      url: '/api/codes',
+      payload: { kind: 'device' },
+    });
+    expectProblem(small, 401);
+    expect(small.headers.connection).not.toBe('close');
+  });
+
   it('answers malformed JSON with a 400 problem', async () => {
     const response = await app.inject({
       method: 'POST',

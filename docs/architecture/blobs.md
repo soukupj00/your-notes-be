@@ -43,7 +43,8 @@ The daily sweep (`HousekeepingService`) releases bytes in two steps:
    A crash between the two deletes leaves a file without a record, which step 2 removes; the other order would leave a record that vouches for bytes that are not there.
 2. A file in the Blob Store without a record is deleted when the previous sweep already saw it without one: what a crash left behind, or what step 1 left when it failed between the two deletes.
    A file seen without a record for the first time is only remembered, since an upload may have written its bytes and not yet its record.
-   The memory lives in the process, so after a restart such a file goes one sweep later.
+   The memory lives in the process, so a server restarted daily would never see a file twice.
+   The sweep at startup therefore deletes such a file on first sight: it runs before the server listens and under the instance lock, so no upload can be in flight.
 
 The files are listed before the records are read, so an upload finishing meanwhile is seen together with its record.
 On S3 the Blob Store lists only under `S3_PREFIX` (default `younotes/`), so the sweep never touches the rest of a shared bucket.
