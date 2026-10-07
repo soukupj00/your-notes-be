@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { SessionAccount } from '../modules/accounts/service.ts';
 import type { SessionDevice } from '../modules/sessions/service.ts';
-import { sendProblem } from './errors.ts';
+import { sendEarlyProblem } from './errors.ts';
 import { clearSessionCookie, SESSION_COOKIE } from './sessionCookie.ts';
 
 declare module 'fastify' {
@@ -35,9 +35,9 @@ export function registerAuth(app: FastifyInstance): void {
         clearSessionCookie(reply);
       }
     }
-    if (!request.account) return sendProblem(reply, 401, 'Sign in first');
+    if (!request.account) return sendEarlyProblem(request, reply, 401, 'Sign in first');
     if (required === 'owner' && request.account.role !== 'owner') {
-      return sendProblem(reply, 403, 'Only the Owner can do this');
+      return sendEarlyProblem(request, reply, 403, 'Only the Owner can do this');
     }
   });
 }

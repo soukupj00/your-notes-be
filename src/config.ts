@@ -29,7 +29,7 @@ const ConfigSchema = z.object({
   TRUST_PROXY: bool.default(false),
   /** The origin Devices open; printed Pairing Links point here. */
   PUBLIC_URL: z.url().optional(),
-  /** Moves the records from the SQLite file in DATA_DIR to PostgreSQL (ADR 0006). */
+  /** Selects PostgreSQL for the records instead of the SQLite file in DATA_DIR (ADR 0006). */
   DATABASE_URL: z
     .url({ protocol: /^postgres(ql)?$/, error: 'must be a valid postgres:// or postgresql:// URL' })
     .optional(),
@@ -37,6 +37,11 @@ const ConfigSchema = z.object({
   S3_ENDPOINT: z.url().optional(),
   S3_REGION: z.string().min(1).default('us-east-1'),
   S3_BUCKET: z.string().min(1).optional(),
+  // Without the slash, a foreign key `notes-2024` under `notes` would list as blob `-2024`.
+  S3_PREFIX: z
+    .string()
+    .regex(/^(.*\/)?$/, 'empty or ending in /')
+    .default('younotes/'),
   S3_ACCESS_KEY_ID: z.string().min(1).optional(),
   S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   S3_FORCE_PATH_STYLE: bool.default(false),
@@ -75,10 +80,7 @@ export type Config = {
   blobStore: { kind: 'disk' } | ({ kind: 's3' } & S3Settings);
 };
 
-/**
- * pino paths that could hold DATABASE_URL or the S3 secret key: a Config, or an environment,
- * logged whole or nested.
- */
+/** Where DATABASE_URL or the S3 secret key sit in a Config or an environment, whole or nested. */
 export const REDACT = [
   'database.url',
   '*.database.url',
@@ -95,8 +97,11 @@ export function loadConfig(
   env: Record<string, string | undefined>,
   what = 'configuration'
 ): Config {
-  // An empty variable (`PORT=` in an env file) means "use the default", not "invalid".
-  const present = Object.fromEntries(Object.entries(env).filter(([, value]) => value !== ''));
+  // An empty variable (`PORT=` in an env file) means "use the default", not "invalid";
+  // only `S3_PREFIX=` keeps its empty value, the bucket root.
+  const present = Object.fromEntries(
+    Object.entries(env).filter(([name, value]) => value !== '' || name === 'S3_PREFIX')
+  );
   const result = EnvSchema.safeParse(present);
   if (!result.success) {
     const problems = result.error.issues.map(
@@ -126,6 +131,7 @@ export function loadConfig(
             endpoint: c.S3_ENDPOINT,
             region: c.S3_REGION,
             bucket: c.S3_BUCKET!,
+            prefix: c.S3_PREFIX,
             forcePathStyle: c.S3_FORCE_PATH_STYLE,
             credentials:
               c.S3_ACCESS_KEY_ID && c.S3_SECRET_ACCESS_KEY
@@ -138,10 +144,7 @@ export function loadConfig(
 
 const TARGET = 'TARGET_';
 
-/**
- * Where `migrate` copies to: each TARGET_ variable stands in for its unprefixed twin, and what it
- * leaves out stays as the server has it.
- */
+/** Where `migrate` copies to: each TARGET_ variable overrides its unprefixed twin. */
 export function loadTargetConfig(env: Record<string, string | undefined>): Config {
   const target = Object.entries(env)
     .filter(([name]) => name.startsWith(TARGET))

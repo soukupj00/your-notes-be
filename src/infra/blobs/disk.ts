@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, readdir, rename, rm, stat } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { mkdir, open, readdir, rename, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -11,10 +11,7 @@ import {
   SAFE_ID,
 } from '../../store/BlobStore.ts';
 
-/**
- * Bytes as files, `<dir>/<id>` (thesis ADR 0002). A write lands in `<dir>/.tmp` first and is
- * renamed into place only once its size checks out, so a reader never sees a partial file.
- */
+/** Bytes as files (thesis ADR 0002); a reader never sees a partial file (blobs.md). */
 export async function diskBlobStore(dir: string): Promise<BlobStore> {
   const tmp = join(dir, '.tmp');
   await mkdir(tmp, { recursive: true });
@@ -30,28 +27,29 @@ export async function diskBlobStore(dir: string): Promise<BlobStore> {
       const temp = join(tmp, randomUUID());
       try {
         const source = Buffer.isBuffer(data) ? Readable.from([data]) : data;
-        await pipeline(source, createWriteStream(temp, { flags: 'wx' }));
+        // fsync file and directory, so a power cut cannot leave a renamed but short file.
+        await pipeline(source, createWriteStream(temp, { flags: 'wx', flush: true }));
         const written = (await stat(temp)).size;
         if (written !== size) throw new BlobSizeMismatchError(size, written);
         await rename(temp, target);
+        await syncDirectory(dir);
       } finally {
         await rm(temp, { force: true });
       }
     },
     async get(id) {
-      const path = pathOf(id);
       try {
-        await stat(path);
-      } catch {
-        return undefined;
+        return (await open(pathOf(id))).createReadStream();
+      } catch (error) {
+        if (isMissing(error)) return undefined;
+        throw error;
       }
-      return createReadStream(path);
     },
     async has(id) {
       try {
         return (await stat(pathOf(id))).isFile();
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+        if (isMissing(error)) return false;
         throw error;
       }
     },
@@ -63,4 +61,15 @@ export async function diskBlobStore(dir: string): Promise<BlobStore> {
       return (await readdir(dir)).filter((name) => SAFE_ID.test(name));
     },
   };
+}
+
+const isMissing = (error: unknown) => (error as NodeJS.ErrnoException).code === 'ENOENT';
+
+async function syncDirectory(dir: string): Promise<void> {
+  const handle = await open(dir, 'r');
+  try {
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
 }

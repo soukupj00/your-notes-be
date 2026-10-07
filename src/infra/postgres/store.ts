@@ -1,5 +1,6 @@
 import { and, asc, eq, gt, isNotNull, isNull, lt, lte, max, notExists, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
+import type { PgSelect } from 'drizzle-orm/pg-core';
 import { UsernameTaken } from '../../shared/errors.ts';
 import type { Warn } from '../../shared/warn.ts';
 import type { Store, StoreTx } from '../../store/Store.ts';
@@ -24,14 +25,11 @@ const { accounts, blobs, codes, notes, noteTags, sessions, shares, tags, tombsto
 export type PostgresOptions = {
   /** Told of every try while the database is not up yet, and of dropped connections. */
   warn: Warn;
-  /**
-   * For the server, not the CLI: hold the one-instance lock (ADR 0006) for the life of the
-   * process, and call `onLost` if its connection drops.
-   */
+  /** Hold the one-instance lock (ADR 0006) until `close`; `onLost` hears if it drops. */
   oneInstance?: { onLost(error: Error): void };
 };
 
-/** Waits for the database, takes the one-instance lock if asked, then migrates (ADR 0006). */
+/** Takes the one-instance lock before migrating, so a refused second server changes nothing. */
 export async function openPostgresStore(
   url: string,
   { warn, oneInstance }: PostgresOptions
@@ -80,7 +78,7 @@ const linkKey = (accountId: string, noteId: string, tagId: string) =>
 const tombstoneKey = (accountId: string, kind: TombstoneKind, id: string) =>
   and(eq(tombstones.accountId, accountId), eq(tombstones.kind, kind), eq(tombstones.id, id));
 
-/** Drizzle wraps the driver's error in its own. */
+/** 23505 is unique_violation; Drizzle wraps the driver's error in its own. */
 function violates(error: unknown, constraint: string): boolean {
   const cause = ((error as { cause?: unknown }).cause ?? error) as {
     code?: string;
@@ -89,7 +87,7 @@ function violates(error: unknown, constraint: string): boolean {
   return cause.code === '23505' && cause.constraint === constraint;
 }
 
-/** Over a pool or PGlite; `end` closes whichever it is. No lock: PostgreSQL isolates. */
+/** No lock around calls as SQLite needs: PostgreSQL isolates each transaction. */
 export function postgresStore(db: Db, end: () => Promise<void>): Store {
   return {
     ...transactionStore(db),
@@ -297,30 +295,13 @@ function transactionStore(db: Db): StoreTx {
       },
       async changesSince(accountId, since, limit) {
         const after = (table: Synced) => and(eq(table.accountId, accountId), gt(table.seq, since));
-        const noteRows = await db
-          .select()
-          .from(notes)
-          .where(after(notes))
-          .orderBy(asc(notes.seq))
-          .limit(limit);
-        const tagRows = await db
-          .select()
-          .from(tags)
-          .where(after(tags))
-          .orderBy(asc(tags.seq))
-          .limit(limit);
-        const linkRows = await db
-          .select()
-          .from(noteTags)
-          .where(after(noteTags))
-          .orderBy(asc(noteTags.seq))
-          .limit(limit);
-        const tombstoneRows = await db
-          .select()
-          .from(tombstones)
-          .where(after(tombstones))
-          .orderBy(asc(tombstones.seq))
-          .limit(limit);
+        // Drizzle's PostgreSQL from() refuses a generic table, so the query comes in already begun.
+        const changed = <Q extends PgSelect>(query: Q, table: Synced) =>
+          query.where(after(table)).orderBy(asc(table.seq)).limit(limit);
+        const noteRows = await changed(db.select().from(notes).$dynamic(), notes);
+        const tagRows = await changed(db.select().from(tags).$dynamic(), tags);
+        const linkRows = await changed(db.select().from(noteTags).$dynamic(), noteTags);
+        const tombstoneRows = await changed(db.select().from(tombstones).$dynamic(), tombstones);
         return {
           notes: noteRows.map((row) => ({ seq: row.seq, record: noteFromRow(row) })),
           tags: tagRows.map((row) => ({ seq: row.seq, record: tagFromRow(row) })),
@@ -413,7 +394,6 @@ function transactionStore(db: Db): StoreTx {
           .groupBy(tombstones.accountId);
         for (const { accountId, seq } of removed) {
           if (seq === null) continue;
-          // PostgreSQL's greatest; SQLite spells it as a two-argument max (ADR 0006).
           await db
             .update(accounts)
             .set({ prunedSeq: sql`greatest(${accounts.prunedSeq}, ${seq})` })

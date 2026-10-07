@@ -25,9 +25,8 @@ function wrapped(store: StoreTx, run: Queue): StoreTx {
 }
 
 /**
- * Drizzle's error quotes every query parameter (Note bodies, password and token hashes); the
- * database's own error, its cause, quotes none. Never copy the cause's `detail`, which holds key
- * values.
+ * Drizzle's error quotes every query parameter (Note bodies, password and token hashes), so only
+ * the database's message is kept (adding-a-store.md), never its `detail`, which quotes key values.
  */
 function withoutParams(error: unknown): unknown {
   if (!(error instanceof DrizzleQueryError)) return error;
@@ -54,8 +53,8 @@ export function guarded(inner: Store, queue: Queue = (call) => call()): Store {
   };
 
   /**
-   * `state` closes when `fn` ends, so work `fn` left behind may use the outer Store again, and a
-   * kept `tx` cannot run outside its transaction (or, under SQLite, outside the lock).
+   * Work `fn` started keeps this context after `fn` ends, so `open`, not the context, says the
+   * transaction is live: once closed, the outer Store works again and a kept `tx` throws.
    */
   const body = <T>(fn: (state: { open: boolean }) => Promise<T>): Promise<T> => {
     const state = { open: true };

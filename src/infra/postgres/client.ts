@@ -23,8 +23,8 @@ export function scrubbed(message: string, url: string): string {
 }
 
 /**
- * A wrong password or database name does not fix itself. Anything else may be the database still
- * starting: refused, dropped by a container's port proxy, or "starting up".
+ * 28xxx (authorization) and 3D000 (no such database) do not fix themselves. Anything else may be
+ * the database still starting: refused, dropped by a container's port proxy, or "starting up".
  */
 function retryable(error: unknown): boolean {
   const code = (error as { code?: string }).code ?? '';

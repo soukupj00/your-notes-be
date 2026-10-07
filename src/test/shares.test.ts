@@ -8,12 +8,15 @@ import {
   cookieOf,
   expectProblem,
   inviteMember,
+  must,
+  note,
+  push,
   type Response,
   signUpOwner,
+  T,
   testServer,
 } from './helpers.ts';
 
-const T = '2026-09-28T10:00:00.000Z';
 const BYTES = Buffer.from('a picture');
 
 let app: App;
@@ -39,24 +42,22 @@ const attachment = (id: string, noteId: string) => ({
 });
 
 /** Pushes a Note, with an uploaded picture, as `cookie`; returns their ids. */
-async function noteWithPicture(cookie = olga, state = 'active', rev?: number, ids?: string[]) {
-  const [noteId, picture] = ids ?? [randomUUID(), randomUUID()];
-  const note = {
-    id: noteId,
-    state,
-    body: '<p>Shopping list</p>',
-    attachments: [attachment(picture as string, noteId as string)],
-    createdAt: T,
-    updatedAt: T,
-    ...(rev ? { rev } : {}),
-  };
-  const pushed = await app.inject({
-    method: 'POST',
-    url: '/api/changes',
-    payload: { notes: [note], tags: [], noteTags: [], tombstones: [] },
-    ...as(cookie),
+async function noteWithPicture({
+  cookie = olga,
+  state = 'active',
+  rev,
+  ids: [noteId, picture] = [randomUUID(), randomUUID()],
+}: {
+  cookie?: string;
+  state?: 'active' | 'trashed';
+  rev?: number;
+  ids?: [string, string];
+} = {}) {
+  const attachments = [attachment(picture, noteId)];
+  const pushed = await push(app, cookie, {
+    notes: [note(noteId, { state, body: '<p>Shopping list</p>', attachments, rev })],
   });
-  expect(pushed.json().outcomes[0].status).toBe('accepted');
+  expect(pushed.outcomes[0]?.status).toBe('accepted');
   await app.inject({
     method: 'PUT',
     url: `/api/blobs/${picture}`,
@@ -64,7 +65,7 @@ async function noteWithPicture(cookie = olga, state = 'active', rev?: number, id
     headers: { 'content-type': 'image/png' },
     ...as(cookie),
   });
-  return { noteId: noteId as string, picture: picture as string };
+  return { noteId, picture };
 }
 
 async function share(noteId: string, cookie = olga): Promise<Response> {
@@ -131,19 +132,7 @@ describe('Share Links', () => {
   it("serves an image's thumbnail through the share too", async () => {
     const [noteId, picture, thumbnail] = [randomUUID(), randomUUID(), randomUUID()];
     const withThumbnail = { ...attachment(picture, noteId), thumbnailId: thumbnail };
-    await app.inject({
-      method: 'POST',
-      url: '/api/changes',
-      payload: {
-        notes: [
-          { id: noteId, state: 'active', attachments: [withThumbnail], createdAt: T, updatedAt: T },
-        ],
-        tags: [],
-        noteTags: [],
-        tombstones: [],
-      },
-      ...as(olga),
-    });
+    await push(app, olga, { notes: [note(noteId, { attachments: [withThumbnail] })] });
     await app.inject({
       method: 'PUT',
       url: `/api/blobs/${thumbnail}`,
@@ -175,7 +164,7 @@ describe('Share Links', () => {
 
     const trashed = await noteWithPicture();
     const { token } = Share.parse((await share(trashed.noteId)).json());
-    await noteWithPicture(olga, 'trashed', 1, [trashed.noteId, trashed.picture]);
+    await noteWithPicture({ state: 'trashed', rev: 1, ids: [trashed.noteId, trashed.picture] });
     expect(expectProblem(await app.inject({ url: `/api/public/shares/${token}` }), 404)).toEqual(
       unknown
     );
@@ -209,24 +198,14 @@ describe('Share Links', () => {
     expect((await read('10.0.0.2')).statusCode).toBe(404);
   });
 
-  it('the sweep removes a share whose Note was purged', async () => {
+  it('removes a share whose Note was purged, at the sweep', async () => {
     const { noteId } = await noteWithPicture();
     const kept = await noteWithPicture();
     await share(noteId);
     await share(kept.noteId);
-    await app.inject({
-      method: 'POST',
-      url: '/api/changes',
-      payload: {
-        notes: [],
-        tags: [],
-        noteTags: [],
-        tombstones: [{ id: noteId, kind: 'note', deletedAt: T, rev: 1 }],
-      },
-      ...as(olga),
-    });
+    await push(app, olga, { tombstones: [{ id: noteId, kind: 'note', deletedAt: T, rev: 1 }] });
     await app.services.housekeeping.sweep(new Date());
-    const olgaId = (await store.accounts.owner())?.id ?? '';
+    const olgaId = must(await store.accounts.owner(), 'the Owner').id;
     const shares = await store.shares.list(olgaId);
     expect(shares.map(({ noteId }) => ({ noteId }))).toEqual([{ noteId: kept.noteId }]);
   });

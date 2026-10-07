@@ -5,7 +5,6 @@ import pino from 'pino';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadConfig } from './config.ts';
 import { HealthResponse, Problem, RootResponse } from './contract/index.ts';
-import { LOG_SERIALIZERS } from './http/security.ts';
 import { memoryBlobStore } from './infra/blobs/memory.ts';
 import { type App, buildServer } from './server.ts';
 import type { Store } from './store/Store.ts';
@@ -147,14 +146,26 @@ describe('security', () => {
     expectProblem(response, 403);
   });
 
-  it('lets same-origin writes and cross-site reads through', async () => {
-    const write = await app.inject({
+  it('rejects an unsafe same-site request with 403', async () => {
+    const response = await app.inject({
       method: 'POST',
-      url: '/api/echo',
-      headers: { 'sec-fetch-site': 'same-origin' },
-      payload: { a: 1 },
+      url: '/api/session',
+      headers: { 'sec-fetch-site': 'same-site' },
+      payload: { username: 'olga', password: 'password', deviceName: 'Laptop' },
     });
-    expect(write.json()).toEqual({ received: { a: 1 } });
+    expect(expectProblem(response, 403).detail).toBe('Cross-site requests may not change anything');
+  });
+
+  it('lets same-origin, user-initiated and header-less writes and cross-site reads through', async () => {
+    for (const headers of [{ 'sec-fetch-site': 'same-origin' }, { 'sec-fetch-site': 'none' }, {}]) {
+      const write = await app.inject({
+        method: 'POST',
+        url: '/api/echo',
+        headers,
+        payload: { a: 1 },
+      });
+      expect(write.json(), JSON.stringify(headers)).toEqual({ received: { a: 1 } });
+    }
     const read = await app.inject({ url: '/health', headers: { 'sec-fetch-site': 'cross-site' } });
     expect(read.statusCode).toBe(200);
   });
@@ -174,7 +185,7 @@ describe('security', () => {
       config: loadConfig({ PUBLIC_DIR: publicDir }),
       store,
       blobs: memoryBlobStore(),
-      logger: pino({ serializers: LOG_SERIALIZERS }, { write: (line: string) => lines.push(line) }),
+      logger: pino({}, { write: (line: string) => lines.push(line) }),
     });
     // The PWA's Share Link page, which this server sends before the service worker takes over.
     await logged.inject('/share/secret-token-value');
@@ -192,6 +203,23 @@ describe('security', () => {
 
   it('answers 401 on a route that needs a Session when there is none', async () => {
     expectProblem(await app.inject('/api/private'), 401);
+  });
+
+  it('closes the connection on an early answer only when the body is over the limit', async () => {
+    const large = await app.inject({
+      method: 'PUT',
+      url: '/api/blobs/00000000-0000-4000-8000-000000000001',
+      headers: { 'content-length': String(BODY_LIMIT + 1) },
+    });
+    expectProblem(large, 401);
+    expect(large.headers.connection).toBe('close');
+    const small = await app.inject({
+      method: 'POST',
+      url: '/api/codes',
+      payload: { kind: 'device' },
+    });
+    expectProblem(small, 401);
+    expect(small.headers.connection).not.toBe('close');
   });
 
   it('answers malformed JSON with a 400 problem', async () => {

@@ -9,6 +9,7 @@ import type { Store } from '../../store/Store.ts';
 import {
   type AccountService,
   type SessionAccount,
+  toSessionAccount,
   WRONG_CREDENTIALS,
 } from '../accounts/service.ts';
 import type { PairingService } from '../pairing/service.ts';
@@ -47,7 +48,7 @@ export class SessionService {
       const row = await this.#accounts.findWithPassword(body.username);
       // Exactly one scrypt either way, so a wrong username costs what a wrong password does.
       const ok = await verifyPassword(body.password, row?.passwordHash);
-      if (row && ok) account = { id: row.id, username: row.username, role: row.role };
+      if (row && ok) account = toSessionAccount(row);
     } else {
       const spent = await this.#pairing.spend(body.code, 'device');
       if (spent?.accountId) account = await this.#accounts.find(spent.accountId);
@@ -56,7 +57,6 @@ export class SessionService {
     return this.open(account, body.deviceName);
   }
 
-  /** The Session's id is the Device's id. */
   async open(account: SessionAccount, deviceName: string): Promise<OpenedSession> {
     const now = this.#clock();
     const token = newSecret();
@@ -88,7 +88,7 @@ export class SessionService {
       await this.#store.sessions.touch(session.id, now.toISOString());
     }
     return {
-      account: { id: account.id, username: account.username, role: account.role },
+      account: toSessionAccount(account),
       device: { id: session.id, name: session.deviceName },
     };
   }

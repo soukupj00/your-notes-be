@@ -8,8 +8,8 @@ import {
 } from 'drizzle-orm/sqlite-core';
 import type { AttachmentMeta } from '../../contract/index.ts';
 
-// Ids are text UUIDs; timestamps are ISO 8601 strings, the same as on the wire.
-// Synced rows are keyed by (account, id) so one Account can never collide with another's ids.
+// Timestamps are ISO 8601 text, as on the wire, compared as strings (ADR 0006). Synced rows are
+// keyed by (account, id), so one Account's ids never collide with another's.
 
 const account = () =>
   text('account_id')
@@ -21,7 +21,7 @@ export const accounts = sqliteTable('accounts', {
   username: text('username').notNull().unique(),
   passwordHash: text('password_hash'),
   role: text('role', { enum: ['owner', 'member'] }).notNull(),
-  /** The Account's Sequence: advanced by every accepted change (ADR 0002). */
+  /** The Account's Sequence (ADR 0002). */
   seq: integer('seq').notNull().default(0),
   /** The highest Sequence of a Tombstone the sweep has removed; older cursors get 410. */
   prunedSeq: integer('pruned_seq').notNull().default(0),
@@ -29,7 +29,7 @@ export const accounts = sqliteTable('accounts', {
   updatedAt: text('updated_at').notNull(),
 });
 
-/** One row per signed-in Device; the id is the Device's id. */
+/** One per signed-in Device; the id is the Device's id. */
 export const sessions = sqliteTable(
   'sessions',
   {
@@ -44,7 +44,7 @@ export const sessions = sqliteTable(
   (t) => [index('sessions_account_idx').on(t.accountId)]
 );
 
-/** Pairing Codes (ADR 0001): hashed, single use, short-lived. */
+/** Pairing Codes (ADR 0001). */
 export const codes = sqliteTable('codes', {
   codeHash: text('code_hash').primaryKey(),
   kind: text('kind', { enum: ['setup', 'device', 'invite'] }).notNull(),
@@ -132,14 +132,13 @@ export const tombstones = sqliteTable(
   ]
 );
 
-/** Which Account owns which bytes, and that they exist (ADR 0003); bytes live in the BlobStore. */
+/** Records only; the bytes are in the BlobStore (ADR 0003). */
 export const blobs = sqliteTable(
   'blobs',
   {
     id: text('id').primaryKey(),
     accountId: account(),
     size: integer('size').notNull(),
-    /** The Content-Type it was uploaded with, served back as is. */
     mime: text('mime').notNull(),
     createdAt: text('created_at').notNull(),
   },
@@ -147,8 +146,8 @@ export const blobs = sqliteTable(
 );
 
 /**
- * Share Links: one per shared Note, readable by anyone holding the token. The token is kept in
- * clear so the link can be shown again (ADR 0005); the sweep removes a share whose Note is gone.
+ * Share Links. The token is kept in clear so the link can be shown again (ADR 0005). No key to
+ * `notes`: the sweep removes a share whose Note is gone.
  */
 export const shares = sqliteTable(
   'shares',

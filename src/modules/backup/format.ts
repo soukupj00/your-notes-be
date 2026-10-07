@@ -11,10 +11,10 @@ import {
   BACKUP_KINDS,
   type BackupKind,
   type BackupRecords,
+  mapKinds,
 } from '../../store/records.ts';
 
-// A Server Backup on disk (ADR 0006): manifest.json, one JSON Lines file per kind of record, and
-// blobs/<id> for the bytes.
+// The Server Backup's directory (ADR 0006).
 
 /** Raised whenever what is on disk changes shape; a restore refuses any other. */
 export const FORMAT_VERSION = 1;
@@ -35,10 +35,7 @@ export type Counts = Manifest['counts'];
 const Seq = z.number().int().min(0);
 const placed = { accountId: z.string(), seq: Seq };
 
-/**
- * One line of each file: a record with the columns of its table. Synced records also meet the
- * contract, which they met when pushed and must meet for the API to serve them.
- */
+/** Synced records also meet the contract, as when pushed, so the API can serve them. */
 const LINES: { [K in BackupKind]: z.ZodType<BackupRecords[K]> } = {
   accounts: z.strictObject({
     id: z.string(),
@@ -135,12 +132,9 @@ export async function* readLines<K extends BackupKind>(
 }
 
 export function recordsIn(dir: string): AllRecords {
-  return Object.fromEntries(
-    BACKUP_KINDS.map((kind) => [kind, () => readLines(dir, kind)])
-  ) as unknown as AllRecords;
+  return mapKinds((kind) => () => readLines(dir, kind));
 }
 
-/** The manifest, once its format version is known to be this server's. */
 export async function readManifest(dir: string): Promise<Manifest> {
   let text: string;
   try {

@@ -928,6 +928,7 @@
             }
           },
           {
+            "description": "Where the pull began; next links carry it, so a paged resync is judged by it",
             "in": "query",
             "name": "from",
             "required": false,

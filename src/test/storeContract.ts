@@ -1,5 +1,3 @@
-// The Store contract suites (src/store/*.contract.test.ts) share these: the records they build and
-// the Stores they run on. Left out of the build, like the rest of src/test/.
 import { afterAll, afterEach, beforeAll, beforeEach, describe } from 'vitest';
 import {
   closePostgresTestStore,
@@ -93,9 +91,8 @@ export const attachment = (id: string, thumbnailId?: string) => ({
 const pgUrl = process.env.PG_TEST_URL;
 
 /**
- * Declares `checks` once per Store (ADR 0006): SQLite in memory, PGlite, and a real PostgreSQL
- * when PG_TEST_URL is set. Each check starts with Accounts `a`, the Owner, and `b`, a minute
- * younger; `current` returns the running check's Store.
+ * Declares `checks` once per Store. Each check starts with Accounts `a`, the Owner, and `b`, a
+ * minute younger; `current()` is the running check's Store.
  */
 export function eachStore(checks: (current: () => Store) => void): void {
   const run = (name: string, open: () => Promise<Store>) =>

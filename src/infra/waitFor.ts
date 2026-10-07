@@ -4,14 +4,12 @@ import type { Warn } from '../shared/warn.ts';
 /** How long startup waits for a backend Compose starts beside the server (setup-backends.md). */
 const WAIT_S = 30;
 /**
- * One try's limit, so a host that never answers is tried again within the wait. Above the 5 s a
- * resolver such as Docker's takes to give up on an unknown name, so that try still ends in
- * "cannot resolve host" rather than a timeout.
+ * Above the 5 s a resolver such as Docker's takes to give up on an unknown name, so that try still
+ * ends in "cannot resolve host" rather than a timeout.
  */
 const TRY_MS = 6000;
 const PAUSE_MS = 1000;
 
-/** Retries only the failures `judge` says a retry may fix, warning of each; others fail at once. */
 export async function waitFor<T>(
   what: string,
   attempt: (timeoutMs: number) => Promise<T>,

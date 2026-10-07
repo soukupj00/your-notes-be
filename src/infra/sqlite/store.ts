@@ -27,11 +27,10 @@ import {
 } from './schema.ts';
 import { serverBackupOf } from './serverBackup.ts';
 
-/** Opens the database file, or `:memory:`, migrated and behind the lock (ADR 0006). */
-export function openSqliteStore(path: string): Store {
+export function openSqliteStore(path: string, onClose = () => {}): Store {
   const db = openDatabase(path);
   migrateDatabase(db);
-  return locked(unlockedStore(db));
+  return locked(unlockedStore(db, onClose));
 }
 
 const accountColumns = {
@@ -54,7 +53,7 @@ const tombstoneKey = (accountId: string, kind: TombstoneKind, id: string) =>
   and(eq(tombstones.accountId, accountId), eq(tombstones.kind, kind), eq(tombstones.id, id));
 
 /** Correct only one call at a time: every call and transaction shares the one connection. */
-function unlockedStore(db: Db): Store {
+function unlockedStore(db: Db, onClose: () => void): Store {
   const tx: StoreTx = {
     accounts: {
       async add(account) {
@@ -63,7 +62,8 @@ function unlockedStore(db: Db): Store {
             .values({ ...account, updatedAt: account.createdAt })
             .run();
         } catch (error) {
-          if ((error as { code?: string }).code === 'SQLITE_CONSTRAINT_UNIQUE') {
+          const { code, message } = error as { code?: string; message?: string };
+          if (code === 'SQLITE_CONSTRAINT_UNIQUE' && message?.includes('accounts.username')) {
             throw new UsernameTaken();
           }
           throw error;
@@ -352,7 +352,7 @@ function unlockedStore(db: Db): Store {
           .all();
         for (const { accountId, seq } of removed) {
           if (seq === null) continue;
-          // SQLite's two-argument max; another database spells it its own way (ADR 0006).
+          // SQLite's two-argument max is scalar, not the aggregate (ADR 0006).
           db.update(accounts)
             .set({ prunedSeq: sql`max(${accounts.prunedSeq}, ${seq})` })
             .where(eq(accounts.id, accountId))
@@ -398,6 +398,7 @@ function unlockedStore(db: Db): Store {
     },
     async close() {
       db.$client.close();
+      onClose();
     },
     async transaction(fn) {
       // IMMEDIATE: a database busy in another process waits at BEGIN, not fails mid-transaction.

@@ -12,7 +12,6 @@ import { SIGN_IN_RATE_LIMIT } from '../../http/security.ts';
 import { setSessionCookie } from '../../http/sessionCookie.ts';
 import { sessionBody } from '../sessions/presenter.ts';
 
-/** Pairing Codes and the first run (ADR 0001). */
 export const pairingRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/api/codes',

@@ -3,8 +3,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { loadConfig } from '../config.ts';
-import { ChangesPage, type PushBatch, PushResponse, Share } from '../contract/index.ts';
+import { Share } from '../contract/index.ts';
 import { diskBlobStore } from '../infra/blobs/disk.ts';
 import { memoryBlobStore } from '../infra/blobs/memory.ts';
 import { s3BlobStore } from '../infra/blobs/s3.ts';
@@ -12,14 +11,24 @@ import { s3TestEndpoint, s3TestSettings } from '../infra/blobs/testing.ts';
 import { pgliteTestStore } from '../infra/postgres/testing.ts';
 import { openSqliteStore } from '../infra/sqlite/store.ts';
 import { type Server, ServerBackupService } from '../modules/backup/service.ts';
-import { type App, buildServer } from '../server.ts';
+import type { App } from '../server.ts';
 import type { BlobStore } from '../store/BlobStore.ts';
 import { BACKUP_KINDS } from '../store/records.ts';
 import type { Store } from '../store/Store.ts';
 import { VERSION } from '../version.ts';
-import { as, signUpOwner, testStore } from './helpers.ts';
+import {
+  as,
+  link,
+  note,
+  pull,
+  push,
+  signUpOwner,
+  T,
+  tag,
+  testServer,
+  testStore,
+} from './helpers.ts';
 
-const T = '2026-09-28T10:00:00.000Z';
 const BYTES = Buffer.from('a picture, byte for byte');
 
 const stores: Store[] = [];
@@ -57,31 +66,11 @@ afterEach(async () => {
 
 const service = (server: Server) => new ServerBackupService(server, () => new Date(T), warn);
 
-async function serve({ store, blobs }: Server): Promise<App> {
-  const config = loadConfig({ PUBLIC_DIR: '/nonexistent' });
-  const app = await buildServer({ config, store, blobs, logger: false });
+async function serve(server: Server): Promise<App> {
+  const { app } = await testServer({}, undefined, server);
   apps.push(app);
   return app;
 }
-
-async function push(app: App, cookie: string, batch: Partial<PushBatch>) {
-  const response = await app.inject({
-    method: 'POST',
-    url: '/api/changes',
-    payload: { notes: [], tags: [], noteTags: [], tombstones: [], ...batch },
-    ...as(cookie),
-  });
-  expect(response.statusCode, response.body).toBe(200);
-  return PushResponse.parse(response.json());
-}
-
-async function pull(app: App, cookie: string, since: number) {
-  const response = await app.inject({ url: `/api/changes?since=${since}`, ...as(cookie) });
-  expect(response.statusCode, response.body).toBe(200);
-  return ChangesPage.parse(response.json());
-}
-
-const bare = (id: string) => ({ id, state: 'active' as const, createdAt: T, updatedAt: T });
 
 type Device = { cookie: string; cursor: number; picture: string; token: string };
 
@@ -102,9 +91,9 @@ async function useSource(): Promise<Device> {
     updatedAt: T,
   };
   await push(app, cookie, {
-    notes: [{ ...bare(noteId), body: '<p>Shopping</p>', attachments: [attachment] }, bare(doomed)],
-    tags: [{ id: tagId, name: 'Home', createdAt: T, updatedAt: T }],
-    noteTags: [{ noteId, tagId, createdAt: T, updatedAt: T }],
+    notes: [note(noteId, { body: '<p>Shopping</p>', attachments: [attachment] }), note(doomed)],
+    tags: [tag(tagId, { name: 'Home' })],
+    noteTags: [link(noteId, tagId)],
   });
   await push(app, cookie, { tombstones: [{ kind: 'note', id: doomed, deletedAt: T, rev: 1 }] });
   const upload = await app.inject({
@@ -137,10 +126,7 @@ function everything(store: Store) {
   });
 }
 
-/**
- * On a server over `target`, the Device is still signed in, finds nothing new from its cursor,
- * reads its picture and its Share Link, and its next push takes the next Sequence.
- */
+/** The Device keeps its Session, cursor, picture and Share Link on a server over `target`. */
 async function expectCarriesOn(target: Server, device: Device) {
   const app = await serve(target);
   expect((await app.inject({ url: '/api/session', ...as(device.cookie) })).statusCode).toBe(200);
@@ -154,7 +140,7 @@ async function expectCarriesOn(target: Server, device: Device) {
   const bytes = await app.inject({ url: `/api/blobs/${device.picture}`, ...as(device.cookie) });
   expect(bytes.rawPayload).toEqual(BYTES);
   expect((await app.inject({ url: `/api/public/shares/${device.token}` })).statusCode).toBe(200);
-  const { seq } = await push(app, device.cookie, { notes: [bare(randomUUID())] });
+  const { seq } = await push(app, device.cookie, { notes: [note(randomUUID())] });
   expect(seq).toBe(device.cursor + 1);
 }
 
@@ -361,11 +347,7 @@ afterAll(async () => {
 });
 
 async function s3Store(): Promise<BlobStore> {
-  const store = await s3BlobStore(
-    await s3TestSettings(),
-    () => {},
-    `server-backup-${randomUUID()}/`
-  );
+  const store = await s3BlobStore(await s3TestSettings(), () => {});
   s3Stores.push(store);
   return store;
 }

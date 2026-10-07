@@ -15,8 +15,7 @@ import {
 } from '../test/storeContract.ts';
 import type { Store, StoreTx } from './Store.ts';
 
-// What every Store promises the services (ADR 0006); each implementation runs all of it. The
-// sync group is in sync.contract.test.ts.
+// The sync group is in sync.contract.test.ts.
 eachStore((current) => {
   let store: Store;
   beforeEach(() => {

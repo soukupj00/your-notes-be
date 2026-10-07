@@ -26,36 +26,33 @@ export type S3Settings = {
   endpoint?: string;
   region: string;
   bucket: string;
+  /** `list` looks only under it, so the sweep never touches the rest of a shared bucket. */
+  prefix: string;
   forcePathStyle: boolean;
   /** Unset means the SDK's default credential chain. */
   credentials?: { accessKeyId: string; secretAccessKey: string };
 };
 
 /**
- * The bucket stays private and bytes always stream through the server (PLAN.md "Rework", R5).
- * No presigned URLs: Share Link checks and the blob CSP header hold only for bytes it sends.
- * Waits for the bucket, which SeaweedFS in Compose makes only once it is up beside the server.
+ * The bucket stays private and bytes always stream through the server (PLAN.md "Rework", R5): no
+ * presigned URLs, since Share Link checks and the blob CSP header hold only for bytes it sends.
  */
-export async function s3BlobStore(
-  settings: S3Settings,
-  warn: Warn,
-  prefix = ''
-): Promise<BlobStore> {
-  const { bucket } = settings;
+export async function s3BlobStore(settings: S3Settings, warn: Warn): Promise<BlobStore> {
+  const { bucket, prefix } = settings;
   const config: S3ClientConfig = {
     endpoint: settings.endpoint,
     region: settings.region,
     forcePathStyle: settings.forcePathStyle,
     credentials: settings.credentials,
-    // Plain Content-Length uploads, which every S3-compatible service accepts; the SDK's default
-    // chunked checksums are not supported everywhere. `exactly` below checks the size.
+    // Plain Content-Length uploads: the SDK's default, an aws-chunked body with a trailing
+    // checksum, is not accepted by every S3-compatible service.
     requestChecksumCalculation: 'WHEN_REQUIRED',
-    // The default logger is silent except for a stray console line on every failed upload.
+    // With the default logger the SDK still prints a console warning on every failed upload.
     logger: { debug() {}, info() {}, warn() {}, error() {} },
   };
 
-  // One HTTP attempt per try: waitFor does the retrying, and judges each failure by its own cause
-  // rather than by the SDK's last retry running out of time.
+  // One attempt per try: waitFor retries, judging each failure by its own cause rather than by the
+  // SDK's last retry running out of time.
   const check = new S3Client({ ...config, maxAttempts: 1 });
   try {
     await waitFor(
@@ -162,8 +159,8 @@ function exactly(size: number): Transform {
 }
 
 /**
- * Why the bucket check failed, from the error's code and status only, never a key, and whether a
- * retry may help: a bucket not made yet or a server still starting may, keys S3 refuses never do.
+ * Reads only the error's code and status, never a key. A bucket not made yet or a server still
+ * starting may pass on a retry; keys S3 refuses never do.
  */
 function judged(error: unknown): { reason: string; retry: boolean } {
   const { name, code, $metadata } = error as {

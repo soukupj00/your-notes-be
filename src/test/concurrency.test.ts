@@ -1,10 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { setTimeout } from 'node:timers/promises';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Note, PushBatch } from '../contract/index.ts';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { memoryBlobStore } from '../infra/blobs/memory.ts';
 import { openPostgresStore } from '../infra/postgres/store.ts';
-import { testDatabase } from '../infra/postgres/testing.ts';
+import { lockWaiters, testDatabase } from '../infra/postgres/testing.ts';
 import { AccountService } from '../modules/accounts/service.ts';
 import { BlobService } from '../modules/blobs/service.ts';
 import { PairingService } from '../modules/pairing/service.ts';
@@ -13,36 +11,25 @@ import { LiveUpdates } from '../modules/sync/liveUpdates.ts';
 import { SyncService } from '../modules/sync/service.ts';
 import { Conflict } from '../shared/errors.ts';
 import type { Store } from '../store/Store.ts';
+import { batch, note, T } from './helpers.ts';
 
 // PGlite runs one transaction at a time, so only a real PostgreSQL shows these races (ADR 0006).
 const pgUrl = process.env.PG_TEST_URL;
 
-const T = '2026-09-28T10:00:00.000Z';
 const clock = () => new Date(T);
 const PAGE = 200;
 
-const note = (id: string, extra: Partial<Note> & { rev?: number } = {}) => ({
-  id,
-  state: 'active' as const,
-  createdAt: T,
-  updatedAt: T,
-  ...extra,
-});
-const batch = (notes: PushBatch['notes']): PushBatch => ({
-  notes,
-  tags: [],
-  noteTags: [],
-  tombstones: [],
-});
 const times = <T>(n: number, make: (i: number) => T) =>
   Array.from({ length: n }, (_, i) => make(i));
 
 describe.skipIf(!pgUrl)('at once, on a real PostgreSQL', () => {
   let store: Store;
   let sync: SyncService;
+  let databaseUrl = '';
   let drop = async () => {};
   beforeAll(async () => {
     const database = await testDatabase(pgUrl!);
+    databaseUrl = database.url;
     drop = database.drop;
     store = await openPostgresStore(database.url, { warn: () => {} });
     sync = new SyncService(store, clock, new LiveUpdates(), PAGE);
@@ -61,7 +48,7 @@ describe.skipIf(!pgUrl)('at once, on a real PostgreSQL', () => {
   it('hands out distinct, gap-free Sequences and loses no advance of the Account', async () => {
     const accountId = await newAccount();
     const pushes = await Promise.all(
-      times(50, (i) => sync.push(accountId, 'device', batch([note(`n${i}`)])))
+      times(50, (i) => sync.push(accountId, 'device', batch({ notes: [note(`n${i}`)] })))
     );
     expect(pushes.map(({ outcomes }) => outcomes[0]?.status)).toEqual(times(50, () => 'accepted'));
     expect(new Set(pushes.map(({ seq }) => seq)).size).toBe(50);
@@ -72,9 +59,11 @@ describe.skipIf(!pgUrl)('at once, on a real PostgreSQL', () => {
 
   it('accepts only one of many edits made against the same rev', async () => {
     const accountId = await newAccount();
-    await sync.push(accountId, 'device', batch([note('n')]));
+    await sync.push(accountId, 'device', batch({ notes: [note('n')] }));
     const pushes = await Promise.all(
-      times(20, (i) => sync.push(accountId, 'device', batch([note('n', { rev: 1, body: `${i}` })])))
+      times(20, (i) =>
+        sync.push(accountId, 'device', batch({ notes: [note('n', { rev: 1, body: `${i}` })] }))
+      )
     );
     const statuses = pushes.map(({ outcomes }) => outcomes[0]?.status);
     expect(statuses.filter((status) => status === 'accepted')).toHaveLength(1);
@@ -82,9 +71,10 @@ describe.skipIf(!pgUrl)('at once, on a real PostgreSQL', () => {
     expect((await store.sync.note(accountId, 'n'))?.rev).toBe(2);
   });
 
+  // The 10 s timeout outlasts the wait's 5 s, so a push that never blocks fails with its message.
   it('never puts a row on a page past the Sequence the page reports', async () => {
     const accountId = await newAccount();
-    await sync.push(accountId, 'device', batch([note('early')]));
+    await sync.push(accountId, 'device', batch({ notes: [note('early')] }));
     let reached = () => {};
     const reading = new Promise<void>((resolve) => {
       reached = resolve;
@@ -120,15 +110,21 @@ describe.skipIf(!pgUrl)('at once, on a real PostgreSQL', () => {
 
     const paging = slow.page(accountId, 0, undefined);
     await reading;
-    const pushing = sync.push(accountId, 'device', batch([note('late')]));
-    // Time for the push to commit, if nothing holds it.
-    await setTimeout(200);
-    release();
+    const pushing = sync.push(accountId, 'device', batch({ notes: [note('late')] }));
+    try {
+      // The push is blocked on the Account row, not merely slow.
+      await vi.waitFor(async () => expect(await lockWaiters(databaseUrl)).toBe(1), {
+        timeout: 5000,
+      });
+    } finally {
+      // Ends the page's transaction even when the wait fails, so the database can be dropped.
+      release();
+    }
     const [page, push] = await Promise.all([paging, pushing]);
     expect(page.seq).toBe(1);
     expect(page.notes.map(({ id }) => id)).toEqual(['early']);
     expect(push.seq).toBe(2);
-  });
+  }, 10_000);
 
   it('creates one of two members who want one username, and leaves the other Invite unspent', async () => {
     const pairing = new PairingService(store, clock);
@@ -154,7 +150,7 @@ describe.skipIf(!pgUrl)('at once, on a real PostgreSQL', () => {
   it('mints one Share Link for a Note shared many times at once', async () => {
     const shares = new ShareService(store, clock, new BlobService(store, memoryBlobStore(), clock));
     const accountId = await newAccount();
-    await sync.push(accountId, 'device', batch([note('n')]));
+    await sync.push(accountId, 'device', batch({ notes: [note('n')] }));
     const minted = await Promise.all(times(10, () => shares.create(accountId, 'n')));
     expect(new Set(minted.map(({ share }) => share.id)).size).toBe(1);
     expect(minted.filter(({ created }) => created)).toHaveLength(1);

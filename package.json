@@ -14,6 +14,7 @@
     "start": "node dist/main.js",
     "check": "biome check --write .",
     "check:ci": "biome ci .",
+    "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "openapi": "tsx scripts/openapi.ts",
     "db:generate": "drizzle-kit generate --config drizzle.sqlite.config.ts && drizzle-kit generate --config drizzle.postgres.config.ts"

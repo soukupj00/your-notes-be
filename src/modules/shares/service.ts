@@ -21,7 +21,6 @@ export class ShareService {
     this.#blobs = blobs;
   }
 
-  /** Sharing a Note again returns its existing Share Link. */
   create(accountId: string, noteId: string): Promise<{ share: ShareRecord; created: boolean }> {
     return this.#store.transaction(async (tx) => {
       // Like a push, so two mints cannot both add a share, nor one share a Note a push purges.
@@ -63,7 +62,6 @@ export class ShareService {
     return shared.note;
   }
 
-  /** Only the bytes of the shared Note's own Attachments and their thumbnails. */
   async sharedBlob(token: string, id: string): Promise<BlobRecord> {
     const shared = await this.#findShared(token);
     const listed = shared?.note.attachments?.some((a) => a.id === id || a.thumbnailId === id);

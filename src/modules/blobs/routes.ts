@@ -8,10 +8,7 @@ import { sendBlob } from '../../http/sendBlob.ts';
 
 const Params = z.object({ id: Id });
 
-/**
- * Encapsulated so the raw-stream body parser applies to these routes only; every other route
- * keeps parsing JSON.
- */
+/** Encapsulated, so the raw-stream body parser below reaches these routes only. */
 export const blobRoutes: FastifyPluginAsyncZod = async (app) => {
   app.removeAllContentTypeParsers();
   app.addContentTypeParser('*', (_request, payload, done) => done(null, payload));
@@ -49,7 +46,7 @@ export const blobRoutes: FastifyPluginAsyncZod = async (app) => {
       const state = await app.services.blobs.uploadState(account.id, id);
       if (state === 'foreign') {
         request.raw.resume();
-        return sendProblem(reply, 403, 'This id belongs to someone else');
+        return sendProblem(reply, 404, 'No such blob');
       }
       if (state === 'stored') {
         request.raw.resume();

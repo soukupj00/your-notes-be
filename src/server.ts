@@ -11,7 +11,7 @@ import type { Config } from './config.ts';
 import { registerAuth } from './http/auth.ts';
 import { registerDocs } from './http/docs.ts';
 import { registerErrorHandler } from './http/errors.ts';
-import { genReqId, registerSecurity } from './http/security.ts';
+import { genReqId, LOG_SERIALIZERS, registerSecurity } from './http/security.ts';
 import { registerStatic } from './http/static.ts';
 import { accountRoutes } from './modules/accounts/routes.ts';
 import { AccountService } from './modules/accounts/service.ts';
@@ -53,12 +53,7 @@ export type ServerDeps = {
   config: Config;
   store: Store;
   blobs: BlobStore;
-  /**
-   * The logger `main.ts` makes before the server, with `LOG_SERIALIZERS`, so startup logs the same
-   * way; false in tests.
-   */
   logger: FastifyBaseLogger | false;
-  /** The clock every expiry is measured against; tests pass their own. */
   now?: Clock;
 };
 
@@ -71,7 +66,10 @@ export async function buildServer({
   now = () => new Date(),
 }: ServerDeps) {
   const app = Fastify({
-    ...(logger ? { loggerInstance: logger } : { logger: false }),
+    // Share Link tokens are masked here, so no entry point can forget it.
+    ...(logger
+      ? { loggerInstance: logger.child({}, { serializers: LOG_SERIALIZERS }) }
+      : { logger: false }),
     bodyLimit: config.bodyLimitBytes,
     trustProxy: config.trustProxy,
     genReqId,
@@ -81,7 +79,6 @@ export async function buildServer({
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
-  // Every service is built here, once, and reached by routes through `app.services` (ADR 0007).
   const live = new LiveUpdates();
   const pairing = new PairingService(store, now);
   const accounts = new AccountService(store, now, pairing);
@@ -106,7 +103,7 @@ export async function buildServer({
   await app.register(sensible);
   await app.register(cookie);
   registerAuth(app);
-  // Routes opt in through `config.rateLimit`: sign-in, code redemption, public Share Links.
+  // Routes opt in through `config.rateLimit`.
   await app.register(rateLimit, { global: false });
   await registerDocs(app);
 

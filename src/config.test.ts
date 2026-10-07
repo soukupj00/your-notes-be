@@ -65,8 +65,27 @@ describe('loadConfig', () => {
       endpoint: 'http://s3:8333',
       region: 'us-east-1',
       bucket: 'younotes',
+      prefix: 'younotes/',
       forcePathStyle: true,
       credentials: { accessKeyId: 'key', secretAccessKey: 'secret' },
+    });
+  });
+
+  it('keeps S3 objects under S3_PREFIX, and an empty one means the bucket root', () => {
+    const s3 = { BLOB_STORE: 's3', S3_BUCKET: 'shared' };
+    expect(loadConfig({ ...s3, S3_PREFIX: 'notes/' }).blobStore).toMatchObject({
+      prefix: 'notes/',
+    });
+    expect(loadConfig({ ...s3, S3_PREFIX: '' }).blobStore).toMatchObject({ prefix: '' });
+  });
+
+  it('refuses an S3_PREFIX that does not end in a slash', () => {
+    const s3 = { BLOB_STORE: 's3', S3_BUCKET: 'shared' };
+    expect(() => loadConfig({ ...s3, S3_PREFIX: 'notes' })).toThrow(
+      'S3_PREFIX: empty or ending in /'
+    );
+    expect(loadConfig({ ...s3, S3_PREFIX: 'notes/' }).blobStore).toMatchObject({
+      prefix: 'notes/',
     });
   });
 
@@ -76,11 +95,12 @@ describe('loadConfig', () => {
       kind: 's3',
       region: 'us-east-1',
       bucket: 'younotes',
+      prefix: 'younotes/',
       forcePathStyle: false,
     });
   });
 
-  it('moves the records to PostgreSQL with DATABASE_URL', () => {
+  it('selects PostgreSQL with DATABASE_URL', () => {
     for (const url of ['postgres://u:pw@db:5432/younotes', 'postgresql://u:pw@db/younotes']) {
       expect(loadConfig({ DATABASE_URL: url }).database).toEqual({ kind: 'postgres', url });
     }
@@ -159,6 +179,16 @@ describe('loadTargetConfig', () => {
       database: { kind: 'postgres', url: 'postgres://u:p@db/younotes' },
       blobStore: { kind: 's3', bucket: 'b' },
     });
+  });
+
+  it('moves S3 objects inside one bucket with TARGET_S3_PREFIX, an empty one to the root', () => {
+    const s3 = { ...server, BLOB_STORE: 's3', S3_BUCKET: 'b', S3_PREFIX: '' };
+    expect(loadTargetConfig({ ...s3, TARGET_S3_PREFIX: 'younotes/' }).blobStore).toMatchObject({
+      bucket: 'b',
+      prefix: 'younotes/',
+    });
+    const fromPrefix = { ...s3, S3_PREFIX: 'younotes/', TARGET_S3_PREFIX: '' };
+    expect(loadTargetConfig(fromPrefix).blobStore).toMatchObject({ prefix: '' });
   });
 
   it('reads an empty TARGET_ variable as unset, so TARGET_DATABASE_URL= means SQLite', () => {

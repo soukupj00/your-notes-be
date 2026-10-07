@@ -9,20 +9,23 @@ export async function sendBlob(
   reply: FastifyReply,
   blob: BlobRecord
 ): Promise<FastifyReply> {
+  const { blobs } = request.server.services;
   const etag = `"${blob.id}"`;
+  const fresh = notModified(request, etag);
+  const bodyless = fresh || request.method === 'HEAD';
+  const bytes = bodyless ? await blobs.has(blob.id) : await blobs.bytes(blob.id);
+  // Before any caching header, so the 404 is never kept and the next PUT can heal it.
+  if (!bytes) {
+    request.log.error({ blobId: blob.id }, 'blob record without a file');
+    return sendProblem(reply, 404, 'No such blob');
+  }
   reply.headers({
     etag,
     'cache-control': 'private, max-age=31536000, immutable',
     // Uploaded bytes never run as a page of this origin, whatever their Content-Type says.
     'content-security-policy': "default-src 'none'; sandbox",
   });
-  if (notModified(request, etag)) return reply.code(304).send();
+  if (fresh) return reply.code(304).send();
   reply.headers({ 'content-type': blob.mime, 'content-length': blob.size });
-  if (request.method === 'HEAD') return reply.send();
-  const bytes = await request.server.services.blobs.bytes(blob.id);
-  if (!bytes) {
-    request.log.error({ blobId: blob.id }, 'blob record without a file');
-    return sendProblem(reply, 500);
-  }
-  return reply.send(bytes);
+  return reply.send(bodyless ? undefined : bytes);
 }

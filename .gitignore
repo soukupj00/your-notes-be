@@ -8,3 +8,7 @@ coverage/
 # Editor and agent tooling, per machine
 .idea/
 .claude-flow/
+
+# Agent context, local only (as in the frontend)
+docs/superpowers/
+.superpowers/

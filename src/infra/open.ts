@@ -5,22 +5,39 @@ import type { Warn } from '../shared/warn.ts';
 import type { BlobStore } from '../store/BlobStore.ts';
 import type { Store } from '../store/Store.ts';
 import { diskBlobStore } from './blobs/disk.ts';
-import type { PostgresOptions } from './postgres/store.ts';
+import { holdInstanceLock } from './sqlite/instanceLock.ts';
 import { openSqliteStore } from './sqlite/store.ts';
 
-// A non-default backend loads only when chosen, so a SQLite and disk install never loads pg or
-// the AWS SDK (ADR 0006). No switch has a default case: tsc fails until each names a new backend.
+// Non-default backends load by dynamic import, so a SQLite and disk install never loads their
+// drivers (ADR 0006). No switch has a default case, so tsc names each one to extend.
 
-/** The SQLite file in DATA_DIR, unless DATABASE_URL names a PostgreSQL; migrated either way. */
-export async function openStore(config: Config, options: PostgresOptions): Promise<Store> {
+export type StoreOptions = {
+  /** Told of every try while PostgreSQL is not up yet, and of its dropped connections. */
+  warn: Warn;
+  /**
+   * Hold the one-instance lock (ADR 0006) from before migrating until `close`; `onLost` hears if
+   * the PostgreSQL connection holding it drops, which SQLite's lock cannot.
+   */
+  oneInstance?: { onLost(error: Error): void };
+};
+
+/** Migrated before it returns. */
+export async function openStore(config: Config, options: StoreOptions): Promise<Store> {
   switch (config.database.kind) {
     case 'postgres': {
       const { openPostgresStore } = await import('./postgres/store.ts');
       return openPostgresStore(config.database.url, options);
     }
-    case 'sqlite':
+    case 'sqlite': {
       mkdirSync(config.dataDir, { recursive: true });
-      return openSqliteStore(sqlitePath(config.dataDir));
+      const release = options.oneInstance ? holdInstanceLock(config.dataDir) : () => {};
+      try {
+        return openSqliteStore(sqlitePath(config.dataDir), release);
+      } catch (error) {
+        release();
+        throw error;
+      }
+    }
   }
 }
 
@@ -28,7 +45,7 @@ export function sqlitePath(dataDir: string): string {
   return join(dataDir, 'younotes.db');
 }
 
-/** Files in DATA_DIR, unless BLOB_STORE=s3; `warn` hears of each try while the bucket is not up. */
+/** `warn` hears of each try while the S3 bucket is not up. */
 export async function openBlobStore(config: Config, warn: Warn): Promise<BlobStore> {
   switch (config.blobStore.kind) {
     case 's3':
@@ -38,9 +55,8 @@ export async function openBlobStore(config: Config, warn: Warn): Promise<BlobSto
   }
 }
 
-// Where a Config keeps records and bytes, compared by `migrate` to move only what changes place.
-// Two spellings of one place (localhost, 127.0.0.1) compare unequal, which is safe: migrate then
-// finds the target holding data, or locked on PostgreSQL, and refuses.
+// Compared by `migrate` to move only what changes place. Two spellings of one place compare
+// unequal, which is safe: migrate then finds the target full, or locked, and refuses.
 
 export function storeLocation(config: Config): string {
   switch (config.database.kind) {
@@ -53,8 +69,10 @@ export function storeLocation(config: Config): string {
 
 export function blobStoreLocation(config: Config): string {
   switch (config.blobStore.kind) {
-    case 's3':
-      return `s3 ${config.blobStore.endpoint ?? 'aws'} ${config.blobStore.bucket}`;
+    case 's3': {
+      const { endpoint, bucket, prefix } = config.blobStore;
+      return `s3 ${endpoint ?? 'aws'} ${bucket}/${prefix}`;
+    }
     case 'disk':
       return resolve(config.dataDir, 'blobs');
   }

@@ -8,6 +8,8 @@ export type AccountRecord = { id: string; username: string; role: Role; createdA
 
 export type NewAccount = AccountRecord & { passwordHash: string };
 
+export type AccountWithPassword = AccountRecord & { passwordHash?: string };
+
 /** One per signed-in Device; the id is the Device's id. */
 export type SessionRecord = {
   id: string;
@@ -38,7 +40,6 @@ export type StoredTag = Tag & { rev: number };
 export type StoredNoteTag = NoteTag & { rev: number };
 export type TombstoneRecord = Omit<Tombstone, 'rev'>;
 
-/** A synced row and the Sequence it was written at. */
 export type Sequenced<T> = { seq: number; record: T };
 
 export type Changes = {
@@ -104,3 +105,9 @@ export const BACKUP_KINDS = [
 
 /** Each kind's records, read as they are iterated. */
 export type AllRecords = { [K in BackupKind]: () => AsyncIterable<BackupRecords[K]> };
+
+export function mapKinds(
+  f: <K extends BackupKind>(kind: K) => () => AsyncIterable<BackupRecords[K]>
+): AllRecords {
+  return Object.fromEntries(BACKUP_KINDS.map((kind) => [kind, f(kind)])) as AllRecords;
+}

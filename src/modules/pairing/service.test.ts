@@ -52,8 +52,8 @@ describe('Pairing Codes', () => {
   });
 
   it('keeps one setup code while there is no Owner, and none after', async () => {
-    const first = await at(T0).ensureSetupCode();
-    const second = await at(T0).ensureSetupCode();
+    const first = await at(T0).renewSetupCode();
+    const second = await at(T0).renewSetupCode();
     expect(first).not.toBeNull();
     expect(second).not.toBeNull();
     if (!first || !second) return;
@@ -61,6 +61,6 @@ describe('Pairing Codes', () => {
     // A setup code does not expire by the clock, and joins no Account.
     expect(await at(later(365 * 24 * 60 * 60 * 1000)).spend(second, 'setup')).toEqual({});
     await account('o1', 'olga', 'owner');
-    expect(await at(T0).ensureSetupCode()).toBeNull();
+    expect(await at(T0).renewSetupCode()).toBeNull();
   });
 });

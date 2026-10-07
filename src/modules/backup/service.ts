@@ -6,7 +6,7 @@ import { pipeline } from 'node:stream/promises';
 import type { Clock } from '../../shared/clock.ts';
 import type { Warn } from '../../shared/warn.ts';
 import type { BlobStore } from '../../store/BlobStore.ts';
-import { type AllRecords, BACKUP_KINDS, type BlobRecord } from '../../store/records.ts';
+import { type AllRecords, BACKUP_KINDS, type BlobRecord, mapKinds } from '../../store/records.ts';
 import type { Store } from '../../store/Store.ts';
 import { VERSION } from '../../version.ts';
 import {
@@ -27,9 +27,8 @@ import {
 export type Server = { store: Store; blobs: BlobStore };
 
 /**
- * The Server Backup (ADR 0006): one server's records and bytes out to a directory, back in, or
- * across to other backends. Records are read and written whole, so Sequences and Sessions survive
- * and Devices keep syncing, signed in, without a resync.
+ * The Server Backup (ADR 0006). Records are copied whole, so Devices keep syncing, signed in,
+ * without a resync.
  */
 export class ServerBackupService {
   readonly #server: Server;
@@ -42,12 +41,9 @@ export class ServerBackupService {
     this.#warn = warn;
   }
 
-  /**
-   * Every record, read in one snapshot while the server runs, then the bytes they list, into an
-   * empty directory. The manifest goes last, so a directory without one is incomplete.
-   */
+  /** The manifest goes last, so a directory without one is incomplete. */
   async backup(dir: string): Promise<Manifest> {
-    // Owner only, files and folders alike: the backup holds Share Link tokens and password hashes.
+    // Private, files and folders alike: the backup holds Share Link tokens and password hashes.
     await mkdir(dir, { recursive: true, mode: PRIVATE_DIR });
     if ((await readdir(dir)).length > 0) throw new Error(`${dir} is not empty`);
     const counts: Partial<Counts> = {};
@@ -74,10 +70,7 @@ export class ServerBackupService {
     return manifest;
   }
 
-  /**
-   * Loads a backup into this server, which must hold nothing yet. Everything is checked first, then
-   * the bytes go in, then every record in one transaction: bytes before records, as on upload.
-   */
+  /** Bytes go in before records, as on upload. */
   async restore(dir: string): Promise<Manifest> {
     const manifest = await readManifest(dir);
     await requireEmpty(this.#server);
@@ -94,9 +87,8 @@ export class ServerBackupService {
   }
 
   /**
-   * Copies this server into `target`, which must hold nothing yet: the bytes, then the records.
-   * An absent `target.store` or `target.blobs` means the records or the bytes stay where they are.
-   * The server must be stopped, since what it wrote meanwhile would be left behind.
+   * An absent `target.store` or `target.blobs` leaves the records or the bytes where they are. The
+   * server must be stopped, or what it writes meanwhile is left behind.
    */
   async migrateTo(target: Partial<Server>): Promise<{ records: number; files: number }> {
     await requireEmpty(target);
@@ -154,7 +146,6 @@ async function requireEmpty({ store, blobs }: Partial<Server>): Promise<void> {
   }
 }
 
-/** Reads every line and finds every blob's bytes before anything is written. */
 async function verify(dir: string, manifest: Manifest): Promise<void> {
   for (const kind of BACKUP_KINDS) {
     const count = (await collect(readLines(dir, kind))).length;
@@ -208,7 +199,5 @@ function counting(records: AllRecords, seen: { count: number }): AllRecords {
       yield item;
     }
   }
-  return Object.fromEntries(
-    BACKUP_KINDS.map((kind) => [kind, () => count<unknown>(records[kind]())])
-  ) as unknown as AllRecords;
+  return mapKinds((kind) => () => count(records[kind]()));
 }

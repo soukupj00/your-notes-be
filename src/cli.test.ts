@@ -38,7 +38,6 @@ async function dataDir(name = 'data'): Promise<string> {
   return dir;
 }
 
-/** The Owner's username and the Attachment's bytes, from wherever `env` keeps them. */
 async function contents(env: Record<string, string>) {
   const config = loadConfig(env);
   const store = await openStore(config, { warn: () => {} });
@@ -53,12 +52,21 @@ const quiet = () => {
   vi.spyOn(console, 'warn').mockImplementation(() => {});
 };
 
+const runningServer = (env: Record<string, string>) =>
+  openStore(loadConfig(env), { warn: () => {}, oneInstance: { onLost: () => {} } });
+
 describe('backup and restore', () => {
-  it('back up a DATA_DIR and restore it into an empty one, once', async () => {
+  it('back up a running DATA_DIR and restore it into an empty one, once', async () => {
     root = await mkdtemp(join(tmpdir(), 'younotes-cli-'));
     quiet();
     const backupDir = join(root, 'backup');
-    expect(await run(['backup', backupDir], { DATA_DIR: await dataDir() })).toBe(0);
+    const data = { DATA_DIR: await dataDir() };
+    const running = await runningServer(data);
+    try {
+      expect(await run(['backup', backupDir], data)).toBe(0);
+    } finally {
+      await running.close();
+    }
     expect(await readdir(backupDir)).toContain('manifest.json');
 
     const restored = { DATA_DIR: join(root, 'restored') };
@@ -94,6 +102,32 @@ describe('backup and restore', () => {
     root = await mkdtemp(join(tmpdir(), 'younotes-cli-'));
     const config = loadConfig({ DATA_DIR: await dataDir() });
     await expect(backup(config, config.dataDir)).rejects.toThrow(/not empty/);
+  });
+
+  it('refuse to restore or migrate while a server runs on the DATA_DIR', async () => {
+    root = await mkdtemp(join(tmpdir(), 'younotes-cli-'));
+    quiet();
+    const backupDir = join(root, 'backup');
+    const data = { DATA_DIR: await dataDir() };
+    expect(await run(['backup', backupDir], data)).toBe(0);
+
+    const running = await runningServer(data);
+    try {
+      const migrating = run(['migrate'], { ...data, TARGET_DATA_DIR: join(root, 'moved') });
+      await expect(migrating).rejects.toThrow(/stop the other first/);
+    } finally {
+      await running.close();
+    }
+
+    const restored = { DATA_DIR: join(root, 'restored') };
+    const runningOnTarget = await runningServer(restored);
+    try {
+      await expect(run(['restore', backupDir], restored)).rejects.toThrow(/stop the other first/);
+    } finally {
+      await runningOnTarget.close();
+    }
+    expect(await run(['restore', backupDir], restored)).toBe(0);
+    expect(await contents(restored)).toEqual({ owner: 'olga', bytes: 'bytes' });
   });
 
   it('point a backup made by an earlier version at the guide', async () => {

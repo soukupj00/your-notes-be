@@ -1,5 +1,4 @@
-// For tests only, and left out of the build: Stores over PGlite and over a throwaway database on
-// a real PostgreSQL.
+// For tests only, and left out of the build.
 import { randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 import { sql } from 'drizzle-orm';
@@ -16,7 +15,7 @@ import { openPostgresStore, postgresStore } from './store.ts';
 
 const TABLES = 'accounts, sessions, codes, notes, tags, note_tags, tombstones, blobs, shares';
 
-/** Empties `db` and hands out a Store whose `close` leaves it open for the next test. */
+/** The Store's `close` leaves `db` open for the next test. */
 async function emptied(db: Db): Promise<Store> {
   await db.execute(sql.raw(`truncate ${TABLES}`));
   return guarded(postgresStore(db, async () => {}));
@@ -34,14 +33,25 @@ export async function pgliteTestStore(): Promise<Store> {
   return emptied(await pglite);
 }
 
-async function admin(url: string, statement: string): Promise<void> {
+async function admin<Row extends pg.QueryResultRow = pg.QueryResultRow>(
+  url: string,
+  statement: string
+): Promise<Row[]> {
   const client = new pg.Client({ connectionString: url });
   await client.connect();
   try {
-    await client.query(statement);
+    return (await client.query<Row>(statement)).rows;
   } finally {
     await client.end();
   }
+}
+
+export async function lockWaiters(url: string): Promise<number> {
+  const [{ n }] = await admin<{ n: number }>(
+    url,
+    "select count(*)::int as n from pg_stat_activity where wait_event_type = 'Lock' and datname = current_database()"
+  );
+  return n;
 }
 
 export async function testDatabase(url: string): Promise<{ url: string; drop(): Promise<void> }> {
@@ -51,16 +61,15 @@ export async function testDatabase(url: string): Promise<{ url: string; drop(): 
   own.pathname = `/${name}`;
   return {
     url: own.toString(),
-    drop: () => admin(url, `drop database if exists ${name} with (force)`),
+    drop: async () => {
+      await admin(url, `drop database if exists ${name} with (force)`);
+    },
   };
 }
 
 let real: Promise<{ db: Db; end(): Promise<void> }> | undefined;
 
-/**
- * The test file's one database on the server `url` points at, migrated the way the server does
- * it; `closePostgresTestStore` drops it.
- */
+/** The test file's one database, migrated as the server does; `closePostgresTestStore` drops it. */
 export async function postgresTestStore(url: string): Promise<Store> {
   real ??= (async () => {
     const database = await testDatabase(url);

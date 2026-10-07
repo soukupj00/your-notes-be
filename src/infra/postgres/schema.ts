@@ -9,9 +9,10 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import type { AttachmentMeta } from '../../contract/index.ts';
+import type * as sqlite from '../sqlite/schema.ts';
 
 // The SQLite schema's twin (ADR 0006): the same tables, columns and keys, so both give the same
-// rows. Timestamps stay ISO 8601 text, because the code compares them as strings.
+// rows (rows.ts). Timestamps stay ISO 8601 text, compared as strings.
 
 const account = () =>
   text('account_id')
@@ -23,7 +24,7 @@ export const accounts = pgTable('accounts', {
   username: text('username').notNull().unique(),
   passwordHash: text('password_hash'),
   role: text('role', { enum: ['owner', 'member'] }).notNull(),
-  /** The Account's Sequence: advanced by every accepted change (ADR 0002). */
+  /** The Account's Sequence (ADR 0002). */
   seq: integer('seq').notNull().default(0),
   /** The highest Sequence of a Tombstone the sweep has removed; older cursors get 410. */
   prunedSeq: integer('pruned_seq').notNull().default(0),
@@ -31,7 +32,7 @@ export const accounts = pgTable('accounts', {
   updatedAt: text('updated_at').notNull(),
 });
 
-/** One row per signed-in Device; the id is the Device's id. */
+/** One per signed-in Device; the id is the Device's id. */
 export const sessions = pgTable(
   'sessions',
   {
@@ -46,7 +47,7 @@ export const sessions = pgTable(
   (t) => [index('sessions_account_idx').on(t.accountId)]
 );
 
-/** Pairing Codes (ADR 0001): hashed, single use, short-lived. */
+/** Pairing Codes (ADR 0001). */
 export const codes = pgTable('codes', {
   codeHash: text('code_hash').primaryKey(),
   kind: text('kind', { enum: ['setup', 'device', 'invite'] }).notNull(),
@@ -134,7 +135,7 @@ export const tombstones = pgTable(
   ]
 );
 
-/** Which Account owns which bytes, and that they exist (ADR 0003); bytes live in the BlobStore. */
+/** Records only; the bytes are in the BlobStore (ADR 0003). */
 export const blobs = pgTable(
   'blobs',
   {
@@ -142,7 +143,6 @@ export const blobs = pgTable(
     accountId: account(),
     /** 64-bit like SQLite's integer, since BLOB_LIMIT_BYTES may exceed 2 GiB. */
     size: bigint('size', { mode: 'number' }).notNull(),
-    /** The Content-Type it was uploaded with, served back as is. */
     mime: text('mime').notNull(),
     createdAt: text('created_at').notNull(),
   },
@@ -150,8 +150,8 @@ export const blobs = pgTable(
 );
 
 /**
- * Share Links: one per shared Note, readable by anyone holding the token. The token is kept in
- * clear so the link can be shown again (ADR 0005); the sweep removes a share whose Note is gone.
+ * Share Links. The token is kept in clear so the link can be shown again (ADR 0005). No key to
+ * `notes`: the sweep removes a share whose Note is gone.
  */
 export const shares = pgTable(
   'shares',
@@ -164,3 +164,18 @@ export const shares = pgTable(
   },
   (t) => [uniqueIndex('shares_account_note_idx').on(t.accountId, t.noteId)]
 );
+
+// rows.ts is typed by the SQLite schema alone; tsc fails here when a table drifts from its twin.
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+type Agree<T extends true> = T;
+export type SchemasAgree = [
+  Agree<Same<typeof accounts.$inferSelect, typeof sqlite.accounts.$inferSelect>>,
+  Agree<Same<typeof sessions.$inferSelect, typeof sqlite.sessions.$inferSelect>>,
+  Agree<Same<typeof codes.$inferSelect, typeof sqlite.codes.$inferSelect>>,
+  Agree<Same<typeof notes.$inferSelect, typeof sqlite.notes.$inferSelect>>,
+  Agree<Same<typeof tags.$inferSelect, typeof sqlite.tags.$inferSelect>>,
+  Agree<Same<typeof noteTags.$inferSelect, typeof sqlite.noteTags.$inferSelect>>,
+  Agree<Same<typeof tombstones.$inferSelect, typeof sqlite.tombstones.$inferSelect>>,
+  Agree<Same<typeof blobs.$inferSelect, typeof sqlite.blobs.$inferSelect>>,
+  Agree<Same<typeof shares.$inferSelect, typeof sqlite.shares.$inferSelect>>,
+];

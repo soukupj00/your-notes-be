@@ -53,14 +53,15 @@ All under `/api`; everything else is the PWA with SPA fallback.
 | Health | `GET /health` |
 
 Batch push is the only write path in M5.
-Single-resource `GET`s exist as HAL link targets with an `ETag`; per-resource `PUT` with `If-Match` is additive later work.
+Single-resource `GET`s exist as HAL link targets.
+Only the feed and the blob routes send an `ETag` today; per-resource `PUT` with `If-Match` is additive later work.
 
 ### Security
 - Session: 32 random bytes, SHA-256 in `sessions`, `HttpOnly; Secure; SameSite=Lax` cookie, one row per Device.
   JSON Web Tokens rejected (ADR 0001).
 - Passwords: `scrypt` from `node:crypto`.
 - Pairing Codes hashed, ten-minute expiry, single use; the Owner is created only through the code printed at first start (ADR 0001).
-- CSRF: `SameSite=Lax` plus rejecting unsafe methods with `Sec-Fetch-Site: cross-site`.
+- CSRF: `SameSite=Lax` plus refusing unsafe methods unless `Sec-Fetch-Site` is absent, `same-origin` or `none`.
 - Rate limits per IP on setup, sign-in and code redemption; body limits on JSON and blobs; one SSE connection per Device.
 - Four static security headers in one `onSend` hook; a real CSP is its own later task tested against the built PWA.
   `@fastify/helmet` not used.
@@ -78,20 +79,9 @@ Single-resource `GET`s exist as HAL link targets with an `ETag`; per-resource `P
 - CLI `backup <dir>`, `restore <dir>`, `migrate`: the portable Server Backup (ADR 0006), whatever the backends; no scheduler, the guide shows the cron line.
 
 ### Sync rules (`src/modules/sync/`)
-| Device sends | Server has | Outcome |
-|---|---|---|
-| no `rev` | nothing | `accepted`, rev 1 |
-| no `rev` | the id | `conflict` |
-| `rev` equal | the row | `accepted`, rev + 1, new `seq` |
-| `rev` lower | the row | `conflict` with the server row; the Device makes the Conflicted Copy |
-| anything | a Tombstone | `gone` |
-| a Tombstone, `rev` equal | the row | row deleted, Tombstone written, blobs released to the sweep |
-| a Tombstone, `rev` stale or absent | the Note or Tag | `conflict` with the server row, nothing written; a NoteTag Tombstone is always accepted |
-| a NoteTag | anything | `accepted`; a link has nothing to conflict over |
-
-One transaction per batch; a malformed row fails the whole batch with 400.
-Pages default to 50 rows across the four kinds (`PAGE_SIZE`, cap 200), ordered by `seq`.
-Tombstones expire after 90 days; a daily in-process sweep also removes blob files unreferenced for 24 hours.
+The rules, the feed and Live Updates are specified in [`docs/architecture/sync.md`](./docs/architecture/sync.md).
+A malformed row fails the whole batch with 400.
+A daily in-process sweep also removes blob files unreferenced for 24 hours.
 `PUT /api/blobs/:id` writes to a temp file, verifies, moves into place; a repeat is 204 without reading the body; upload before or after the Note both work.
 
 ### Structure
@@ -178,4 +168,4 @@ Each slice updates `docs/architecture/structure.md` and `CLAUDE.md` for what it 
   Done when a SQLite and disk install moves to PostgreSQL and S3 and every Device keeps syncing without a resync.
   The format is a directory: `manifest.json` (written last, so a folder without one is incomplete), one JSON Lines file per kind, `blobs/<id>`; every line is checked with a strict schema before a restore writes anything.
   `migrate` streams Store to Store and BlobStore to BlobStore with no temp copy; the target is the server's own environment with each `TARGET_X` replacing `X`, so records and bytes can move separately.
-  `restore` and `migrate` take the PostgreSQL instance lock and refuse while a server runs; `backup` works on a running server.
+  `restore` and `migrate` take the instance lock and refuse while a server runs, on SQLite too since the review of 2026-10-07; `backup` works on a running server.

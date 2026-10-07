@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ChangesPage, PushBatch, PushResponse } from '../../contract/index.ts';
 import { sessionOf } from '../../http/auth.ts';
 import { etagOf, notModified } from '../../http/etag.ts';
-import { SECURITY_HEADERS } from '../../http/security.ts';
+import { securityHeaders } from '../../http/security.ts';
 import { pageBody, pushBody } from './presenter.ts';
 
 const PING_MS = 25_000;
@@ -36,8 +36,14 @@ export const syncRoutes: FastifyPluginAsyncZod = async (app) => {
         tags: ['sync'],
         querystring: z.object({
           since: z.coerce.number().int().min(0).default(0),
-          /** Where the pull began; `next` links carry it, so a paged resync is judged by it. */
-          from: z.coerce.number().int().min(0).optional(),
+          from: z.coerce
+            .number()
+            .int()
+            .min(0)
+            .optional()
+            .describe(
+              'Where the pull began; next links carry it, so a paged resync is judged by it'
+            ),
         }),
         response: {
           200: ChangesPage,
@@ -56,7 +62,6 @@ export const syncRoutes: FastifyPluginAsyncZod = async (app) => {
     }
   );
 
-  /** Live Update: an SSE hint carrying only the Account's Sequence; the Device pulls on it. */
   app.get(
     '/api/changes/stream',
     {
@@ -74,8 +79,7 @@ export const syncRoutes: FastifyPluginAsyncZod = async (app) => {
       reply.hijack();
       const raw = reply.raw;
       raw.writeHead(200, {
-        ...SECURITY_HEADERS,
-        'x-request-id': request.id,
+        ...securityHeaders(request.id),
         'content-type': 'text/event-stream',
         'cache-control': 'no-cache',
         'x-accel-buffering': 'no',
