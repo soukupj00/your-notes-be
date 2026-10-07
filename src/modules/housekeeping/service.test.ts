@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import type { AttachmentMeta } from '../../contract/index.ts';
+import { DAY_MS } from '../../shared/clock.ts';
 import type { BlobStore } from '../../store/BlobStore.ts';
 import type { CodeRecord, SessionRecord } from '../../store/records.ts';
 import type { Store } from '../../store/Store.ts';
@@ -7,7 +8,7 @@ import { testBlobs, testStore } from '../../test/helpers.ts';
 import { HousekeepingService } from './service.ts';
 
 const NOW = new Date('2026-12-31T00:00:00.000Z');
-const daysAgo = (days: number) => new Date(NOW.getTime() - days * 86_400_000).toISOString();
+const daysAgo = (days: number) => new Date(NOW.getTime() - days * DAY_MS).toISOString();
 
 let store: Store;
 let blobs: BlobStore;

@@ -11,6 +11,7 @@ import {
   BACKUP_KINDS,
   type BackupKind,
   type BackupRecords,
+  mapKinds,
 } from '../../store/records.ts';
 
 // The Server Backup's directory (ADR 0006).
@@ -131,9 +132,7 @@ export async function* readLines<K extends BackupKind>(
 }
 
 export function recordsIn(dir: string): AllRecords {
-  return Object.fromEntries(
-    BACKUP_KINDS.map((kind) => [kind, () => readLines(dir, kind)])
-  ) as unknown as AllRecords;
+  return mapKinds((kind) => () => readLines(dir, kind));
 }
 
 export async function readManifest(dir: string): Promise<Manifest> {

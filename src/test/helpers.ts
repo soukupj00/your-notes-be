@@ -64,7 +64,7 @@ export async function signUpOwner(app: App): Promise<string> {
     method: 'POST',
     url: '/api/setup',
     payload: {
-      code: await app.services.pairing.ensureSetupCode(),
+      code: await app.services.pairing.renewSetupCode(),
       username: 'olga',
       password: PASSWORD,
       deviceName: 'Laptop',

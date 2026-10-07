@@ -9,6 +9,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import type { AttachmentMeta } from '../../contract/index.ts';
+import type * as sqlite from '../sqlite/schema.ts';
 
 // The SQLite schema's twin (ADR 0006): the same tables, columns and keys, so both give the same
 // rows (rows.ts). Timestamps stay ISO 8601 text, compared as strings.
@@ -163,3 +164,15 @@ export const shares = pgTable(
   },
   (t) => [uniqueIndex('shares_account_note_idx').on(t.accountId, t.noteId)]
 );
+
+// Both Stores share rows.ts, which is typed by the SQLite schema; this fails at the schema instead.
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+true satisfies Same<typeof accounts.$inferSelect, typeof sqlite.accounts.$inferSelect>;
+true satisfies Same<typeof sessions.$inferSelect, typeof sqlite.sessions.$inferSelect>;
+true satisfies Same<typeof codes.$inferSelect, typeof sqlite.codes.$inferSelect>;
+true satisfies Same<typeof notes.$inferSelect, typeof sqlite.notes.$inferSelect>;
+true satisfies Same<typeof tags.$inferSelect, typeof sqlite.tags.$inferSelect>;
+true satisfies Same<typeof noteTags.$inferSelect, typeof sqlite.noteTags.$inferSelect>;
+true satisfies Same<typeof tombstones.$inferSelect, typeof sqlite.tombstones.$inferSelect>;
+true satisfies Same<typeof blobs.$inferSelect, typeof sqlite.blobs.$inferSelect>;
+true satisfies Same<typeof shares.$inferSelect, typeof sqlite.shares.$inferSelect>;

@@ -15,6 +15,7 @@ The rules every Store keeps, all documented in `Store.ts`:
 
 - Every call is async, and `transaction(fn)` runs `fn` against a Store bound to one transaction.
 - Calling the outer Store inside `fn` throws, and so does a `tx` kept after its transaction ended; wrap the Store in `guarded()` from `src/infra/guarded.ts` to get both for free.
+  Each group is a plain object of functions that do not use `this`, because `guarded()` wraps a group's own properties and calls them unbound.
 - `accounts.lock(id, mode)` holds the Account until the transaction ends, which is what keeps two pushes from sharing a Sequence and a feed page from reaching past its own.
   A database that runs one transaction at a time, like SQLite behind its lock, implements it as nothing.
 - Timestamps are ISO 8601 text, compared as strings.

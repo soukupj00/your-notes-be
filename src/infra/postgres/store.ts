@@ -1,5 +1,6 @@
 import { and, asc, eq, gt, isNotNull, isNull, lt, lte, max, notExists, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
+import type { PgSelect } from 'drizzle-orm/pg-core';
 import { UsernameTaken } from '../../shared/errors.ts';
 import type { Warn } from '../../shared/warn.ts';
 import type { Store, StoreTx } from '../../store/Store.ts';
@@ -294,30 +295,13 @@ function transactionStore(db: Db): StoreTx {
       },
       async changesSince(accountId, since, limit) {
         const after = (table: Synced) => and(eq(table.accountId, accountId), gt(table.seq, since));
-        const noteRows = await db
-          .select()
-          .from(notes)
-          .where(after(notes))
-          .orderBy(asc(notes.seq))
-          .limit(limit);
-        const tagRows = await db
-          .select()
-          .from(tags)
-          .where(after(tags))
-          .orderBy(asc(tags.seq))
-          .limit(limit);
-        const linkRows = await db
-          .select()
-          .from(noteTags)
-          .where(after(noteTags))
-          .orderBy(asc(noteTags.seq))
-          .limit(limit);
-        const tombstoneRows = await db
-          .select()
-          .from(tombstones)
-          .where(after(tombstones))
-          .orderBy(asc(tombstones.seq))
-          .limit(limit);
+        // Drizzle's PostgreSQL from() refuses a generic table, so the query comes in already begun.
+        const changed = <Q extends PgSelect>(query: Q, table: Synced) =>
+          query.where(after(table)).orderBy(asc(table.seq)).limit(limit);
+        const noteRows = await changed(db.select().from(notes).$dynamic(), notes);
+        const tagRows = await changed(db.select().from(tags).$dynamic(), tags);
+        const linkRows = await changed(db.select().from(noteTags).$dynamic(), noteTags);
+        const tombstoneRows = await changed(db.select().from(tombstones).$dynamic(), tombstones);
         return {
           notes: noteRows.map((row) => ({ seq: row.seq, record: noteFromRow(row) })),
           tags: tagRows.map((row) => ({ seq: row.seq, record: tagFromRow(row) })),

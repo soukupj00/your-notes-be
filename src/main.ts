@@ -55,7 +55,7 @@ await app.listen({ port: config.port, host: config.host });
 setInterval(sweep, SWEEP_EVERY_MS).unref();
 
 // First run (ADR 0001): a new link on every start until the Owner exists.
-const setupCode = await app.services.pairing.ensureSetupCode();
+const setupCode = await app.services.pairing.renewSetupCode();
 if (setupCode) {
   const url = pairingLink(config.publicUrl, setupCode);
   app.log.info({ pairingLink: url }, 'No Owner yet: open the Pairing Link to create one');

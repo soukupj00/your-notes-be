@@ -8,6 +8,7 @@ import {
 } from '../../contract/index.ts';
 import type { Clock } from '../../shared/clock.ts';
 import { BadRequest, Gone } from '../../shared/errors.ts';
+import type { Sequenced } from '../../store/records.ts';
 import type { Store, StoreTx } from '../../store/Store.ts';
 import { decide } from './decide.ts';
 import type { Client, LiveUpdates } from './liveUpdates.ts';
@@ -157,31 +158,24 @@ export class SyncService {
       return { seq, changes: await tx.sync.changesSince(accountId, since, limit) };
     });
 
-    const page: Pick<ChangesPage, 'notes' | 'tags' | 'noteTags' | 'tombstones'> = {
-      notes: [],
-      tags: [],
-      noteTags: [],
-      tombstones: [],
-    };
-    const entries = [
-      ...changes.notes.map(({ seq, record }) => ({ seq, put: () => page.notes.push(record) })),
-      ...changes.tags.map(({ seq, record }) => ({ seq, put: () => page.tags.push(record) })),
-      ...changes.noteTags.map(({ seq, record }) => ({
-        seq,
-        put: () => page.noteTags.push(record),
-      })),
-      ...changes.tombstones.map(({ seq, record }) => ({
-        seq,
-        put: () => page.tombstones.push(record),
-      })),
-    ]
+    const entries = [...changes.notes, ...changes.tags, ...changes.noteTags, ...changes.tombstones]
       .sort((a, b) => a.seq - b.seq)
       .slice(0, limit);
-    for (const entry of entries) entry.put();
+    // Filtering keeps each kind in the Store's order, which is by Sequence (Store.ts).
+    const onPage = new Set<Sequenced<unknown>>(entries);
+    const records = <T>(rows: Sequenced<T>[]) =>
+      rows.filter((row) => onPage.has(row)).map((row) => row.record);
 
     const last = entries.at(-1);
     const next = entries.length === limit && last ? { since: last.seq, from: origin } : null;
-    return { ...page, seq, next };
+    return {
+      notes: records(changes.notes),
+      tags: records(changes.tags),
+      noteTags: records(changes.noteTags),
+      tombstones: records(changes.tombstones),
+      seq,
+      next,
+    };
   }
 
   async seq(accountId: string): Promise<number> {

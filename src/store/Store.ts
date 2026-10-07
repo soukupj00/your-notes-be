@@ -1,5 +1,6 @@
 import type {
   AccountRecord,
+  AccountWithPassword,
   AllRecords,
   BlobRecord,
   Changes,
@@ -57,9 +58,7 @@ export interface StoreTx {
      */
     lock(id: string, mode: 'write' | 'read'): Promise<void>;
     find(id: string): Promise<AccountRecord | undefined>;
-    findByUsername(
-      username: string
-    ): Promise<(AccountRecord & { passwordHash?: string }) | undefined>;
+    findByUsername(username: string): Promise<AccountWithPassword | undefined>;
     /** Oldest first, ties by id. */
     list(): Promise<AccountRecord[]>;
     owner(): Promise<AccountRecord | undefined>;

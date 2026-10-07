@@ -62,7 +62,8 @@ function unlockedStore(db: Db, onClose: () => void): Store {
             .values({ ...account, updatedAt: account.createdAt })
             .run();
         } catch (error) {
-          if ((error as { code?: string }).code === 'SQLITE_CONSTRAINT_UNIQUE') {
+          const { code, message } = error as { code?: string; message?: string };
+          if (code === 'SQLITE_CONSTRAINT_UNIQUE' && message?.includes('accounts.username')) {
             throw new UsernameTaken();
           }
           throw error;

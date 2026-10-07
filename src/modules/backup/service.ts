@@ -6,7 +6,7 @@ import { pipeline } from 'node:stream/promises';
 import type { Clock } from '../../shared/clock.ts';
 import type { Warn } from '../../shared/warn.ts';
 import type { BlobStore } from '../../store/BlobStore.ts';
-import { type AllRecords, BACKUP_KINDS, type BlobRecord } from '../../store/records.ts';
+import { type AllRecords, BACKUP_KINDS, type BlobRecord, mapKinds } from '../../store/records.ts';
 import type { Store } from '../../store/Store.ts';
 import { VERSION } from '../../version.ts';
 import {
@@ -199,7 +199,5 @@ function counting(records: AllRecords, seen: { count: number }): AllRecords {
       yield item;
     }
   }
-  return Object.fromEntries(
-    BACKUP_KINDS.map((kind) => [kind, () => count<unknown>(records[kind]())])
-  ) as unknown as AllRecords;
+  return mapKinds((kind) => () => count(records[kind]()));
 }

@@ -28,7 +28,7 @@ let setupCode: string;
 beforeEach(async () => {
   clock = new Date('2026-09-28T10:00:00.000Z');
   ({ app } = await testServer({}, () => clock));
-  setupCode = (await app.services.pairing.ensureSetupCode()) ?? '';
+  setupCode = (await app.services.pairing.renewSetupCode()) ?? '';
 });
 
 afterEach(async () => {

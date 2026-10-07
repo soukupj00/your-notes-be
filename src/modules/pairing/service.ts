@@ -64,8 +64,7 @@ export class PairingService {
     if (await this.ownerExists()) throw new NotFound(ALREADY_SET_UP);
   }
 
-  /** Replaces any earlier setup code, so only the link printed last works. */
-  async ensureSetupCode(): Promise<string | null> {
+  async renewSetupCode(): Promise<string | null> {
     if (await this.ownerExists()) return null;
     await this.#store.codes.removeSetupCodes();
     return (await this.mint('setup')).code;

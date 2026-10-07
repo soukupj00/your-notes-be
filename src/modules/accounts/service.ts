@@ -8,6 +8,13 @@ import type { PairingService } from '../pairing/service.ts';
 
 export type SessionAccount = Pick<AccountRecord, 'id' | 'username' | 'role'>;
 
+/** Copies only these three, so a password hash or other columns never ride along. */
+export function toSessionAccount(
+  record: Pick<AccountRecord, 'id' | 'username' | 'role'>
+): SessionAccount {
+  return { id: record.id, username: record.username, role: record.role };
+}
+
 /** One answer for a wrong username, a wrong password and a bad code, so none can be told apart. */
 export const WRONG_CREDENTIALS = 'Wrong credentials';
 
@@ -69,7 +76,7 @@ export class AccountService {
 
   async find(id: string): Promise<SessionAccount | undefined> {
     const account = await this.#store.accounts.find(id);
-    return account && { id: account.id, username: account.username, role: account.role };
+    return account && toSessionAccount(account);
   }
 
   findWithPassword(
