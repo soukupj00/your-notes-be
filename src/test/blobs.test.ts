@@ -90,6 +90,27 @@ describe('blobs', () => {
     expect(await buffer((await blobs.get(id)) as NodeJS.ReadableStream)).toEqual(BYTES);
   });
 
+  it('answers 404 for a record whose bytes are gone, uncached, and takes the next upload', async () => {
+    const id = randomUUID();
+    await put(id, BYTES);
+    await blobs.delete(id);
+    const head = () => app.inject({ method: 'HEAD', url: `/api/blobs/${id}`, ...as(olga) });
+
+    const lost = await head();
+    expect(lost.statusCode).toBe(404);
+    expect(lost.headers['cache-control']).toBeUndefined();
+    expect(problem(await app.inject({ url: `/api/blobs/${id}`, ...as(olga) }))).toBe(404);
+    const cached = await app.inject({
+      url: `/api/blobs/${id}`,
+      headers: { 'if-none-match': `"${id}"` },
+      ...as(olga),
+    });
+    expect(cached.statusCode).toBe(404);
+
+    expect((await put(id, BYTES)).statusCode).toBe(201);
+    expect((await head()).statusCode).toBe(200);
+  });
+
   it('answers a repeat, and a missing Content-Length, before reading the body', async () => {
     const id = randomUUID();
     await put(id, BYTES);
@@ -199,7 +220,7 @@ describe('blobs', () => {
     const id = randomUUID();
     await put(id, BYTES);
     const max = await member();
-    expect(problem(await put(id, BYTES, max))).toBe(403);
+    expect(problem(await put(id, BYTES, max))).toBe(404);
     expect(problem(await app.inject({ url: `/api/blobs/${id}`, ...as(max) }))).toBe(404);
     const head = await app.inject({ method: 'HEAD', url: `/api/blobs/${id}`, ...as(max) });
     expect(head.statusCode).toBe(404);

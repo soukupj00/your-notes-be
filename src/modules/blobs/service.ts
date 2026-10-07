@@ -53,6 +53,10 @@ export class BlobService {
     return record;
   }
 
+  has(id: string): Promise<boolean> {
+    return this.#blobs.has(id);
+  }
+
   bytes(id: string): Promise<Readable | undefined> {
     return this.#blobs.get(id);
   }

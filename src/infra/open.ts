@@ -52,8 +52,10 @@ export function storeLocation(config: Config): string {
 
 export function blobStoreLocation(config: Config): string {
   switch (config.blobStore.kind) {
-    case 's3':
-      return `s3 ${config.blobStore.endpoint ?? 'aws'} ${config.blobStore.bucket}`;
+    case 's3': {
+      const { endpoint, bucket, prefix } = config.blobStore;
+      return `s3 ${endpoint ?? 'aws'} ${bucket}/${prefix}`;
+    }
     case 'disk':
       return resolve(config.dataDir, 'blobs');
   }

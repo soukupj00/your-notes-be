@@ -26,6 +26,8 @@ export type S3Settings = {
   endpoint?: string;
   region: string;
   bucket: string;
+  /** `list` looks only under it, so the sweep never touches the rest of a shared bucket. */
+  prefix: string;
   forcePathStyle: boolean;
   /** Unset means the SDK's default credential chain. */
   credentials?: { accessKeyId: string; secretAccessKey: string };
@@ -35,12 +37,8 @@ export type S3Settings = {
  * The bucket stays private and bytes always stream through the server (PLAN.md "Rework", R5): no
  * presigned URLs, since Share Link checks and the blob CSP header hold only for bytes it sends.
  */
-export async function s3BlobStore(
-  settings: S3Settings,
-  warn: Warn,
-  prefix = ''
-): Promise<BlobStore> {
-  const { bucket } = settings;
+export async function s3BlobStore(settings: S3Settings, warn: Warn): Promise<BlobStore> {
+  const { bucket, prefix } = settings;
   const config: S3ClientConfig = {
     endpoint: settings.endpoint,
     region: settings.region,

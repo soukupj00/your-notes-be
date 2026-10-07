@@ -37,6 +37,7 @@ const ConfigSchema = z.object({
   S3_ENDPOINT: z.url().optional(),
   S3_REGION: z.string().min(1).default('us-east-1'),
   S3_BUCKET: z.string().min(1).optional(),
+  S3_PREFIX: z.string().default('younotes/'),
   S3_ACCESS_KEY_ID: z.string().min(1).optional(),
   S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   S3_FORCE_PATH_STYLE: bool.default(false),
@@ -92,8 +93,11 @@ export function loadConfig(
   env: Record<string, string | undefined>,
   what = 'configuration'
 ): Config {
-  // An empty variable (`PORT=` in an env file) means "use the default", not "invalid".
-  const present = Object.fromEntries(Object.entries(env).filter(([, value]) => value !== ''));
+  // An empty variable (`PORT=` in an env file) means "use the default", not "invalid";
+  // only `S3_PREFIX=` keeps its empty value, the bucket root.
+  const present = Object.fromEntries(
+    Object.entries(env).filter(([name, value]) => value !== '' || name === 'S3_PREFIX')
+  );
   const result = EnvSchema.safeParse(present);
   if (!result.success) {
     const problems = result.error.issues.map(
@@ -123,6 +127,7 @@ export function loadConfig(
             endpoint: c.S3_ENDPOINT,
             region: c.S3_REGION,
             bucket: c.S3_BUCKET!,
+            prefix: c.S3_PREFIX,
             forcePathStyle: c.S3_FORCE_PATH_STYLE,
             credentials:
               c.S3_ACCESS_KEY_ID && c.S3_SECRET_ACCESS_KEY

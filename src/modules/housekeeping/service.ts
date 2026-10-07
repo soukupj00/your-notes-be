@@ -9,6 +9,8 @@ export class HousekeepingService {
   readonly #store: Store;
   readonly #blobs: BlobStore;
   readonly #tombstoneDays: number;
+  // Deleted on the second sighting, so an upload between its bytes and its record is never swept.
+  #orphansSeen = new Set<string>();
 
   constructor(store: Store, blobs: BlobStore, tombstoneDays: number) {
     this.#store = store;
@@ -40,10 +42,13 @@ export class HousekeepingService {
     const files = await this.#blobs.list();
     const cutoff = new Date(now.getTime() - DAY_MS).toISOString();
     for (const id of await this.#store.housekeeping.unreferencedBlobs(cutoff)) {
-      await this.#blobs.delete(id);
+      // Record first: a crash between the two leaves a file, never a record vouching for nothing.
       await this.#store.blobRecords.remove(id);
+      await this.#blobs.delete(id);
     }
     const recorded = new Set(await this.#store.blobRecords.ids());
-    for (const id of files) if (!recorded.has(id)) await this.#blobs.delete(id);
+    const orphans = files.filter((id) => !recorded.has(id));
+    for (const id of orphans) if (this.#orphansSeen.has(id)) await this.#blobs.delete(id);
+    this.#orphansSeen = new Set(orphans.filter((id) => !this.#orphansSeen.has(id)));
   }
 }

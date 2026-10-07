@@ -46,7 +46,7 @@ export const blobRoutes: FastifyPluginAsyncZod = async (app) => {
       const state = await app.services.blobs.uploadState(account.id, id);
       if (state === 'foreign') {
         request.raw.resume();
-        return sendProblem(reply, 403, 'This id belongs to someone else');
+        return sendProblem(reply, 404, 'No such blob');
       }
       if (state === 'stored') {
         request.raw.resume();

@@ -19,8 +19,8 @@ At your provider:
 
 1. Create a bucket, for example `younotes`, and keep it private: never turn on public access.
    The server hands out every Attachment itself, and that is what keeps Share Links and the safety checks on Attachments working.
-2. Use the bucket for YouNotes only.
-   The server regularly removes anything in it that it does not know about.
+2. The server keeps its files in the folder `younotes/` of the bucket, and regularly removes anything in that folder that it does not know about.
+   It never touches the rest of the bucket.
 3. Create an access key that may list, read, write and delete in that bucket.
    The provider shows a key ID and a secret key; the secret is often shown only once, so copy it straight away.
 4. Turn on versioning for the bucket, if the provider offers it.
@@ -41,7 +41,12 @@ S3_SECRET_ACCESS_KEY=your-secret-key
 `S3_ENDPOINT` is the S3 address from your provider's instructions; for Amazon S3 itself, leave that line out.
 `S3_REGION` is the region the provider shows for the bucket; if it shows none, keep `us-east-1`.
 Some providers also need `S3_FORCE_PATH_STYLE=true`; their instructions say so.
+To keep the files in another folder of the bucket, add `S3_PREFIX=` with the folder's name and a `/` at the end, such as `S3_PREFIX=notes/`.
+`S3_PREFIX=` with nothing after the `=` means the top of the bucket, and then the server treats the whole bucket as its own.
 The two keys open your bucket, so keep `.env` as private as the machine.
+
+A bucket that an earlier YouNotes filled holds the files at its top, not in `younotes/`.
+Keep using it with `S3_PREFIX=` with nothing after the `=`, or move the files into `younotes/` with `migrate`, as the end of section 3 shows.
 
 Start YouNotes again with `docker compose up -d`.
 On every start the server waits up to half a minute for the bucket, saying "Waiting for S3 bucket" in `docker compose logs younotes`, and then stops with the reason, for example "no such bucket".
@@ -139,9 +144,17 @@ The old copy stays where it was, unused, so you can go back by undoing the setti
    To move both, put all of those `-e` lines in one command.
    A setting you leave out stays as it is, so only what you name moves.
    It prints "Copied", with how many records and Attachment files it copied.
-5. Now change the settings: add the `DATABASE_URL` line of section 2, or the S3 lines of section 1, to `.env`, and start YouNotes with `docker compose up -d`.
+   To move the files of an earlier YouNotes from the top of the bucket into `younotes/`, with `S3_PREFIX=` still in `.env`, name only the new folder:
 
-`migrate` fills only an empty database and an empty bucket, and refuses otherwise; if it fails, it takes back what it copied, so you can run it again.
+   ```bash
+   docker compose run --rm -e TARGET_S3_PREFIX=younotes/ younotes node dist/cli.js migrate
+   ```
+
+5. Now change the settings: add the `DATABASE_URL` line of section 2, or the S3 lines of section 1, to `.env`, and start YouNotes with `docker compose up -d`.
+   After a move into `younotes/`, delete the `S3_PREFIX=` line instead.
+   The files at the top of the bucket stay there, unused, and you may delete them at your provider.
+
+`migrate` fills only an empty database and an empty bucket folder, and refuses otherwise; if it fails, it takes back what it copied, so you can run it again.
 To move back, run it the other way round: `-e TARGET_DATABASE_URL=` with nothing after the `=` means the file on the machine, and `-e TARGET_BLOB_STORE=disk` the machine's disk.
 The old copy still lying there must be removed first, because `migrate` will not fill a place that holds data.
 With the server stopped, remove it from the place you move back to.

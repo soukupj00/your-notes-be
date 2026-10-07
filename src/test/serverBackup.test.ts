@@ -358,11 +358,7 @@ afterAll(async () => {
 });
 
 async function s3Store(): Promise<BlobStore> {
-  const store = await s3BlobStore(
-    await s3TestSettings(),
-    () => {},
-    `server-backup-${randomUUID()}/`
-  );
+  const store = await s3BlobStore(await s3TestSettings(), () => {});
   s3Stores.push(store);
   return store;
 }

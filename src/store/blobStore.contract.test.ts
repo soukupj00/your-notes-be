@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
@@ -35,7 +35,7 @@ const implementations: [string, () => Promise<BlobStore>][] = [
 ];
 
 async function s3Store(): Promise<BlobStore> {
-  const store = await s3BlobStore(await s3TestSettings(), () => {}, `test-${randomUUID()}/`);
+  const store = await s3BlobStore(await s3TestSettings(), () => {});
   s3Stores.push(store);
   return store;
 }
@@ -119,6 +119,7 @@ function contract(_name: string, create: () => Promise<BlobStore>) {
     await store.delete(ID);
     await store.delete(ID);
     expect(await store.has(ID)).toBe(false);
+    expect(await store.get(ID)).toBeUndefined();
   });
 
   it('lists what it holds', async () => {
@@ -144,6 +145,32 @@ describe('diskBlobStore', () => {
       expect(await readdir(join(dir, '.tmp'))).toEqual([]);
     } finally {
       await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('reports a broken directory instead of calling the bytes missing', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'younotes-blobs-'));
+    try {
+      const store = await diskBlobStore(dir);
+      await rm(dir, { recursive: true });
+      await writeFile(dir, 'not a directory');
+      await expect(store.get(ID)).rejects.toMatchObject({ code: 'ENOTDIR' });
+      await expect(store.has(ID)).rejects.toMatchObject({ code: 'ENOTDIR' });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe.skipIf(!s3TestEndpoint)('s3BlobStore in a shared bucket (needs S3_TEST_ENDPOINT)', () => {
+  it('never lists an object outside its prefix, so the sweep cannot delete it', async () => {
+    const root = await s3BlobStore({ ...(await s3TestSettings()), prefix: '' }, () => {});
+    const theirs = randomUUID();
+    await root.put(theirs, BYTES, BYTES.length);
+    try {
+      expect(await (await s3Store()).list()).toEqual([]);
+    } finally {
+      await root.delete(theirs);
     }
   });
 });
