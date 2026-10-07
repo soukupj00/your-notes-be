@@ -51,13 +51,10 @@ pnpm only; no npm, no yarn.
 See [`docs/architecture/structure.md`](./docs/architecture/structure.md).
 The rules that matter most:
 
-- `buildServer()` never calls `listen()`; tests use `app.inject()` against a real Store, SQLite in memory and PGlite, one Vitest project each.
-  `PG_TEST_URL` adds a real PostgreSQL to the Store and Server Backup contracts and the CLI tests, and runs the concurrency tests.
-  It names a server the tests may create databases on, such as `postgres://postgres:postgres@127.0.0.1:5432/postgres`.
-  `S3_TEST_ENDPOINT` adds S3 to the BlobStore contract and the Server Backup tests, such as SeaweedFS at `http://127.0.0.1:8333` as in CI.
-  It takes its keys from `S3_TEST_ACCESS_KEY_ID` and `S3_TEST_SECRET_ACCESS_KEY`, and uses the bucket `S3_TEST_BUCKET` (default `younotes-test`, created when missing).
-  Each test store works under its own random key prefix, so tests and runs never collide.
-  Never mock the database; set up and inspect state through the Store.
+- `buildServer()` never calls `listen()`; tests use `app.inject()` against a real Store, never a mock, and set up and inspect state through the Store.
+  How they run is in [`docs/architecture/testing.md`](./docs/architecture/testing.md); two variables add the real servers CI has, and without them those tests are skipped.
+  `PG_TEST_URL` names a PostgreSQL server the tests may create databases on, such as `postgres://postgres:postgres@127.0.0.1:5432/postgres`.
+  `S3_TEST_ENDPOINT` adds S3, such as SeaweedFS at `http://127.0.0.1:8333` as in CI, with `S3_TEST_ACCESS_KEY_ID`, `S3_TEST_SECRET_ACCESS_KEY` and `S3_TEST_BUCKET` (default `younotes-test`).
 - Records go through the `Store` interface and bytes through `BlobStore` (ADR 0006).
   Routes call services, services call the two interfaces, and only `src/infra/` imports a driver or SDK (ADR 0007); Biome enforces it.
 - Store calls are async, so reads and writes that must not interleave with another request share one `transaction(fn)`; one that decides on an Account's rows takes `accounts.lock` first, since PostgreSQL reads what others committed.

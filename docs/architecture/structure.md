@@ -26,7 +26,7 @@ src/
   infra/blobs/        disk.ts, memory.ts, s3.ts (loaded only when BLOB_STORE=s3), testing.ts (the S3 test bucket; not built)
   http/               what routes share: auth and security hooks, errors, docs, static (PWA), hal, etag, session cookie, sendBlob
   shared/             crypto (secrets and their SHA-256), passwords (scrypt), clock, errors (the server's, no HTTP), warn (the warning callback's type)
-  test/               helpers.ts (the test Store, the test server, the sign-up steps), storeContract.ts (the Store contract's records and the Stores it runs on), pglite.setup.ts (boots a file's PGlite before its first test), the API tests, serverBackup.test.ts (across Stores and BlobStores), concurrency.test.ts (real PostgreSQL only)
+  test/               helpers.ts (the test Store and server, the sign-up steps, the shared builders, must, push and pull), storeContract.ts (the Store contract's records and the Stores it runs on), pglite.setup.ts (boots a file's PGlite before its first test), the API tests, serverBackup.test.ts (across Stores and BlobStores), concurrency.test.ts (real PostgreSQL only)
 drizzle/sqlite/, drizzle/postgres/   generated migrations, applied when the Store opens
 scripts/openapi.ts    writes docs/openapi.json
 ```
@@ -37,7 +37,7 @@ scripts/openapi.ts    writes docs/openapi.json
 - A service is a class that takes what it needs in its constructor and knows nothing of Fastify (ADR 0007).
 - `server.ts` builds every service once and hands them to the routes as `app.services`.
 - Services throw the errors in `shared/errors.ts`, and `http/errors.ts` turns them into problem details.
-  `sendProblem` is left to the hooks, the not-found handler and the blob routes, whose early answers must close or drain the connection.
+  `sendProblem` is left to the hooks, the not-found handler and the blob routes, whose early answers [`http.md`](http.md) describes.
 - No route file imports another; what two features share lives in `http/`, `shared/` or a presenter.
 - Services reach records only through the async `Store` (ADR 0006), shaped by the domain, and its records carry no SQL nulls and no Drizzle types.
 - Only `src/infra/` imports `drizzle-orm`, `better-sqlite3`, `pg`, `@electric-sql/pglite` or `@aws-sdk/*` (the contract suites may, to set up real backends), and nothing under `src/modules/`, `src/http/`, `src/store/` or `src/shared/` imports `src/infra/`; Biome's `noRestrictedImports` fails the build otherwise.
@@ -47,10 +47,8 @@ scripts/openapi.ts    writes docs/openapi.json
 - The Server Backup reads every record in one snapshot through `serverBackup.read` (SQLite: a deferred read transaction, which WAL lets the server's writers pass; PostgreSQL: REPEATABLE READ), and copies bytes only after it ends.
   `restore` and `migrate` write bytes first, then every record in one `serverBackup.write`, and only into an empty Store and BlobStore; on failure they delete the bytes they wrote, so a retry finds the target empty.
 - `buildServer()` takes its config, Store and BlobStore as arguments and never calls `listen()`.
-- Tests run the real app over `app.inject()` against a real Store with the migrations applied; the database is never mocked, and tests set up or inspect state through the Store.
-  Vitest runs the API and service tests twice, as project `sqlite` (in memory) and project `pglite` (one PGlite per test file, booted before its first test and emptied for each).
-- A unit test sits next to what it tests; the API tests and the service unit tests share `test/helpers.ts`.
-- The Store contract (`store.contract.test.ts`, and `sync.contract.test.ts` for the sync group) runs every check on every Store through `eachStore()` in `test/storeContract.ts`, the transaction rules included: SQLite, PGlite, and a real PostgreSQL when `PG_TEST_URL` is set.
+- Tests run the real app over `app.inject()` against a real Store, never a mock, and a unit test sits next to what it tests.
+  The two Vitest projects, the contract suites and the variables that add a real PostgreSQL and S3 are in [`testing.md`](testing.md).
 - `src/contract/index.ts` imports only `zod`, because it runs in the browser too.
 - Requests are validated at the boundary with the contract's schemas, and every error leaves as RFC 9457 problem details.
 - `docs/openapi.json` and `drizzle/` are generated; CI fails when either is stale.
