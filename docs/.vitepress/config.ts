@@ -79,7 +79,13 @@ const config = withMermaid(
     rewrites: { 'architecture/README.md': 'architecture/index.md' },
     markdown: { anchor: { slugify } },
     // A label is sized for Mermaid's line height; VitePress's 28px for every paragraph clips it.
-    mermaid: { themeCSS: 'p { line-height: 1.5; }' },
+    // Diagrams keep their natural size and scroll sideways, so a phone never shrinks their text.
+    mermaid: {
+      themeCSS: 'p { line-height: 1.5; }',
+      flowchart: { useMaxWidth: false },
+      sequence: { useMaxWidth: false },
+    },
+    head: [['style', {}, '.vp-doc .mermaid { overflow-x: auto; }']],
     themeConfig: {
       nav: [
         { text: 'Home', link: '/' },

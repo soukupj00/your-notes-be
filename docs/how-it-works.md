@@ -36,12 +36,12 @@ Change a Note on your phone, and a few seconds later the same change is on your 
 ```mermaid
 sequenceDiagram
     participant P as Your phone
-    participant S as The server at home
+    participant S as Server at home
     participant L as Your laptop
-    P->>S: Here is the Note I changed
+    P->>S: My changed Note
     S-->>L: Something changed
     L->>S: What changed?
-    S-->>L: The new version of the Note
+    S-->>L: The new version
 ```
 
 1. Your phone sends the changed Note to the server.
