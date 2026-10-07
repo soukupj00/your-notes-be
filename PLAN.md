@@ -167,4 +167,4 @@ Each slice updates `docs/architecture/structure.md` and `CLAUDE.md` for what it 
   Done when a SQLite and disk install moves to PostgreSQL and S3 and every Device keeps syncing without a resync.
   The format is a directory: `manifest.json` (written last, so a folder without one is incomplete), one JSON Lines file per kind, `blobs/<id>`; every line is checked with a strict schema before a restore writes anything.
   `migrate` streams Store to Store and BlobStore to BlobStore with no temp copy; the target is the server's own environment with each `TARGET_X` replacing `X`, so records and bytes can move separately.
-  `restore` and `migrate` take the PostgreSQL instance lock and refuse while a server runs; `backup` works on a running server.
+  `restore` and `migrate` take the instance lock and refuse while a server runs, on SQLite too since the review of 2026-10-07; `backup` works on a running server.

@@ -20,7 +20,7 @@ src/
     meta              the HAL root and /health, routes only
   store/              Store.ts (the records interface), records.ts (what it takes and returns), BlobStore.ts (the bytes interface), one contract suite each (the Store's is store.contract.test.ts plus sync.contract.test.ts), and one for serverBackup
   infra/              open.ts (picks the Store and BlobStore from the config, and says where each keeps its data), guarded.ts (the transaction rules: no outer Store inside, no tx after; no error quoting query values), rows.ts (rows to records and the Server Backup's paging, both databases), waitFor.ts (waiting at startup for PostgreSQL or S3)
-  infra/sqlite/       schema.ts, client.ts, migrate.ts, store.ts (the Store), lock.ts (its one async lock), serverBackup.ts (its serverBackup group)
+  infra/sqlite/       schema.ts, client.ts, migrate.ts, store.ts (the Store), lock.ts (its one async lock), serverBackup.ts (its serverBackup group), instanceLock.ts (one server per DATA_DIR)
   infra/postgres/     schema.ts, client.ts (waiting for the database, the advisory locks, the pool), migrate.ts, store.ts (the Store), serverBackup.ts; loaded only with DATABASE_URL
                       testing.ts (PGlite and throwaway databases for tests; not built)
   infra/blobs/        disk.ts, memory.ts, s3.ts (loaded only when BLOB_STORE=s3), testing.ts (the S3 test bucket; not built)

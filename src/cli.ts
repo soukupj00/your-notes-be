@@ -7,10 +7,10 @@ import {
   blobStoreLocation,
   openBlobStore,
   openStore,
+  type StoreOptions,
   sqlitePath,
   storeLocation,
 } from './infra/open.ts';
-import type { PostgresOptions } from './infra/postgres/store.ts';
 import type { Counts } from './modules/backup/format.ts';
 import { type Server, ServerBackupService } from './modules/backup/service.ts';
 import { hashPassword } from './shared/passwords.ts';
@@ -29,16 +29,13 @@ function requireDatabase(config: Config): void {
   if (!existsSync(path)) throw new Error(`No database at ${resolve(path)}; is DATA_DIR set?`);
 }
 
-/**
- * Takes the one-instance lock on PostgreSQL, so a running server makes the command refuse
- * (ADR 0006); with SQLite the guide asks to stop the server instead.
- */
-const alone: PostgresOptions = {
+/** Takes the one-instance lock, so a running server makes the command refuse (ADR 0006). */
+const alone: StoreOptions = {
   warn: console.warn,
   oneInstance: { onLost: (error) => console.warn(error.message) },
 };
 
-async function open(config: Config, options: PostgresOptions): Promise<Server> {
+async function open(config: Config, options: StoreOptions): Promise<Server> {
   const store = await openStore(config, options);
   try {
     return { store, blobs: await openBlobStore(config, console.warn) };

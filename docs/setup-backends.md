@@ -119,7 +119,7 @@ The old copy stays where it was, unused, so you can go back by undoing the setti
    docker compose stop younotes
    ```
 
-   With PostgreSQL, `migrate` refuses while a server is running; with the file on the machine it cannot tell, so do not skip this step.
+   `migrate` refuses while the server is running and says so.
 4. Run `migrate`, telling it the new place with `TARGET_` in front of each setting.
    To move the records to the PostgreSQL in `compose.yml`, with the password you made up:
 

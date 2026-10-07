@@ -324,6 +324,7 @@ docker compose up -d
 
 Use the date of the backup you want.
 The second line empties the server's data and loads the backup into it, then prints "Restored".
+Do not skip the first line: the second empties the data even while YouNotes is running, before restore can tell that it is.
 If the backup is damaged or incomplete, it says so and loads none of it; restore an older backup instead.
 Anything written after that backup is gone from the server.
 Devices that synced after that backup will re-download everything on their next sync.

@@ -27,10 +27,10 @@ import {
 } from './schema.ts';
 import { serverBackupOf } from './serverBackup.ts';
 
-export function openSqliteStore(path: string): Store {
+export function openSqliteStore(path: string, onClose = () => {}): Store {
   const db = openDatabase(path);
   migrateDatabase(db);
-  return locked(unlockedStore(db));
+  return locked(unlockedStore(db, onClose));
 }
 
 const accountColumns = {
@@ -53,7 +53,7 @@ const tombstoneKey = (accountId: string, kind: TombstoneKind, id: string) =>
   and(eq(tombstones.accountId, accountId), eq(tombstones.kind, kind), eq(tombstones.id, id));
 
 /** Correct only one call at a time: every call and transaction shares the one connection. */
-function unlockedStore(db: Db): Store {
+function unlockedStore(db: Db, onClose: () => void): Store {
   const tx: StoreTx = {
     accounts: {
       async add(account) {
@@ -397,6 +397,7 @@ function unlockedStore(db: Db): Store {
     },
     async close() {
       db.$client.close();
+      onClose();
     },
     async transaction(fn) {
       // IMMEDIATE: a database busy in another process waits at BEGIN, not fails mid-transaction.
