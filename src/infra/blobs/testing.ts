@@ -7,7 +7,7 @@ export const s3TestEndpoint = process.env.S3_TEST_ENDPOINT;
 
 let bucket: Promise<S3Settings> | undefined;
 
-/** The settings of the test bucket, created on first use, each under a key prefix of its own. */
+/** The test bucket, created on first use; every call gets a key prefix of its own. */
 export async function s3TestSettings(): Promise<S3Settings> {
   bucket ??= createBucket();
   return { ...(await bucket), prefix: `test-${randomUUID()}/` };

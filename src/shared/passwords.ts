@@ -9,6 +9,7 @@ const LEGACY_COST: Cost = { N: 16384, r: 8, p: 1 };
 
 function derive(password: string, salt: Buffer, { N, r, p }: Cost): Promise<Buffer> {
   return new Promise((resolve, reject) => {
+    // scrypt needs 128 * N * r bytes; Node's default 32 MiB cap would refuse a costlier hash.
     scrypt(password, salt, KEY_LENGTH, { N, r, p, maxmem: 128 * N * r * 2 }, (error, key) =>
       error ? reject(error) : resolve(key)
     );

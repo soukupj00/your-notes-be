@@ -24,7 +24,7 @@ export class HousekeepingService {
 
   /**
    * Removing Tombstones raises each Account's pruned Sequence; a cursor below it gets 410.
-   * With `idle`, no upload can be in flight, so a file without a record goes on first sight.
+   * `idle` promises no upload is in flight, so a file without a record goes on first sight.
    */
   async sweep(now: Date, idle = false): Promise<void> {
     const at = now.toISOString();
@@ -39,7 +39,7 @@ export class HousekeepingService {
     await this.#sweepBlobs(now, idle);
   }
 
-  /** A purged Note's bytes leave this way; so do files a crash left without a record. */
+  /** A purged Note's bytes leave this way; so do files a crash left without a record (blobs.md). */
   async #sweepBlobs(now: Date, idle: boolean): Promise<void> {
     // Listed before the records are read, so an upload finishing meanwhile is seen with its record.
     const files = await this.#blobs.list();

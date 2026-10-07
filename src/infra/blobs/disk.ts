@@ -11,10 +11,7 @@ import {
   SAFE_ID,
 } from '../../store/BlobStore.ts';
 
-/**
- * Bytes as files (thesis ADR 0002). A write lands in `.tmp` and is renamed into place once its
- * size checks out, so a reader never sees a partial file.
- */
+/** Bytes as files (thesis ADR 0002); a reader never sees a partial file (blobs.md). */
 export async function diskBlobStore(dir: string): Promise<BlobStore> {
   const tmp = join(dir, '.tmp');
   await mkdir(tmp, { recursive: true });

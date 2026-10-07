@@ -5,13 +5,9 @@ import Database from 'better-sqlite3';
 // A collected connection closes itself, so the lock would end with the last reference to it.
 const held = new Set<Database.Database>();
 
-/**
- * Holds the one-instance lock on `dataDir` (ADR 0006) until the returned release is called;
- * throws when another server or command holds it.
- */
+/** Holds `dataDir`'s one-instance lock (ADR 0006) until released; throws if another holds it. */
 export function holdInstanceLock(dataDir: string): () => void {
-  // A kernel lock rather than a pid in a file: it dies with its process, and a container's
-  // server is pid 1 on every start, so a pid cannot tell a crashed server from a running one.
+  // A kernel lock, not a pid file, so a crash never blocks the next start (transactions.md).
   const path = join(dataDir, 'younotes.lock');
   // SQLite opens a file it cannot write read-only, where BEGIN EXCLUSIVE locks nothing.
   closeSync(openSync(path, 'a'));

@@ -29,7 +29,7 @@ flowchart TD
 - The Live Update stream hijacks its reply, so neither `onSend` nor the error handler reaches it.
   It writes `securityHeaders()` itself and ends the stream when it fails; a header added in `onSend` must be added there too.
 - A hook that answers early never reads the body; Node reads and discards it afterwards, so the connection is reused.
-  The hooks run before the upload checks `BLOB_LIMIT_BYTES`, so a `401` to a large upload is still read off the wire.
+  The hooks run before the upload checks `BLOB_LIMIT_BYTES`; an early answer to a body over `BODY_LIMIT_BYTES` closes the connection instead of reading it (`sendEarlyProblem`).
 - The upload's plugin swaps the body parsers for the raw stream, so the route answers before reading a byte where it can.
   `411` without `Content-Length` and `413` over the limit send `Connection: close`, since reading that body is wasted; `400`, `404` and the repeat's `204` drain it.
 - `BODY_LIMIT_BYTES` bounds the JSON parser only; an upload is bounded by its own `Content-Length` check.

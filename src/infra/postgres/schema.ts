@@ -165,7 +165,7 @@ export const shares = pgTable(
   (t) => [uniqueIndex('shares_account_note_idx').on(t.accountId, t.noteId)]
 );
 
-// Both Stores share rows.ts, which is typed by the SQLite schema; this fails at the schema instead.
+// rows.ts is typed by the SQLite schema alone; tsc fails here when a table drifts from its twin.
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 type Agree<T extends true> = T;
 export type SchemasAgree = [

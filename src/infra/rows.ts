@@ -9,8 +9,7 @@ import {
 } from '../store/records.ts';
 import type { notes, noteTags, tags, tombstones } from './sqlite/schema.ts';
 
-// Typed by the SQLite schema and shared by both Stores: the PostgreSQL Store compiles only while
-// both schemas give the same rows.
+// Typed by the SQLite schema and shared by both Stores; postgres/schema.ts checks the two agree.
 
 type NoteRow = typeof notes.$inferSelect;
 type TagRow = typeof tags.$inferSelect;
@@ -108,7 +107,7 @@ export async function writeEach(
 }
 
 async function* pages<T>(read: (offset: number) => Promise<T[]> | T[]): AsyncIterable<T> {
-  // ponytail: OFFSET paging rescans the skipped rows; keyset paging if a table reaches millions.
+  // OFFSET paging rescans the skipped rows; keyset paging if a table reaches millions.
   for (let offset = 0; ; offset += PAGE) {
     const rows = await read(offset);
     yield* rows;
