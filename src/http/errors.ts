@@ -13,7 +13,6 @@ const STATUS_OF = [
   [Gone, 410],
 ] as const;
 
-/** The server's errors (`shared/errors.ts`), or Fastify's, which carry their own status. */
 type HandledError = Error & Partial<Pick<FastifyError, 'statusCode'>>;
 
 export function sendProblem(

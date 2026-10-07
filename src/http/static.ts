@@ -5,8 +5,8 @@ import type { FastifyInstance } from 'fastify';
 import { sendProblem } from './errors.ts';
 
 /**
- * Serves the built PWA (frontend ADR 0018). Unknown GETs outside `/api` fall back to
- * `index.html` so the client router can take them; unknown `/api` paths are 404 problems.
+ * Serves the built PWA (frontend ADR 0018); unknown GETs outside `/api` get `index.html`, so the
+ * client router can take them.
  */
 export async function registerStatic(app: FastifyInstance, publicDir: string): Promise<void> {
   const root = resolve(publicDir);

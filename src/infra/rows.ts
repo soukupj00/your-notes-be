@@ -9,16 +9,14 @@ import {
 } from '../store/records.ts';
 import type { notes, noteTags, tags, tombstones } from './sqlite/schema.ts';
 
-// Between rows and records: a record has no `accountId` or `seq`, and an absent field is SQL null.
-// Both schemas give the same rows, so both Stores share these; the PostgreSQL Store compiles only
-// while they do.
+// Typed by the SQLite schema and shared by both Stores: the PostgreSQL Store compiles only while
+// both schemas give the same rows.
 
 type NoteRow = typeof notes.$inferSelect;
 type TagRow = typeof tags.$inferSelect;
 type NoteTagRow = typeof noteTags.$inferSelect;
 type TombstoneRow = typeof tombstones.$inferSelect;
 
-/** Drops null fields, so an absent optional field stays absent. */
 export function withoutNulls<T>(row: Record<string, unknown>): T {
   return Object.fromEntries(Object.entries(row).filter(([, value]) => value !== null)) as T;
 }
@@ -91,10 +89,7 @@ export function noteTagToRow(accountId: string, link: StoredNoteTag, seq: number
 /** Rows per page read and per multi-row insert: well inside both databases' parameter limits. */
 export const PAGE = 500;
 
-/**
- * The Server Backup's reading half, for both Stores: every kind of record, each read a page at a
- * time by `page(kind, offset)`; stable only inside one snapshot.
- */
+/** Reads each kind a page at a time; OFFSET paging is consistent only inside one snapshot. */
 export function recordsOf(
   page: (kind: BackupKind, offset: number) => Promise<object[]> | object[]
 ): AllRecords {

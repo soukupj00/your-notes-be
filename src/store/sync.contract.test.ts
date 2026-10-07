@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { attachment, eachStore, link, note, T, tag } from '../test/storeContract.ts';
 import type { Store } from './Store.ts';
 
-// The sync group of the Store contract (store.contract.test.ts); every Store runs it.
+// The rest of the Store contract is in store.contract.test.ts.
 eachStore((current) => {
   let store: Store;
   beforeEach(() => {

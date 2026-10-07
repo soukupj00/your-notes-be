@@ -7,9 +7,9 @@ export interface BlobStore {
   put(id: string, data: Readable | Buffer, size: number): Promise<void>;
   get(id: string): Promise<Readable | undefined>;
   has(id: string): Promise<boolean>;
-  /** Removes the bytes; a missing id is not an error. */
+  /** A missing id is not an error. */
   delete(id: string): Promise<void>;
-  /** Every stored id, without writes still in progress; the sweep's view of what is on disk. */
+  /** Every stored id, without writes still in progress. */
   list(): Promise<string[]>;
 }
 

@@ -10,7 +10,6 @@ const PUBLIC_RATE_LIMIT = { max: 60, timeWindow: '1 minute' };
 
 const Token = z.string().min(1).max(128);
 
-/** The public routes under `/api/public` need only the token. */
 export const shareRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/api/shares',

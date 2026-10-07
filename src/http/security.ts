@@ -15,14 +15,10 @@ export const SIGN_IN_RATE_LIMIT = { max: 10, timeWindow: '1 minute' };
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const REQUEST_ID = /^[A-Za-z0-9._-]{1,128}$/;
-// The PWA's page (/share/<token>, shareLink in the contract) and the API it reads. Unanchored, so
-// a doubled slash (//share/<token>) is masked too.
+// Must follow `shareLink` in the contract; unanchored, so a doubled slash is masked too.
 const SHARE_TOKEN = /(\/share\/|\/api\/public\/shares\/)[^/?#]+/;
 
-/**
- * Fastify's request line without the Share Link token in the path, since the guide asks people
- * to paste their logs (setup.md); `main.ts` builds the one logger with it.
- */
+/** Masks the Share Link token in the request line: setup.md asks people to paste their logs. */
 export const LOG_SERIALIZERS = {
   req: (request: FastifyRequest) => ({
     method: request.method,
@@ -40,8 +36,7 @@ export function genReqId(req: RawRequestDefaultExpression): string {
 }
 
 export function registerSecurity(app: FastifyInstance): void {
-  // CSRF: the session cookie is SameSite=Lax; this closes what Lax leaves open
-  // (PLAN.md "Security").
+  // CSRF: closes what the cookie's SameSite=Lax leaves open (PLAN.md "Security").
   app.addHook('onRequest', async (request, reply) => {
     if (SAFE_METHODS.has(request.method)) return;
     if (request.headers['sec-fetch-site'] === 'cross-site') {

@@ -12,8 +12,8 @@ import {
 } from '../../store/BlobStore.ts';
 
 /**
- * Bytes as files, `<dir>/<id>` (thesis ADR 0002). A write lands in `<dir>/.tmp` first and is
- * renamed into place only once its size checks out, so a reader never sees a partial file.
+ * Bytes as files (thesis ADR 0002). A write lands in `.tmp` and is renamed into place once its
+ * size checks out, so a reader never sees a partial file.
  */
 export async function diskBlobStore(dir: string): Promise<BlobStore> {
   const tmp = join(dir, '.tmp');

@@ -38,7 +38,6 @@ export type StoredTag = Tag & { rev: number };
 export type StoredNoteTag = NoteTag & { rev: number };
 export type TombstoneRecord = Omit<Tombstone, 'rev'>;
 
-/** A synced row and the Sequence it was written at. */
 export type Sequenced<T> = { seq: number; record: T };
 
 export type Changes = {

@@ -8,7 +8,7 @@ function derive(password: string, salt: Buffer): Promise<Buffer> {
   });
 }
 
-/** `scrypt$<saltB64>$<keyB64>` with a 16-byte salt and Node's default cost. */
+/** Node's default scrypt cost, which the stored hash does not record. */
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
   const key = await derive(password, salt);

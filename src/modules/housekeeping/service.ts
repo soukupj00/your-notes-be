@@ -16,15 +16,11 @@ export class HousekeepingService {
     this.#tombstoneDays = tombstoneDays;
   }
 
-  /** For `/health`: fails when the database does. */
   ping(): Promise<void> {
     return this.#store.ping();
   }
 
-  /**
-   * Each Account's pruned Sequence rises to the newest Tombstone removed, so an older cursor gets
-   * 410 (PLAN.md "Sync rules").
-   */
+  /** Removing Tombstones raises each Account's pruned Sequence; a cursor below it gets 410. */
   async sweep(now: Date): Promise<void> {
     const at = now.toISOString();
     const cutoff = new Date(now.getTime() - this.#tombstoneDays * DAY_MS).toISOString();
@@ -38,10 +34,7 @@ export class HousekeepingService {
     await this.#sweepBlobs(now);
   }
 
-  /**
-   * Bytes no Note references for a day go (a purged Note's too), file before record; so do files
-   * a crash left without a record.
-   */
+  /** A purged Note's bytes leave this way; so do files a crash left without a record. */
   async #sweepBlobs(now: Date): Promise<void> {
     // Listed before the records are read, so an upload finishing meanwhile is seen with its record.
     const files = await this.#blobs.list();

@@ -61,7 +61,8 @@ The rules that matter most:
   Routes call services, services call the two interfaces, and only `src/infra/` imports a driver or SDK (ADR 0007); Biome enforces it.
 - Store calls are async, so reads and writes that must not interleave with another request share one `transaction(fn)`; one that decides on an Account's rows takes `accounts.lock` first, since PostgreSQL reads what others committed.
   Inside it no byte or network I/O, and only its `tx`: a service method that joins a transaction takes `tx` as a parameter.
-- The sync rules (`decide.ts`) are pure: no HTTP, no Store.
+  The full rules are in [`docs/architecture/transactions.md`](./docs/architecture/transactions.md); the life of an Attachment's bytes in [`docs/architecture/blobs.md`](./docs/architecture/blobs.md).
+- The sync rules (`decide.ts`) are pure: no HTTP, no Store; they are specified in [`docs/architecture/sync.md`](./docs/architecture/sync.md).
 - `src/contract/index.ts` imports nothing from the server and keeps its path; the frontend pulls it from there.
 - Validate at the boundary with the contract's Zod schemas; the auth hook is the only code that reads the cookie.
 - Security measures listed in `PLAN.md` are requirements, not polish.

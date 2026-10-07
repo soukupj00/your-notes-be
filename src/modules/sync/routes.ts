@@ -36,7 +36,6 @@ export const syncRoutes: FastifyPluginAsyncZod = async (app) => {
         tags: ['sync'],
         querystring: z.object({
           since: z.coerce.number().int().min(0).default(0),
-          /** Where the pull began; `next` links carry it, so a paged resync is judged by it. */
           from: z.coerce.number().int().min(0).optional(),
         }),
         response: {
@@ -56,7 +55,6 @@ export const syncRoutes: FastifyPluginAsyncZod = async (app) => {
     }
   );
 
-  /** Live Update: an SSE hint carrying only the Account's Sequence; the Device pulls on it. */
   app.get(
     '/api/changes/stream',
     {

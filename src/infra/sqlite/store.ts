@@ -27,7 +27,6 @@ import {
 } from './schema.ts';
 import { serverBackupOf } from './serverBackup.ts';
 
-/** Opens the database file, or `:memory:`, migrated and behind the lock (ADR 0006). */
 export function openSqliteStore(path: string): Store {
   const db = openDatabase(path);
   migrateDatabase(db);
@@ -352,7 +351,7 @@ function unlockedStore(db: Db): Store {
           .all();
         for (const { accountId, seq } of removed) {
           if (seq === null) continue;
-          // SQLite's two-argument max; another database spells it its own way (ADR 0006).
+          // SQLite's two-argument max is scalar, not the aggregate (ADR 0006).
           db.update(accounts)
             .set({ prunedSeq: sql`max(${accounts.prunedSeq}, ${seq})` })
             .where(eq(accounts.id, accountId))

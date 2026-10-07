@@ -24,14 +24,11 @@ const { accounts, blobs, codes, notes, noteTags, sessions, shares, tags, tombsto
 export type PostgresOptions = {
   /** Told of every try while the database is not up yet, and of dropped connections. */
   warn: Warn;
-  /**
-   * For the server, not the CLI: hold the one-instance lock (ADR 0006) for the life of the
-   * process, and call `onLost` if its connection drops.
-   */
+  /** Hold the one-instance lock (ADR 0006) until `close`; `onLost` hears if it drops. */
   oneInstance?: { onLost(error: Error): void };
 };
 
-/** Waits for the database, takes the one-instance lock if asked, then migrates (ADR 0006). */
+/** Takes the one-instance lock before migrating, so a refused second server changes nothing. */
 export async function openPostgresStore(
   url: string,
   { warn, oneInstance }: PostgresOptions
@@ -80,7 +77,7 @@ const linkKey = (accountId: string, noteId: string, tagId: string) =>
 const tombstoneKey = (accountId: string, kind: TombstoneKind, id: string) =>
   and(eq(tombstones.accountId, accountId), eq(tombstones.kind, kind), eq(tombstones.id, id));
 
-/** Drizzle wraps the driver's error in its own. */
+/** 23505 is unique_violation; Drizzle wraps the driver's error in its own. */
 function violates(error: unknown, constraint: string): boolean {
   const cause = ((error as { cause?: unknown }).cause ?? error) as {
     code?: string;
@@ -89,7 +86,7 @@ function violates(error: unknown, constraint: string): boolean {
   return cause.code === '23505' && cause.constraint === constraint;
 }
 
-/** Over a pool or PGlite; `end` closes whichever it is. No lock: PostgreSQL isolates. */
+/** No lock around calls as SQLite needs: PostgreSQL isolates each transaction. */
 export function postgresStore(db: Db, end: () => Promise<void>): Store {
   return {
     ...transactionStore(db),
@@ -413,7 +410,6 @@ function transactionStore(db: Db): StoreTx {
           .groupBy(tombstones.accountId);
         for (const { accountId, seq } of removed) {
           if (seq === null) continue;
-          // PostgreSQL's greatest; SQLite spells it as a two-argument max (ADR 0006).
           await db
             .update(accounts)
             .set({ prunedSeq: sql`greatest(${accounts.prunedSeq}, ${seq})` })

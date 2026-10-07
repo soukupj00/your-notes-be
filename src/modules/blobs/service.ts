@@ -17,7 +17,6 @@ export class BlobService {
     this.#clock = clock;
   }
 
-  /** Whether an upload to `id` is refused, already done, or wanted. */
   async uploadState(accountId: string, id: string): Promise<'foreign' | 'stored' | 'wanted'> {
     const record = await this.#store.blobRecords.find(id);
     if (record && record.accountId !== accountId) return 'foreign';

@@ -5,7 +5,7 @@ import { PAGE, recordsOf, withoutNulls, writeEach } from '../rows.ts';
 import type { Db } from './client.ts';
 import { accounts, blobs, notes, noteTags, sessions, shares, tags, tombstones } from './schema.ts';
 
-/** Each kind's table and its primary key, which orders the pages. */
+/** Paged in primary-key order, so OFFSET pages neither skip nor repeat a row. */
 const TABLES: Record<BackupKind, { table: SQLiteTable; key: SQLiteColumn[] }> = {
   accounts: { table: accounts, key: [accounts.id] },
   sessions: { table: sessions, key: [sessions.id] },
@@ -39,8 +39,8 @@ export function serverBackupOf(db: Db): Store['serverBackup'] {
       return isEmpty(db);
     },
     async read(fn) {
-      // Deferred, so it only reads: under WAL the server's writers go on and this sees none of
-      // their commits, whichever process they run in.
+      // Deferred, so it takes no write lock: under WAL other connections' writers go on, and its
+      // snapshot sees none of their commits.
       db.$client.exec('BEGIN');
       try {
         return await fn(recordsIn(db));

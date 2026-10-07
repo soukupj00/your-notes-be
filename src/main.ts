@@ -11,7 +11,7 @@ let config: Config;
 try {
   config = loadConfig(process.env);
 } catch (error) {
-  // Before the logger, whose level the config sets; the message names every bad variable.
+  // Before the logger, whose level the config sets.
   console.error((error as Error).message);
   process.exit(1);
 }

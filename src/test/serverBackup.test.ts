@@ -137,10 +137,7 @@ function everything(store: Store) {
   });
 }
 
-/**
- * On a server over `target`, the Device is still signed in, finds nothing new from its cursor,
- * reads its picture and its Share Link, and its next push takes the next Sequence.
- */
+/** The Device keeps its Session, cursor, picture and Share Link on a server over `target`. */
 async function expectCarriesOn(target: Server, device: Device) {
   const app = await serve(target);
   expect((await app.inject({ url: '/api/session', ...as(device.cookie) })).statusCode).toBe(200);

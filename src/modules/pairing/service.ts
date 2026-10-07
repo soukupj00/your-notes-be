@@ -37,7 +37,6 @@ export class PairingService {
     return { code, expiresAt };
   }
 
-  /** `device` adds a Device to this Account, `invite` a member, which only the Owner may do. */
   async mintFor(
     account: Pick<AccountRecord, 'id' | 'role'>,
     kind: 'device' | 'invite'
@@ -61,12 +60,11 @@ export class PairingService {
     return (await this.#store.accounts.owner()) !== undefined;
   }
 
-  /** Setup exists only until the Owner does (ADR 0001). */
   async requireSetup(): Promise<void> {
     if (await this.ownerExists()) throw new NotFound(ALREADY_SET_UP);
   }
 
-  /** At startup, while there is no Owner, a new setup code replaces any earlier one (ADR 0001). */
+  /** Replaces any earlier setup code, so only the link printed last works. */
   async ensureSetupCode(): Promise<string | null> {
     if (await this.ownerExists()) return null;
     await this.#store.codes.removeSetupCodes();

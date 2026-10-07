@@ -146,7 +146,6 @@ const stores: [string, () => Promise<Store>][] = [
     : []),
 ];
 
-/** What every Store promises the Server Backup (ADR 0006). */
 describe.each(stores)('Store.serverBackup (%s)', (_name, open) => {
   // Opened once first, so a PGlite or a PostgreSQL database boots before the first test.
   beforeAll(async () => {

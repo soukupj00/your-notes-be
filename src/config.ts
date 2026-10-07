@@ -29,7 +29,7 @@ const ConfigSchema = z.object({
   TRUST_PROXY: bool.default(false),
   /** The origin Devices open; printed Pairing Links point here. */
   PUBLIC_URL: z.url().optional(),
-  /** Moves the records from the SQLite file in DATA_DIR to PostgreSQL (ADR 0006). */
+  /** Selects PostgreSQL for the records instead of the SQLite file in DATA_DIR (ADR 0006). */
   DATABASE_URL: z
     .url({ protocol: /^postgres(ql)?$/, error: 'must be a valid postgres:// or postgresql:// URL' })
     .optional(),
@@ -75,10 +75,7 @@ export type Config = {
   blobStore: { kind: 'disk' } | ({ kind: 's3' } & S3Settings);
 };
 
-/**
- * pino paths that could hold DATABASE_URL or the S3 secret key: a Config, or an environment,
- * logged whole or nested.
- */
+/** Where DATABASE_URL or the S3 secret key sit in a Config or an environment, whole or nested. */
 export const REDACT = [
   'database.url',
   '*.database.url',
@@ -138,10 +135,7 @@ export function loadConfig(
 
 const TARGET = 'TARGET_';
 
-/**
- * Where `migrate` copies to: each TARGET_ variable stands in for its unprefixed twin, and what it
- * leaves out stays as the server has it.
- */
+/** Where `migrate` copies to: each TARGET_ variable overrides its unprefixed twin. */
 export function loadTargetConfig(env: Record<string, string | undefined>): Config {
   const target = Object.entries(env)
     .filter(([name]) => name.startsWith(TARGET))

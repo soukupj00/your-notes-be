@@ -19,8 +19,8 @@ import type {
 // Account, so another Account's row reads as absent.
 
 /**
- * Where records live (ADR 0006): shaped by the domain, every call async. No error it throws quotes
- * a query's values, which hold Note bodies and password and token hashes.
+ * Where records live (ADR 0006). No error it throws quotes a query's values, which hold Note bodies
+ * and password and token hashes.
  */
 export interface Store extends StoreTx {
   /** A round trip, so `/health` fails when the database does. */
@@ -28,9 +28,8 @@ export interface Store extends StoreTx {
   /** Waits for calls in flight. */
   close(): Promise<void>;
   /**
-   * Commits when `fn` resolves, rolls back and rethrows when it rejects. Inside `fn` the outer
-   * Store throws, and `tx` throws once `fn` has ended. Reads see others' commits (READ COMMITTED),
-   * so work that must not interleave with another request takes `accounts.lock` first.
+   * Inside `fn` the outer Store throws, and `tx` throws once `fn` has ended. Reads see others'
+   * commits (READ COMMITTED), so work that must not interleave takes `accounts.lock` first.
    */
   transaction<T>(fn: (tx: StoreTx) => Promise<T>): Promise<T>;
   /** What the Server Backup reads and writes (ADR 0006): every record as stored, whole. */
@@ -38,9 +37,8 @@ export interface Store extends StoreTx {
     /** No Account, and so nothing that belongs to one. */
     isEmpty(): Promise<boolean>;
     /**
-     * Runs `fn` over one snapshot of every record, which the server's writes neither change nor
-     * wait for. `records` reads only inside `fn`, and the outer Store throws there, as inside
-     * `transaction(fn)`.
+     * One snapshot of every record, which the server's writes neither change nor wait for.
+     * `records` reads only inside `fn`, where the outer Store throws as in `transaction(fn)`.
      */
     read<T>(fn: (records: AllRecords) => Promise<T>): Promise<T>;
     /** Writes every kind in one transaction; throws, writing nothing, unless the Store is empty. */
@@ -55,8 +53,7 @@ export interface StoreTx {
     add(account: NewAccount): Promise<void>;
     /**
      * Held until the transaction ends; `write` keeps out every other holder, `read` only writers.
-     * A push takes `write` before any read, so two pushes never share a Sequence or both accept
-     * one row's edit; a feed page takes `read`, so it never shows a row above its Sequence.
+     * Take it before any read: an earlier read misses what the previous holder commits (ADR 0006).
      */
     lock(id: string, mode: 'write' | 'read'): Promise<void>;
     find(id: string): Promise<AccountRecord | undefined>;
@@ -89,7 +86,7 @@ export interface StoreTx {
     removeSetupCodes(): Promise<void>;
   };
   sync: {
-    /** The Account's Sequence and the highest Sequence the sweep has pruned; 0 for neither. */
+    /** The Account's Sequence and the highest one pruned; both 0 for an unknown Account. */
     sequence(accountId: string): Promise<{ seq: number; prunedSeq: number }>;
     setSequence(accountId: string, seq: number): Promise<void>;
     note(accountId: string, id: string): Promise<StoredNote | undefined>;

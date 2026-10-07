@@ -17,7 +17,6 @@ export type FeedPage = Pick<ChangesPage, 'notes' | 'tags' | 'noteTags' | 'tombst
   next: { since: number; from: number } | null;
 };
 
-/** Runs inside the caller's transaction; every accepted row takes the next Sequence. */
 async function applyPush(
   tx: StoreTx,
   accountId: string,
@@ -87,7 +86,7 @@ async function applyPush(
       await sync.isTombstoned(accountId, kind, id)
     );
     if (decision.status === 'conflict') {
-      // Stale: nothing written; the Device keeps the server's version.
+      // Stale: the Device keeps the server's version.
       if (note) outcomes.push({ kind: 'note', id, status: 'conflict', server: note });
       if (tag) outcomes.push({ kind: 'tag', id, status: 'conflict', server: tag });
       continue;
@@ -109,7 +108,7 @@ async function applyPush(
   return { outcomes, seq, advanced };
 }
 
-/** The push and the change feed (ADR 0002), and the Live Update hints that follow a push. */
+/** The push and the change feed (ADR 0002). */
 export class SyncService {
   readonly #store: Store;
   readonly #clock: Clock;
@@ -146,8 +145,7 @@ export class SyncService {
   async page(accountId: string, since: number, from: number | undefined): Promise<FeedPage> {
     const origin = from ?? since;
     const limit = this.#pageSize;
-    // One transaction holding the Account, so a push landing between the reads cannot split the
-    // page or put a row past its Sequence.
+    // One transaction holding the Account, so a push between the reads cannot split the page.
     const { seq, changes } = await this.#store.transaction(async (tx) => {
       await tx.accounts.lock(accountId, 'read');
       const { seq, prunedSeq } = await tx.sync.sequence(accountId);
@@ -159,7 +157,6 @@ export class SyncService {
       return { seq, changes: await tx.sync.changesSince(accountId, since, limit) };
     });
 
-    // Up to a page from each kind, merged by Sequence and cut to one page (ADR 0002).
     const page: Pick<ChangesPage, 'notes' | 'tags' | 'noteTags' | 'tombstones'> = {
       notes: [],
       tags: [],
@@ -191,7 +188,6 @@ export class SyncService {
     return (await this.#store.sync.sequence(accountId)).seq;
   }
 
-  /** Ends any earlier stream of the same Device; returns the unsubscribe. */
   subscribe(accountId: string, deviceId: string, client: Client): () => void {
     return this.#live.add(accountId, deviceId, client);
   }

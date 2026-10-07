@@ -4,7 +4,6 @@ import * as schema from './schema.ts';
 
 export type Db = BetterSQLite3Database<typeof schema> & { $client: Database.Database };
 
-/** Opens (or creates) the database file, or an in-memory one for tests. */
 export function openDatabase(path: string | ':memory:'): Db {
   const sqlite = new Database(path);
   sqlite.pragma('journal_mode = WAL');

@@ -5,7 +5,7 @@ import { PAGE, recordsOf, withoutNulls, writeEach } from '../rows.ts';
 import type { Db } from './client.ts';
 import { accounts, blobs, notes, noteTags, sessions, shares, tags, tombstones } from './schema.ts';
 
-/** Each kind's table and its primary key, which orders the pages. */
+/** Paged in primary-key order, so OFFSET pages neither skip nor repeat a row. */
 const TABLES: Record<BackupKind, { table: PgTable; key: PgColumn[] }> = {
   accounts: { table: accounts, key: [accounts.id] },
   sessions: { table: sessions, key: [sessions.id] },

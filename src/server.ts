@@ -53,12 +53,8 @@ export type ServerDeps = {
   config: Config;
   store: Store;
   blobs: BlobStore;
-  /**
-   * The logger `main.ts` makes before the server, with `LOG_SERIALIZERS`, so startup logs the same
-   * way; false in tests.
-   */
+  /** Must carry `LOG_SERIALIZERS`, which mask Share Link tokens. */
   logger: FastifyBaseLogger | false;
-  /** The clock every expiry is measured against; tests pass their own. */
   now?: Clock;
 };
 
@@ -81,7 +77,6 @@ export async function buildServer({
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
-  // Every service is built here, once, and reached by routes through `app.services` (ADR 0007).
   const live = new LiveUpdates();
   const pairing = new PairingService(store, now);
   const accounts = new AccountService(store, now, pairing);
@@ -106,7 +101,7 @@ export async function buildServer({
   await app.register(sensible);
   await app.register(cookie);
   registerAuth(app);
-  // Routes opt in through `config.rateLimit`: sign-in, code redemption, public Share Links.
+  // Routes opt in through `config.rateLimit`.
   await app.register(rateLimit, { global: false });
   await registerDocs(app);
 

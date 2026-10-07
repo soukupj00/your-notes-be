@@ -157,7 +157,6 @@ describe('blobs', () => {
       const before = lines.length;
       req.destroy();
 
-      // The error handler's line, whichever way it judged the upload.
       await vi.waitFor(() => expect(lines.length).toBeGreaterThan(before));
       expect(lines.slice(before)).toEqual([
         expect.objectContaining({

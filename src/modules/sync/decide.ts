@@ -1,14 +1,12 @@
-/**
- * The sync rules (PLAN.md "Sync rules"): what the server does with one pushed row.
- * Pure: no HTTP, no Store; the push in the sync service gathers the state and applies the decision.
- */
+// The sync rules for one pushed row (docs/architecture/sync.md). Pure: the push in service.ts
+// gathers the state and applies the decision.
 
 export type Incoming =
   | { kind: 'note' | 'tag' | 'noteTag'; rev?: number | undefined }
   | { kind: 'tombstone'; of: 'note' | 'tag' | 'noteTag'; rev?: number | undefined };
 
 export type Decision =
-  /** `write`: store the row, store a Tombstone (and delete the row), or nothing (already gone). */
+  /** `tombstone` also deletes the row; `nothing` means the Tombstone is already there. */
   | { status: 'accepted'; rev: number; write: 'row' | 'tombstone' | 'nothing' }
   | { status: 'conflict' }
   | { status: 'gone' };
@@ -35,8 +33,8 @@ export function decide(
   if (tombstoned) return { status: 'gone' };
   // A link has nothing to conflict over.
   if (incoming.kind === 'noteTag') return { status: 'accepted', rev: next, write: 'row' };
-  // New to the server. A `rev` here means the server forgot the row (its Tombstone expired);
-  // accepting it again loses nothing the person wrote.
+  // A `rev` here means the server forgot the row once its Tombstone expired; accepting it again
+  // loses nothing the person wrote.
   if (!existing) return { status: 'accepted', rev: 1, write: 'row' };
   // Equal rev: the Device edited what the server has. No rev, a lower one, or an impossible
   // higher one: the Device is out of date and makes a Conflicted Copy.

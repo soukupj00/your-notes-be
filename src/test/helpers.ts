@@ -1,5 +1,3 @@
-// Shared by the tests: a real Store and server, and the sign-ups they need. The Store is SQLite in
-// memory, or PGlite in the Vitest project that sets TEST_STORE=pglite (vitest.config.ts).
 import { expect } from 'vitest';
 import { loadConfig } from '../config.ts';
 import { CodeResponse, Problem } from '../contract/index.ts';
@@ -15,7 +13,7 @@ export const PASSWORD = 'correct horse';
 
 export type Response = Awaited<ReturnType<App['inject']>>;
 
-/** Empty and migrated. Under PGlite the test file shares one database, emptied by each call. */
+/** Empty and migrated. Under PGlite (vitest.config.ts) a call empties the file's one database. */
 export async function testStore(): Promise<Store> {
   if (process.env.TEST_STORE !== 'pglite') return openSqliteStore(':memory:');
   return (await import('../infra/postgres/testing.ts')).pgliteTestStore();

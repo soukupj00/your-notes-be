@@ -42,13 +42,8 @@ scripts/openapi.ts    writes docs/openapi.json
 - Services reach records only through the async `Store` (ADR 0006), shaped by the domain, and its records carry no SQL nulls and no Drizzle types.
 - Only `src/infra/` imports `drizzle-orm`, `better-sqlite3`, `pg`, `@electric-sql/pglite` or `@aws-sdk/*` (the contract suites may, to set up real backends), and nothing under `src/modules/`, `src/http/`, `src/store/` or `src/shared/` imports `src/infra/`; Biome's `noRestrictedImports` fails the build otherwise.
 - `infra/open.ts` loads PostgreSQL and S3 with a dynamic `import()`, so a SQLite and disk install never loads their drivers.
-- Reads and writes that must not interleave with another request run in one `transaction(fn)`: the push, a feed page, minting a Share Link, an account created by a code, the sweep's records.
-  PostgreSQL reads what others committed before each statement, so the push and Share Link minting first take `accounts.lock(id, 'write')` and a feed page `accounts.lock(id, 'read')`.
-- Inside `transaction(fn)` only the `tx` it passes is used; a service method that joins another's transaction takes it as a parameter (`spend(code, kind, store = this.#store)`).
-  No byte or network I/O happens inside, and Live Update hints are sent after the commit.
-- The SQLite Store runs every call through one async lock, a wrapper in `lock.ts` rather than code in each method.
-  Both Stores are wrapped by `guarded.ts`, so calling the outer Store inside `fn` throws instead of waiting on a lock its own transaction holds, and a `tx` kept after `fn` throws instead of running outside the transaction.
-- With PostgreSQL the server holds an advisory lock for its lifetime, so a second instance stops at startup (ADR 0006); `restore` and `migrate` take it too, so they refuse while a server runs.
+- Work that must not interleave with another request runs in one `transaction(fn)` and takes `accounts.lock` before its first read; inside it only the `tx` is used and no byte or network I/O happens.
+  The rules, and how each database keeps them, are in [`transactions.md`](transactions.md).
 - The Server Backup reads every record in one snapshot through `serverBackup.read` (SQLite: a deferred read transaction, which WAL lets the server's writers pass; PostgreSQL: REPEATABLE READ), and copies bytes only after it ends.
   `restore` and `migrate` write bytes first, then every record in one `serverBackup.write`, and only into an empty Store and BlobStore; on failure they delete the bytes they wrote, so a retry finds the target empty.
 - `buildServer()` takes its config, Store and BlobStore as arguments and never calls `listen()`.

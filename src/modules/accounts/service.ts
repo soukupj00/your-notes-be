@@ -6,7 +6,6 @@ import type { AccountRecord, Role } from '../../store/records.ts';
 import type { Store, StoreTx } from '../../store/Store.ts';
 import type { PairingService } from '../pairing/service.ts';
 
-/** An Account as a Session sees it. */
 export type SessionAccount = Pick<AccountRecord, 'id' | 'username' | 'role'>;
 
 /** One answer for a wrong username, a wrong password and a bad code, so none can be told apart. */
@@ -26,7 +25,6 @@ export class AccountService {
     this.#pairing = pairing;
   }
 
-  /** First run: only the setup code printed at startup can create the Owner. */
   async createOwner({ code, username, password }: NewAccount): Promise<SessionAccount> {
     await this.#pairing.requireSetup();
     const passwordHash = await hashPassword(password);

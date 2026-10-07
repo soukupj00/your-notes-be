@@ -56,7 +56,6 @@ export class SessionService {
     return this.open(account, body.deviceName);
   }
 
-  /** The Session's id is the Device's id. */
   async open(account: SessionAccount, deviceName: string): Promise<OpenedSession> {
     const now = this.#clock();
     const token = newSecret();

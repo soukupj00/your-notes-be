@@ -4,7 +4,6 @@ import type { FastifyInstance } from 'fastify';
 import { jsonSchemaTransform } from 'fastify-type-provider-zod';
 import { VERSION } from '../version.ts';
 
-/** OpenAPI 3.1 generated from the routes' Zod schemas; the UI's assets ship in the package. */
 export async function registerDocs(app: FastifyInstance): Promise<void> {
   await app.register(swagger, {
     openapi: {

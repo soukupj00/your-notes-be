@@ -38,7 +38,6 @@ async function dataDir(name = 'data'): Promise<string> {
   return dir;
 }
 
-/** The Owner's username and the Attachment's bytes, from wherever `env` keeps them. */
 async function contents(env: Record<string, string>) {
   const config = loadConfig(env);
   const store = await openStore(config, { warn: () => {} });

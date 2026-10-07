@@ -78,20 +78,9 @@ Single-resource `GET`s exist as HAL link targets with an `ETag`; per-resource `P
 - CLI `backup <dir>`, `restore <dir>`, `migrate`: the portable Server Backup (ADR 0006), whatever the backends; no scheduler, the guide shows the cron line.
 
 ### Sync rules (`src/modules/sync/`)
-| Device sends | Server has | Outcome |
-|---|---|---|
-| no `rev` | nothing | `accepted`, rev 1 |
-| no `rev` | the id | `conflict` |
-| `rev` equal | the row | `accepted`, rev + 1, new `seq` |
-| `rev` lower | the row | `conflict` with the server row; the Device makes the Conflicted Copy |
-| anything | a Tombstone | `gone` |
-| a Tombstone, `rev` equal | the row | row deleted, Tombstone written, blobs released to the sweep |
-| a Tombstone, `rev` stale or absent | the Note or Tag | `conflict` with the server row, nothing written; a NoteTag Tombstone is always accepted |
-| a NoteTag | anything | `accepted`; a link has nothing to conflict over |
-
-One transaction per batch; a malformed row fails the whole batch with 400.
-Pages default to 50 rows across the four kinds (`PAGE_SIZE`, cap 200), ordered by `seq`.
-Tombstones expire after 90 days; a daily in-process sweep also removes blob files unreferenced for 24 hours.
+The rules, the feed and Live Updates are specified in [`docs/architecture/sync.md`](./docs/architecture/sync.md).
+A malformed row fails the whole batch with 400.
+A daily in-process sweep also removes blob files unreferenced for 24 hours.
 `PUT /api/blobs/:id` writes to a temp file, verifies, moves into place; a repeat is 204 without reading the body; upload before or after the Note both work.
 
 ### Structure

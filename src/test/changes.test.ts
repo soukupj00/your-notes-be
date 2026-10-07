@@ -28,11 +28,9 @@ async function start(env: Record<string, string> = {}) {
   ({ app, store } = await testServer(env, () => clock));
 }
 
-/** The Owner's first Device; `pair` adds another Device, `invite` another Account. */
 const owner = () => signUpOwner(app);
 const pair = async (cookie: string) => cookieOf(await pairDevice(app, cookie));
 const invite = async (cookie: string) => cookieOf(await inviteMember(app, cookie));
-/** For state the API cannot reach, set through the Store. */
 const ownerId = async () => (await store.accounts.owner())?.id ?? '';
 
 const note = (id: string, extra: object = {}) => ({

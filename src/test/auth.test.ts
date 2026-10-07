@@ -335,7 +335,6 @@ describe('invites and passwords', () => {
       ...as(owner),
     });
     expect(reset.statusCode).toBe(204);
-    // Existing Sessions stay.
     expect((await app.inject({ url: '/api/session', ...as(member) })).statusCode).toBe(200);
     const signIn = (password: string) =>
       post('/api/session', { username: 'max', password, deviceName: 'Tablet' });

@@ -8,10 +8,7 @@ import { sendBlob } from '../../http/sendBlob.ts';
 
 const Params = z.object({ id: Id });
 
-/**
- * Encapsulated so the raw-stream body parser applies to these routes only; every other route
- * keeps parsing JSON.
- */
+/** Encapsulated, so the raw-stream body parser below reaches these routes only. */
 export const blobRoutes: FastifyPluginAsyncZod = async (app) => {
   app.removeAllContentTypeParsers();
   app.addContentTypeParser('*', (_request, payload, done) => done(null, payload));
