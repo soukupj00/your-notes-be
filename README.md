@@ -1,6 +1,6 @@
-# YouNotes Self-hosted Server
+# YourNotes Self-hosted Server
 
-The sync server for the [YouNotes](https://soukupj00.github.io/your-notes-fe/) PWA.
+The sync server for the [YourNotes](https://soukupj00.github.io/your-notes-fe/) PWA.
 It keeps a household's Notes in step across their Devices and serves the app itself from the same origin.
 Fastify and SQLite in one container, with Caddy in front for TLS.
 

@@ -15,7 +15,7 @@ afterEach(() => rm(dir, { recursive: true, force: true }));
 it('is held by one taker at a time, and free again once released', () => {
   const release = holdInstanceLock(dir);
   expect(() => holdInstanceLock(dir)).toThrow(
-    `Another YouNotes server is already using ${dir}; only one may run at a time, so stop the other first`
+    `Another YourNotes server is already using ${dir}; only one may run at a time, so stop the other first`
   );
   release();
   holdInstanceLock(dir)();

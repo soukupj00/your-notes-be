@@ -20,7 +20,7 @@ export function holdInstanceLock(dataDir: string): () => void {
     lock.close();
     if ((error as { code?: string }).code !== 'SQLITE_BUSY') throw error;
     throw new Error(
-      `Another YouNotes server is already using ${dataDir}; ` +
+      `Another YourNotes server is already using ${dataDir}; ` +
         'only one may run at a time, so stop the other first'
     );
   }

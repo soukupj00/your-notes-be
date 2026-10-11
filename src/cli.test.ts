@@ -248,11 +248,11 @@ describe.skipIf(!pgUrl)('on a real PostgreSQL (PG_TEST_URL)', () => {
     try {
       const data = await dataDir();
       const migrating = run(['migrate'], { DATA_DIR: data, TARGET_DATABASE_URL: database.url });
-      await expect(migrating).rejects.toThrow(/Another YouNotes server/);
+      await expect(migrating).rejects.toThrow(/Another YourNotes server/);
       const backupDir = join(root, 'backup');
       await run(['backup', backupDir], { DATA_DIR: data });
       const restoring = run(['restore', backupDir], { DATA_DIR: data, DATABASE_URL: database.url });
-      await expect(restoring).rejects.toThrow(/Another YouNotes server/);
+      await expect(restoring).rejects.toThrow(/Another YourNotes server/);
     } finally {
       await running.close();
       await database.drop();

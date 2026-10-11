@@ -1,7 +1,7 @@
-# YouNotes with PostgreSQL or an S3 bucket
+# YourNotes with PostgreSQL or an S3 bucket
 
 This page continues the [setup guide](setup.md), for the few homes that want the records or the Attachments somewhere other than the machine itself.
-Most homes need none of it: by default YouNotes keeps everything on the machine.
+Most homes need none of it: by default YourNotes keeps everything on the machine.
 Run every command from inside the `younotes` folder, as in the guide.
 
 ## 1. Keep Attachments in an S3 bucket
@@ -45,10 +45,10 @@ To keep the files in another folder of the bucket, add `S3_PREFIX=` with the fol
 `S3_PREFIX=` with nothing after the `=` means the top of the bucket, and then the server treats the whole bucket as its own.
 The two keys open your bucket, so keep `.env` as private as the machine.
 
-A bucket that an earlier YouNotes filled holds the files at its top, not in `younotes/`.
+A bucket that an earlier YourNotes filled holds the files at its top, not in `younotes/`.
 Keep using it with `S3_PREFIX=` with nothing after the `=`, or move the files into `younotes/` with `migrate`, as the end of section 3 shows.
 
-Start YouNotes again with `docker compose up -d`.
+Start YourNotes again with `docker compose up -d`.
 On every start the server waits up to half a minute for the bucket, saying "Waiting for S3 bucket" in `docker compose logs younotes`, and then stops with the reason, for example "no such bucket".
 Keys the provider refuses stop it straight away, with "access denied".
 The messages name the bucket and the address, never the keys.
@@ -90,7 +90,7 @@ DATABASE_URL=postgres://younotes:make-up-a-long-password@postgres:5432/younotes
 
 The password appears twice and must be the same in both lines.
 The first line makes every `docker compose` command include the database; with the SeaweedFS of section 1 as well, it is `COMPOSE_PROFILES=postgres,s3`.
-Start YouNotes again with `docker compose up -d`.
+Start YourNotes again with `docker compose up -d`.
 
 To use a PostgreSQL server you already run, create an empty database there with a user that owns it, and set only `DATABASE_URL`, in the form `postgres://user:password@address:5432/database`.
 The server creates its tables itself when it starts.
@@ -98,15 +98,15 @@ The server creates its tables itself when it starts.
 On every start the server waits up to half a minute for the database, saying "Waiting for PostgreSQL" in `docker compose logs younotes`, and then stops with the reason, for example a wrong password.
 Its messages name the database's address, never the password.
 
-Only one YouNotes server may use a database.
-A second one stops straight away and says "Another YouNotes server is already using PostgreSQL".
+Only one YourNotes server may use a database.
+A second one stops straight away and says "Another YourNotes server is already using PostgreSQL".
 
 The backup in [section 8 of the setup guide](setup.md#8-back-up-and-restore) works the same with PostgreSQL.
 PostgreSQL's own `pg_dump` is another way to back up the records, as its guide describes: <https://www.postgresql.org/docs/17/backup-dump.html>.
 
 ## 3. Move a running server to PostgreSQL or S3
 
-Once YouNotes holds your Notes, moving them is one command, `migrate`, which copies everything into the new place.
+Once YourNotes holds your Notes, moving them is one command, `migrate`, which copies everything into the new place.
 Every Device stays signed in and keeps syncing as if nothing happened.
 The old copy stays where it was, unused, so you can go back by undoing the settings.
 
@@ -144,13 +144,13 @@ The old copy stays where it was, unused, so you can go back by undoing the setti
    To move both, put all of those `-e` lines in one command.
    A setting you leave out stays as it is, so only what you name moves.
    It prints "Copied", with how many records and Attachment files it copied.
-   To move the files of an earlier YouNotes from the top of the bucket into `younotes/`, with `S3_PREFIX=` still in `.env`, name only the new folder:
+   To move the files of an earlier YourNotes from the top of the bucket into `younotes/`, with `S3_PREFIX=` still in `.env`, name only the new folder:
 
    ```bash
    docker compose run --rm -e TARGET_S3_PREFIX=younotes/ younotes node dist/cli.js migrate
    ```
 
-5. Now change the settings: add the `DATABASE_URL` line of section 2, or the S3 lines of section 1, to `.env`, and start YouNotes with `docker compose up -d`.
+5. Now change the settings: add the `DATABASE_URL` line of section 2, or the S3 lines of section 1, to `.env`, and start YourNotes with `docker compose up -d`.
    After a move into `younotes/`, delete the `S3_PREFIX=` line instead.
    The files at the top of the bucket stay there, unused, and you may delete them at your provider.
 

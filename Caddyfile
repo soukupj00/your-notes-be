@@ -1,4 +1,4 @@
-# TLS in front of YouNotes. Driven by two variables from `.env`:
+# TLS in front of YourNotes. Driven by two variables from `.env`:
 #   YOUNOTES_HOST  the name devices open: a domain, a *.ts.net name, localhost,
 #                  or the machine's IP address (internal mode)
 #   YOUNOTES_TLS   auto      public certificate over HTTP-01 for a domain, the tailnet certificate

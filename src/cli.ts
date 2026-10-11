@@ -60,7 +60,7 @@ export async function backup(config: Config, dir: string): Promise<Counts> {
     // The guide's container runs as uid 1000 and writes into a folder mounted from the host.
     throw new Error(
       `Cannot write the backup to ${dir}: permission denied. Its folder must belong to the ` +
-        'account YouNotes runs as; with Docker, run `sudo chown 1000:1000 backups` once ' +
+        'account YourNotes runs as; with Docker, run `sudo chown 1000:1000 backups` once ' +
         '(docs/setup.md, section 8)'
     );
   } finally {

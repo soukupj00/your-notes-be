@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-The Self-hosted Server for the YouNotes PWA, which lives in the frontend repository, `ni-dip-fe`.
+The Self-hosted Server for the YourNotes PWA, which lives in the frontend repository, `ni-dip-fe`.
 Fastify + SQLite or PostgreSQL (Drizzle) in one container behind Caddy; it serves the built PWA and syncs Notes between a person's Devices.
 
 ## Hard rules
