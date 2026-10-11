@@ -1,6 +1,6 @@
 # Developers only: build the server image from this checkout instead of pulling it.
 # Compose merges this file into compose.yml automatically when it sits next to it;
-# the setup guide downloads compose.yml alone, so people running YouNotes never see it.
+# the setup guide downloads compose.yml alone, so people running YourNotes never see it.
 #
 #   docker compose --profile local build
 

@@ -9,8 +9,8 @@ export async function registerDocs(app: FastifyInstance): Promise<void> {
     openapi: {
       openapi: '3.1.0',
       info: {
-        title: 'YouNotes Self-hosted Server',
-        description: 'Sync for the YouNotes PWA. Errors are application/problem+json (RFC 9457).',
+        title: 'YourNotes Self-hosted Server',
+        description: 'Sync for the YourNotes PWA. Errors are application/problem+json (RFC 9457).',
         version: VERSION,
       },
     },

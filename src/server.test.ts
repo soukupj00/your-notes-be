@@ -10,7 +10,7 @@ import { type App, buildServer } from './server.ts';
 import type { Store } from './store/Store.ts';
 import { testStore } from './test/helpers.ts';
 
-const INDEX_HTML = '<!doctype html><title>YouNotes</title>';
+const INDEX_HTML = '<!doctype html><title>YourNotes</title>';
 const BODY_LIMIT = 2048;
 
 let app: App;

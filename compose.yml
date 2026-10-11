@@ -1,4 +1,4 @@
-# YouNotes: the server and Caddy in front of it (ADR 0004).
+# YourNotes: the server and Caddy in front of it (ADR 0004).
 # Settings come from `.env` next to this file; see `.env.example`.
 #
 #   docker compose up -d                      # the full stack over HTTPS

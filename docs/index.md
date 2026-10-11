@@ -2,9 +2,9 @@
 layout: home
 
 hero:
-  name: YouNotes Server
+  name: YourNotes Server
   text: Your notes, synced by a server you run at home
-  tagline: YouNotes is a notes app for your phone and your computer. This server keeps the same notes on all of them, on a machine in your own home.
+  tagline: YourNotes is a notes app for your phone and your computer. This server keeps the same notes on all of them, on a machine in your own home.
   actions:
     - theme: brand
       text: Set it up

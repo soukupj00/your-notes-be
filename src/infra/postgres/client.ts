@@ -63,7 +63,7 @@ export async function holdInstanceLock(client: pg.Client, url: string): Promise<
   );
   if (!rows[0]?.locked) {
     throw new Error(
-      `Another YouNotes server is already using PostgreSQL at ${where(url)}; ` +
+      `Another YourNotes server is already using PostgreSQL at ${where(url)}; ` +
         'only one may run at a time, so stop the other first'
     );
   }

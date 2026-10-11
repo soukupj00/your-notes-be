@@ -1,6 +1,6 @@
 # How it works
 
-YouNotes is a notes app for your phone, tablet and computer.
+YourNotes is a notes app for your phone, tablet and computer.
 This server is the part that keeps your notes the same on all of them.
 This page explains what each part does and where your notes are kept, without technical words.
 
@@ -60,7 +60,7 @@ As soon as the Device reaches the server again, it sends what waited and gets wh
 ## Two changes to one Note
 
 Sometimes one Note is changed on two Devices before either has synced, for example on a phone without signal and on the laptop at home.
-That is a conflict, and YouNotes never throws either version away.
+That is a conflict, and YourNotes never throws either version away.
 
 The version that reached the server first stays as the Note.
 The other version is kept beside it as a second Note, called a Conflicted Copy.
