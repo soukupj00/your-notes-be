@@ -152,6 +152,7 @@ const config = withMermaid(
       sequence: { useMaxWidth: false },
     },
     head: [
+      ['link', { rel: 'icon', type: 'image/png', href: `${base}note-128.png` }],
       ['style', {}, '.vp-doc .mermaid { overflow-x: auto; }'],
       ['script', {}, czechRedirect(base)],
     ],
