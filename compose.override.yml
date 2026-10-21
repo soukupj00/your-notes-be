@@ -8,7 +8,7 @@ x-build: &build
   build:
     context: .
     args:
-      FE_IMAGE: ${FE_IMAGE:-gitlab.fit.cvut.cz:5050/soukuj26/ni-dip-fe:latest}
+      FE_IMAGE: ${FE_IMAGE:-ghcr.io/soukupj00/your-notes-fe:latest}
 
 services:
   yournotes:

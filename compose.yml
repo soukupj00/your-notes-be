@@ -16,7 +16,7 @@
 name: yournotes
 
 x-yournotes: &yournotes
-  image: gitlab.fit.cvut.cz:5050/soukuj26/ni-dip-be:${YOURNOTES_VERSION:-latest}
+  image: ghcr.io/soukupj00/your-notes-be:${YOURNOTES_VERSION:-latest}
   restart: unless-stopped
   read_only: true
   tmpfs:

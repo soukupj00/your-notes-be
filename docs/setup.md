@@ -122,9 +122,9 @@ Make a folder for YourNotes and download its three files into it:
 ```bash
 mkdir yournotes
 cd yournotes
-curl -fsSLO https://gitlab.fit.cvut.cz/soukuj26/ni-dip-be/-/raw/v0.1.0/compose.yml
-curl -fsSLO https://gitlab.fit.cvut.cz/soukuj26/ni-dip-be/-/raw/v0.1.0/Caddyfile
-curl -fsSLO https://gitlab.fit.cvut.cz/soukuj26/ni-dip-be/-/raw/v0.1.0/.env.example
+curl -fsSLO https://raw.githubusercontent.com/soukupj00/your-notes-be/v0.1.0/compose.yml
+curl -fsSLO https://raw.githubusercontent.com/soukupj00/your-notes-be/v0.1.0/Caddyfile
+curl -fsSLO https://raw.githubusercontent.com/soukupj00/your-notes-be/v0.1.0/.env.example
 ```
 
 Make your own settings file from the example and open it in a text editor:
