@@ -34,6 +34,7 @@ features:
 
 A Note is one thing you write in the app: a few words, a checklist, a drawing, photos or a recording.
 The app itself has [its own site](https://soukupj00.github.io/your-notes-fe/), with what it can do and how to install it.
+You can also try it in your browser at [your-notes-fe.vercel.app](https://your-notes-fe.vercel.app/): it works fully on one Device, and this server is what adds sync between Devices.
 
 <style>
 .screenshots {

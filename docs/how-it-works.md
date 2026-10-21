@@ -97,3 +97,4 @@ That is a different thing: one file with the Notes of one account, made on one D
 
 - [Set it up at home](setup.md) walks you through it in about ten minutes.
 - [The app's site](https://soukupj00.github.io/your-notes-fe/) shows the app itself and how to install it.
+- [your-notes-fe.vercel.app](https://your-notes-fe.vercel.app/) lets you try the app in your browser first, on one Device and without sync.

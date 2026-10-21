@@ -1,7 +1,15 @@
 import { defineConfig } from 'vitepress';
 import { withMermaid } from 'vitepress-plugin-mermaid';
+import {
+  czechFooter,
+  czechRedirect,
+  czechSearch,
+  czechThemeConfig,
+  keepCzechPrepositionsAttached,
+} from './czech';
 
 const repo = 'https://github.com/soukupj00/your-notes-be';
+const base = '/your-notes-be/';
 
 // VitePress's own slugify without the "_" it puts before a leading digit, so a numbered heading
 // keeps the anchor GitHub gives it and setup.md#8-back-up-and-restore works in both places.
@@ -69,15 +77,73 @@ const forDevelopers = [
   },
 ];
 
+const forDevelopersCzech = [
+  {
+    text: 'Pro vývojáře',
+    link: '/cs/developers/',
+    items: [{ text: 'API', link: '/cs/developers/api' }],
+  },
+  {
+    text: 'Architektura',
+    link: '/cs/architecture/',
+    items: [
+      { text: 'Struktura', link: '/cs/architecture/structure' },
+      { text: 'Přidání Store', link: '/cs/architecture/adding-a-store' },
+      { text: 'Synchronizace', link: '/cs/architecture/sync' },
+      { text: 'Transakce a zámky', link: '/cs/architecture/transactions' },
+      { text: 'Bloby', link: '/cs/architecture/blobs' },
+      { text: 'HTTP', link: '/cs/architecture/http' },
+      { text: 'Testování', link: '/cs/architecture/testing' },
+    ],
+  },
+  {
+    text: 'Rozhodnutí',
+    link: '/cs/adr/',
+    items: [
+      {
+        text: '0001 Vlastníka vytvoří vypsaný párovací odkaz',
+        link: '/cs/adr/0001-the-owner-is-created-by-a-printed-pairing-link',
+      },
+      {
+        text: '0002 Proud změn se čte z řádků, ne z logu',
+        link: '/cs/adr/0002-the-change-feed-is-read-from-the-rows-not-from-a-log',
+      },
+      {
+        text: '0003 Metadata příloh jsou sloupec poznámky',
+        link: '/cs/adr/0003-attachment-metadata-is-a-column-on-the-note',
+      },
+      {
+        text: '0004 Backendový image přebírá PWA z frontendového image',
+        link: '/cs/adr/0004-the-backend-image-takes-the-pwa-from-the-frontend-image',
+      },
+      {
+        text: '0005 Tokeny odkazů pro sdílení se ukládají v čitelné podobě',
+        link: '/cs/adr/0005-share-link-tokens-are-stored-in-clear',
+      },
+      {
+        text: '0006 Záznamy a bajty stojí za dvěma asynchronními rozhraními',
+        link: '/cs/adr/0006-records-and-bytes-sit-behind-two-async-interfaces',
+      },
+      {
+        text: '0007 Funkce je modul z rout, služby a presenterů',
+        link: '/cs/adr/0007-a-feature-is-a-module-of-routes-a-service-and-presenters',
+      },
+    ],
+  },
+];
+
 const config = withMermaid(
   defineConfig({
     title: 'YourNotes Server',
     description: 'Your notes, synced by a server you run at home.',
-    base: '/your-notes-be/',
+    base,
     srcExclude: ['superpowers/**'],
     // GitHub shows a folder's README.md; the site serves the same file as the section's index.
-    rewrites: { 'architecture/README.md': 'architecture/index.md' },
-    markdown: { anchor: { slugify } },
+    rewrites: {
+      'architecture/README.md': 'architecture/index.md',
+      'cs/architecture/README.md': 'cs/architecture/index.md',
+    },
+    markdown: { anchor: { slugify }, config: keepCzechPrepositionsAttached },
     // A label is sized for Mermaid's line height; VitePress's 28px for every paragraph clips it.
     // Diagrams keep their natural size and scroll sideways, so a phone never shrinks their text.
     mermaid: {
@@ -85,7 +151,49 @@ const config = withMermaid(
       flowchart: { useMaxWidth: false },
       sequence: { useMaxWidth: false },
     },
-    head: [['style', {}, '.vp-doc .mermaid { overflow-x: auto; }']],
+    head: [
+      ['style', {}, '.vp-doc .mermaid { overflow-x: auto; }'],
+      ['script', {}, czechRedirect(base)],
+    ],
+    locales: {
+      root: { label: 'English', lang: 'en' },
+      cs: {
+        label: 'Čeština',
+        lang: 'cs',
+        title: 'Server YourNotes',
+        description: 'Vaše poznámky synchronizuje server, který si provozujete doma.',
+        themeConfig: {
+          ...czechThemeConfig,
+          nav: [
+            { text: 'Úvod', link: '/cs/' },
+            { text: 'Jak to funguje', link: '/cs/how-it-works' },
+            { text: 'Nastavení', link: '/cs/setup', activeMatch: '^/cs/setup' },
+            {
+              text: 'Pro vývojáře',
+              link: '/cs/developers/',
+              activeMatch: '^/cs/(developers|architecture|adr)/',
+            },
+          ],
+          socialLinks: [{ icon: 'github', link: repo, ariaLabel: 'Server na GitHubu' }],
+          sidebar: {
+            '/cs/developers/': forDevelopersCzech,
+            '/cs/architecture/': forDevelopersCzech,
+            '/cs/adr/': forDevelopersCzech,
+            '/cs/': [
+              {
+                text: 'Pro všechny',
+                items: [
+                  { text: 'Jak to funguje', link: '/cs/how-it-works' },
+                  { text: 'Nastavení serveru doma', link: '/cs/setup' },
+                  { text: 'PostgreSQL nebo S3 bucket', link: '/cs/setup-backends' },
+                ],
+              },
+            ],
+          },
+          footer: czechFooter(repo),
+        },
+      },
+    },
     themeConfig: {
       nav: [
         { text: 'Home', link: '/' },
@@ -114,7 +222,7 @@ const config = withMermaid(
         ],
       },
       outline: [2, 3],
-      search: { provider: 'local' },
+      search: { provider: 'local', options: { locales: { cs: czechSearch } } },
       footer: {
         message: `Released under the <a href="${repo}/blob/main/LICENSE">MIT License</a>.`,
         copyright:
