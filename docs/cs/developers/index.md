@@ -40,10 +40,10 @@ Reference API je na `/api/docs`; tentýž dokument je na stránce [API](api.md) 
 Server samotný bez Caddy na `http://localhost:3000` vyzkoušíte takto:
 
 ```bash
-docker compose --profile local up younotes-local
+docker compose --profile local up yournotes-local
 ```
 
-`--profile` nahrazuje `COMPOSE_PROFILES`, takže pokud ho `.env` nastavuje, uveďte i tyto profily, například `docker compose --profile local --profile postgres up younotes-local`; jinak server čeká na databázi, která se nikdy nespustí.
+`--profile` nahrazuje `COMPOSE_PROFILES`, takže pokud ho `.env` nastavuje, uveďte i tyto profily, například `docker compose --profile local --profile postgres up yournotes-local`; jinak server čeká na databázi, která se nikdy nespustí.
 Zastavte ho se stejnými přepínači: `docker compose --profile local down`, nebo `docker compose --profile local --profile postgres down`.
 Prosté `docker compose down` ho nechá na místě, ale bez jeho sítě, a jeho další spuštění selže.
 Ostrý provoz s Caddy popisuje [návod k nastavení](../setup.md).
@@ -77,7 +77,7 @@ Každé další zařízení přidejte z přihlášeného zařízení v Nastaven�
 
 1. Zvyšte `version` v `package.json` a mergněte do `main`.
 2. Otagujte tento commit jako `v0.x.y` a pushněte tag; CI sestaví image, provede smoke testy a publikuje ji pod tímto tagem.
-3. Nastavte `YOUNOTES_VERSION` v `.env.example` na nový tag, aby nové instalace začínaly na něm; [návod k nastavení](../setup.md#4-spusteni) stahuje soubory také z tagu, takže aktualizujte jeho tři řádky s `curl`.
+3. Nastavte `YOURNOTES_VERSION` v `.env.example` na nový tag, aby nové instalace začínaly na něm; [návod k nastavení](../setup.md#4-spusteni) stahuje soubory také z tagu, takže aktualizujte jeho tři řádky s `curl`.
 
 Každý push do `main` také publikuje tento web na GitHub Pages.
 

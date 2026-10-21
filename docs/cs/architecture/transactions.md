@@ -36,7 +36,7 @@ Režie naměřená ve spiku byla asi 3,5 % u triviálních čtení.
 - `serverBackup.read` otevírá odložený `BEGIN`: nebere žádný zápisový zámek a pod WAL zapisovatelé z ostatních spojení pokračují, zatímco jeho snapshot nevidí žádný z jejich commitů.
   `serverBackup.write` je opět `BEGIN IMMEDIATE`.
 - Soubor běží s WAL, zapnutými cizími klíči a `busy_timeout`; viz `client.ts`.
-- Zámek instance je exkluzivní transakce držená otevřená na `younotes.lock` vedle databáze (`instanceLock.ts`), takže druhý server na stejném `DATA_DIR` je při startu odmítnut, a berou ho i `restore` a `migrate`, takže odmítnou běžet, dokud běží server.
+- Zámek instance je exkluzivní transakce držená otevřená na `yournotes.lock` vedle databáze (`instanceLock.ts`), takže druhý server na stejném `DATA_DIR` je při startu odmítnut, a berou ho i `restore` a `migrate`, takže odmítnou běžet, dokud běží server.
   Jádro ho uvolní spolu s procesem, takže spadlý server nikdy nezablokuje další start.
   PID v souboru by to nedokázal: server v containeru má při každém startu pid 1 a CLI běží ve vlastním containeru.
 
