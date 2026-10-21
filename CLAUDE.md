@@ -28,6 +28,7 @@ Fastify + SQLite or PostgreSQL (Drizzle) in one container behind Caddy; it serve
   The running server shows it at `/api/docs`.
 - `docs/` is also the source of the VitePress site, published to GitHub Pages from `main` (`docs/.vitepress/config.ts`, `.github/workflows/pages.yml`); `docs/superpowers/` is left out of it.
   A page's links must resolve on the site and on GitHub alike, and the build fails on a dead one.
+  Every change to an English page needs the matching change in its Czech copy under `docs/cs/`.
 
 ## Commands
 

@@ -1,0 +1,8 @@
+# Backendový image přebírá sestavenou PWA z publikovaného frontendového image a Caddy je jediná proxy
+
+ADR 0018 (frontend) rozhodlo, že server servíruje PWA z jednoho originu; tento repozitář musí dostat sestavenou aplikaci do svého image, aniž by vlastnil frontendový toolchain.
+Rozhodnuto 2026-09-28: Dockerfile uvádí publikovaný image frontendu (ADR 0006, frontend) jako fázi buildu, připnutý tagem v build argumentu, a kopíruje z něj statické soubory do image serveru; zvýšením tohoto tagu backendový release určuje, který frontend dodává.
+Git submodul, který by zde sestavoval frontend, i předávání CI artefaktů mezi dvěma projekty v GitLabu byly zamítnuty jako druhý toolchain a křehká závislost mezi projekty kvůli práci, kterou už dělá frontendová pipeline.
+Stack tvoří dva kontejnery, server a Caddy: Caddy ukončuje TLS a jako reverse proxy předává požadavky Fastify, které statické soubory servíruje samo přes `@fastify/static`, takže nginx ve frontendovém image slouží jen jako zdroj při buildu a nikdy neběží.
+Režim TLS s vlastní doménou používá ACME HTTP-01 místo DNS-01, které uváděla frontendová dokumentace, protože DNS-01 vyžaduje Caddy znovu sestavený s pluginem poskytovatele DNS, a to je přesně krok, který po neprogramátorovi nelze chtít; DNS-01 je zdokumentované jako možné, ne jako podporované.
+Zabezpečení, které kostra dodává bez ohledu na režim (žádná neautentizovaná route kromě vstupního bodu, nastavení, přihlášení, health, dokumentace a statických souborů; rate limity podle IP na přihlášení a uplatnění kódu; limity velikosti těla požadavku; kontejner bez roota, jen pro čtení a bez publikovaného portu), je požadavek, ne pozdější etapa, a návod uvádí, že na veřejný internet dostane server jen režim s vlastní doménou.
