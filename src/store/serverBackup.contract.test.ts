@@ -246,9 +246,9 @@ const pairs: [string, () => Promise<{ reader: Store; writer: Store; end(): Promi
   [
     'SQLite file',
     async () => {
-      const dir = await mkdtemp(join(tmpdir(), 'younotes-snapshot-'));
-      const reader = openSqliteStore(join(dir, 'younotes.db'));
-      const writer = openSqliteStore(join(dir, 'younotes.db'));
+      const dir = await mkdtemp(join(tmpdir(), 'yournotes-snapshot-'));
+      const reader = openSqliteStore(join(dir, 'yournotes.db'));
+      const writer = openSqliteStore(join(dir, 'yournotes.db'));
       return {
         reader,
         writer,

@@ -71,7 +71,7 @@ const forDevelopers = [
 
 const config = withMermaid(
   defineConfig({
-    title: 'YouNotes Server',
+    title: 'YourNotes Server',
     description: 'Your notes, synced by a server you run at home.',
     base: '/your-notes-be/',
     srcExclude: ['superpowers/**'],

@@ -41,7 +41,7 @@ const ConfigSchema = z.object({
   S3_PREFIX: z
     .string()
     .regex(/^(.*\/)?$/, 'empty or ending in /')
-    .default('younotes/'),
+    .default('yournotes/'),
   S3_ACCESS_KEY_ID: z.string().min(1).optional(),
   S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   S3_FORCE_PATH_STYLE: bool.default(false),

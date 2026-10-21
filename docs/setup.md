@@ -1,4 +1,4 @@
-# Setting up YouNotes at home
+# Setting up YourNotes at home
 
 This guide takes you from nothing to your Notes syncing between your phone and your laptop.
 You do not need to be a programmer.
@@ -6,7 +6,7 @@ Copy every command exactly as written; lines starting with `#` inside a command 
 
 ## 1. What you are setting up
 
-One machine in your home runs the YouNotes server.
+One machine in your home runs the YourNotes server.
 Your phones and laptops open it in a web browser and install it as an app.
 Your Notes live on that one machine, and every Device you sign in keeps a copy that works offline.
 Nothing is sent to anyone else's computer.
@@ -47,17 +47,17 @@ Pick one of the three ways below and remember its two settings; you will type th
 | 3c. Only at home | No, only on your home Wi-Fi | No | One small one | Yes |
 
 If you are unsure, choose Tailscale.
-Choose "Only at home" if you do not want to install anything extra and only use YouNotes at home.
+Choose "Only at home" if you do not want to install anything extra and only use YourNotes at home.
 
 ### 3a. Tailscale (recommended)
 
 Tailscale is a free private network between your own devices.
 It gives the machine a name like `homebox.tail1234.ts.net` with a real certificate, works away from home, and needs no changes to your router.
 
-1. Install Tailscale on the machine and on every phone and laptop that will use YouNotes: <https://tailscale.com/download>.
+1. Install Tailscale on the machine and on every phone and laptop that will use YourNotes: <https://tailscale.com/download>.
    Sign in with the same account everywhere.
    On a phone, open the Tailscale app and switch it on; it should say "Connected".
-   Leave it on whenever you want YouNotes to sync.
+   Leave it on whenever you want YourNotes to sync.
 2. Open the DNS page of the Tailscale admin console: <https://login.tailscale.com/admin/dns>.
    Turn on **MagicDNS**, then turn on **HTTPS Certificates**.
 3. Open the Machines page: <https://login.tailscale.com/admin/machines>.
@@ -66,8 +66,8 @@ It gives the machine a name like `homebox.tail1234.ts.net` with a real certifica
 Your two settings:
 
 ```bash
-YOUNOTES_HOST=homebox.tail1234.ts.net
-YOUNOTES_TLS=auto
+YOURNOTES_HOST=homebox.tail1234.ts.net
+YOURNOTES_TLS=auto
 ```
 
 Use your own machine's name, not the example.
@@ -75,7 +75,7 @@ There is one more change in `compose.yml`, shown in section 4.
 
 ### 3b. Your own domain
 
-Use this if you own a domain name, for example `example.com`, and want YouNotes reachable from anywhere on the internet.
+Use this if you own a domain name, for example `example.com`, and want YourNotes reachable from anywhere on the internet.
 It needs your router to let the internet in, which is why it is not the recommended path.
 
 1. At your domain provider, add an `A` record for a name such as `notes.example.com` pointing to your home's public IP address (<https://ifconfig.me> shows it).
@@ -85,8 +85,8 @@ It needs your router to let the internet in, which is why it is not the recommen
 Your two settings:
 
 ```bash
-YOUNOTES_HOST=notes.example.com
-YOUNOTES_TLS=auto
+YOURNOTES_HOST=notes.example.com
+YOURNOTES_TLS=auto
 ```
 
 ### 3c. Only at home, without internet
@@ -111,17 +111,17 @@ The server makes its own certificate, and each Device has to be told to trust it
 Your two settings, with your own address:
 
 ```bash
-YOUNOTES_HOST=192.168.1.50
-YOUNOTES_TLS=internal
+YOURNOTES_HOST=192.168.1.50
+YOURNOTES_TLS=internal
 ```
 
 ## 4. Start it
 
-Make a folder for YouNotes and download its three files into it:
+Make a folder for YourNotes and download its three files into it:
 
 ```bash
-mkdir younotes
-cd younotes
+mkdir yournotes
+cd yournotes
 curl -fsSLO https://gitlab.fit.cvut.cz/soukuj26/ni-dip-be/-/raw/v0.1.0/compose.yml
 curl -fsSLO https://gitlab.fit.cvut.cz/soukuj26/ni-dip-be/-/raw/v0.1.0/Caddyfile
 curl -fsSLO https://gitlab.fit.cvut.cz/soukuj26/ni-dip-be/-/raw/v0.1.0/.env.example
@@ -134,7 +134,7 @@ cp .env.example .env
 nano .env
 ```
 
-Change the `YOUNOTES_HOST` and `YOUNOTES_TLS` lines to the two settings from section 3.
+Change the `YOURNOTES_HOST` and `YOURNOTES_TLS` lines to the two settings from section 3.
 Leave everything else as it is.
 Save with `Ctrl+O` and `Enter`, then close the editor with `Ctrl+X`.
 
@@ -150,7 +150,7 @@ Delete the `# ` at its start, keeping the spaces before it, so it reads:
       - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock
 ```
 
-Start YouNotes:
+Start YourNotes:
 
 ```bash
 docker compose up -d
@@ -160,13 +160,13 @@ The first start downloads the server and takes a minute or two.
 Then show the server's messages:
 
 ```bash
-docker compose logs younotes
+docker compose logs yournotes
 ```
 
 Near the end you will see "No Owner yet", a link, and a large square QR code.
 The link looks like `https://homebox.tail1234.ts.net/pair#…` with a long code at the end.
 Check that the address in it is the one you chose in section 3.
-If it says `localhost` or something else, `YOUNOTES_HOST` in `.env` is not set right: fix it and run `docker compose up -d` again.
+If it says `localhost` or something else, `YOURNOTES_HOST` in `.env` is not set right: fix it and run `docker compose up -d` again.
 
 <!-- screenshot: the server log showing "No Owner yet", the Pairing Link and the QR code -->
 
@@ -175,24 +175,24 @@ It works once.
 Restarting the server makes a new one and the old one stops working; to get a fresh link at any time before you have set up, run:
 
 ```bash
-docker compose restart younotes
-docker compose logs younotes
+docker compose restart yournotes
+docker compose logs yournotes
 ```
 
 ### Only at home (3c): trust the certificate
 
 Skip this with Tailscale or your own domain.
 
-With the at-home setup, every Device has to trust the server's certificate once, before you open YouNotes on it.
+With the at-home setup, every Device has to trust the server's certificate once, before you open YourNotes on it.
 Otherwise the browser shows a warning that the connection is not private, and the app cannot work offline.
 
-Copy the certificate out of the server, in the `younotes` folder:
+Copy the certificate out of the server, in the `yournotes` folder:
 
 ```bash
-docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./younotes-root.crt
+docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./yournotes-root.crt
 ```
 
-Send the file `younotes-root.crt` to each Device, for example by email to yourself, then:
+Send the file `yournotes-root.crt` to each Device, for example by email to yourself, then:
 
 - **iPhone or iPad**: open the file in Safari or Mail and allow the download.
   Go to Settings, General, VPN & Device Management, tap the profile whose name starts with "Caddy Local Authority" and tap Install.
@@ -209,7 +209,7 @@ To check it worked, open `https://` followed by your address, for example `https
 
 ## 5. Create the Owner
 
-Pick the Device you want to use YouNotes on first, for example your phone.
+Pick the Device you want to use YourNotes on first, for example your phone.
 
 1. With Tailscale, make sure the Tailscale app on it is switched on.
    At home, make sure it is on your home Wi-Fi.
@@ -227,9 +227,9 @@ But when no signed-in Device is left to show a link, for example after losing yo
 This first link is now used up.
 Opening it on a second Device only shows "This link has expired or was already used"; add every other Device through section 6 instead.
 
-To install YouNotes as an app, open the browser's menu and choose "Add to Home Screen" (phones) or "Install" (laptops).
+To install YourNotes as an app, open the browser's menu and choose "Add to Home Screen" (phones) or "Install" (laptops).
 Always install it from the server's address, as above.
-YouNotes syncs with the server it was opened from, so a copy installed from anywhere else never reaches your server.
+YourNotes syncs with the server it was opened from, so a copy installed from anywhere else never reaches your server.
 
 ## 6. Add your other Devices
 
@@ -271,10 +271,10 @@ The invitation works once and for ten minutes.
 
 ## 8. Back up and restore
 
-Everything YouNotes knows is stored inside Docker, in a place called a volume.
+Everything YourNotes knows is stored inside Docker, in a place called a volume.
 A backup copies it into a `backups` folder next to your settings, where you can copy it onto a USB stick or another computer.
 
-The first time, from inside the `younotes` folder, make the folder and hand it to the account YouNotes runs as inside Docker, number 1000:
+The first time, from inside the `yournotes` folder, make the folder and hand it to the account YourNotes runs as inside Docker, number 1000:
 
 ```bash
 mkdir -p backups && sudo chown 1000:1000 backups
@@ -283,11 +283,11 @@ mkdir -p backups && sudo chown 1000:1000 backups
 Make a backup now:
 
 ```bash
-docker compose run -T --rm -v ./backups:/backups younotes node dist/cli.js backup /backups/$(date +%F)
+docker compose run -T --rm -v ./backups:/backups yournotes node dist/cli.js backup /backups/$(date +%F)
 ```
 
 It makes a folder named after today's date, for example `backups/2026-09-28`, and prints "Backed up" with how many records of each kind it copied.
-It is safe to run while YouNotes is in use.
+It is safe to run while YourNotes is in use.
 It works the same with the records in PostgreSQL or the Attachments in an S3 bucket ([the backends page](setup-backends.md)): the folder holds both.
 A second backup on the same day needs a different name, for example `/backups/$(date +%F)-evening`.
 If a backup stops halfway, its folder has no `manifest.json` in it; delete the folder and run the command again.
@@ -305,10 +305,10 @@ To back up every night at 3:00, open the scheduled-tasks list:
 crontab -e
 ```
 
-Add this line at the bottom, replacing `/home/you/younotes` with your folder (`pwd` prints it):
+Add this line at the bottom, replacing `/home/you/yournotes` with your folder (`pwd` prints it):
 
 ```bash
-0 3 * * * cd /home/you/younotes && docker compose run -T --rm -v ./backups:/backups younotes node dist/cli.js backup /backups/$(date +\%F)
+0 3 * * * cd /home/you/yournotes && docker compose run -T --rm -v ./backups:/backups yournotes node dist/cli.js backup /backups/$(date +\%F)
 ```
 
 The `\%` is on purpose: the scheduler needs it.
@@ -318,13 +318,13 @@ To restore a backup, replacing everything on the server with it:
 
 ```bash
 docker compose down
-docker compose run --rm -v ./backups/2026-09-28:/backup:ro younotes sh -c 'rm -rf /data/* && node dist/cli.js restore /backup'
+docker compose run --rm -v ./backups/2026-09-28:/backup:ro yournotes sh -c 'rm -rf /data/* && node dist/cli.js restore /backup'
 docker compose up -d
 ```
 
 Use the date of the backup you want.
 The second line empties the server's data and loads the backup into it, then prints "Restored".
-Do not skip the first line: the second empties the data even while YouNotes is running, before restore can tell that it is.
+Do not skip the first line: the second empties the data even while YourNotes is running, before restore can tell that it is.
 If the backup is damaged or incomplete, it says so and loads none of it; restore an older backup instead.
 Anything written after that backup is gone from the server.
 Devices that synced after that backup will re-download everything on their next sync.
@@ -333,17 +333,17 @@ Restoring is for when the machine's data is lost or broken, not for undoing one 
 
 Restore fills only an empty server, so with PostgreSQL or an S3 bucket, empty those too before the second line:
 
-- For the PostgreSQL in `compose.yml`, run `docker volume rm younotes_postgres-data` after `docker compose down`; the second line starts it again, empty.
-- For the SeaweedFS bucket in `compose.yml` (section 1 of [the backends page](setup-backends.md#1-keep-attachments-in-an-s3-bucket)), run `docker volume rm younotes_s3-data` after `docker compose down`, then `docker compose up -d s3`, which makes the bucket again, empty; the second line does not start it.
+- For the PostgreSQL in `compose.yml`, run `docker volume rm yournotes_postgres-data` after `docker compose down`; the second line starts it again, empty.
+- For the SeaweedFS bucket in `compose.yml` (section 1 of [the backends page](setup-backends.md#1-keep-attachments-in-an-s3-bucket)), run `docker volume rm yournotes_s3-data` after `docker compose down`, then `docker compose up -d s3`, which makes the bucket again, empty; the second line does not start it.
 - For a PostgreSQL server of your own, delete the database and create it again, empty.
 - Empty a bucket of your own with your provider's tools.
 
-A backup folder with a `younotes.db` file in it and no `manifest.json` was made by an earlier version of YouNotes.
-Restore cannot read it; put it back the way that version did, by copying the files:
+A backup folder with a `younotes.db` file in it and no `manifest.json` was made by an earlier version of YourNotes.
+Restore cannot read it; put it back by copying the files, under the name this version uses:
 
 ```bash
 docker compose down
-docker compose run --rm --user root -v ./backups/2026-09-28:/backup:ro younotes sh -c 'rm -rf /data/* && cp -a /backup/. /data/ && chown -R node:node /data'
+docker compose run --rm --user root -v ./backups/2026-09-28:/backup:ro yournotes sh -c 'rm -rf /data/* && cp -a /backup/. /data/ && for f in /data/younotes.db*; do mv "$f" "/data/yournotes${f#/data/younotes}"; done && chown -R node:node /data'
 docker compose up -d
 ```
 
@@ -354,7 +354,7 @@ There is no way back to an older version except restoring a backup, so every upg
 
 1. Make a backup as section 8 shows, before you change anything.
    Not after editing `.env`: the backup command runs the version `.env` names, and a newer one would update the data under the server still running, so the backup would hold the new layout.
-2. Open your settings (`nano .env`), change the `YOUNOTES_VERSION` line to the new number, and save.
+2. Open your settings (`nano .env`), change the `YOURNOTES_VERSION` line to the new number, and save.
 3. Run:
 
    ```bash
@@ -363,14 +363,14 @@ There is no way back to an older version except restoring a backup, so every upg
    ```
 
 The server updates its data on start by itself.
-To go back, set `YOUNOTES_VERSION` to the old number again, then restore the backup as section 8 shows.
+To go back, set `YOURNOTES_VERSION` to the old number again, then restore the backup as section 8 shows.
 
 ## 10. Forgot the Owner password
 
-From inside the `younotes` folder, run:
+From inside the `yournotes` folder, run:
 
 ```bash
-docker compose exec younotes node dist/cli.js reset-owner-password
+docker compose exec yournotes node dist/cli.js reset-owner-password
 ```
 
 It prints a new password once.
@@ -411,7 +411,7 @@ The Device cannot reach the server: with Tailscale, check the Tailscale app is s
 Every link works once.
 If you already created the Owner on another Device, this is expected: add this Device from a signed-in one instead (section 6).
 A link from "Add a Device" or "Invite" also runs out after ten minutes; tap the button again for a new one.
-If nobody has created the Owner yet, run `docker compose restart younotes` and use the new link from `docker compose logs younotes`.
+If nobody has created the Owner yet, run `docker compose restart yournotes` and use the new link from `docker compose logs yournotes`.
 
 **The page says "This link is incomplete".**
 The long code after the `#` was cut off, which happens when the link is typed by hand or copied only partly.
@@ -430,13 +430,13 @@ This shows which one:
 sudo ss -ltnp | grep -E ':(80|443) '
 ```
 
-Stop that program, or run YouNotes on a different machine.
+Stop that program, or run YourNotes on a different machine.
 
 **The log says "No Owner yet" although you already set up.**
 The log keeps messages from earlier starts; look only at the newest lines:
 
 ```bash
-docker compose logs --tail 40 younotes
+docker compose logs --tail 40 yournotes
 ```
 
 If the newest start still says "No Owner yet", the server is starting with empty data.
@@ -445,5 +445,5 @@ Restore a backup (section 8) to get your Notes back.
 
 ## 13. Optional: PostgreSQL, an S3 bucket, or moving between them
 
-By default YouNotes keeps the records and the Attachments on the machine, and that is the right choice for almost every home.
-To keep the Attachments in an S3 bucket, the records in PostgreSQL, or to move a running server to either, follow [YouNotes with PostgreSQL or an S3 bucket](setup-backends.md).
+By default YourNotes keeps the records and the Attachments on the machine, and that is the right choice for almost every home.
+To keep the Attachments in an S3 bucket, the records in PostgreSQL, or to move a running server to either, follow [YourNotes with PostgreSQL or an S3 bucket](setup-backends.md).

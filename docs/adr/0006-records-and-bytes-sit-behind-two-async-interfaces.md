@@ -31,7 +31,7 @@ Each database keeps its own Drizzle schema and migrations (`drizzle/sqlite/`, `d
 That duplication is the price of typed per-database schemas; the contract suite keeps the two honest, and it is the worked example of adding a database.
 
 The server runs as **one instance**.
-Live Update hints, rate-limit counters, the daily sweep and the first-run setup code live in the process, and a second instance is refused at startup by a lock: an advisory lock with PostgreSQL, a lock on `younotes.lock` in `DATA_DIR` with SQLite.
+Live Update hints, rate-limit counters, the daily sweep and the first-run setup code live in the process, and a second instance is refused at startup by a lock: an advisory lock with PostgreSQL, a lock on `yournotes.lock` in `DATA_DIR` with SQLite.
 Running several would need `LISTEN/NOTIFY` for the hints and a shared rate-limit store; the Live Update registry sits behind a small interface so that can be added later.
 Amended 2026-10-01, wording only: the registry is one class, `LiveUpdates`, with no interface in front; its three methods (`add`, `notify`, `closeAll`) are the seam a `LISTEN/NOTIFY` version would keep.
 

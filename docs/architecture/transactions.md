@@ -36,7 +36,7 @@ The cost measured in the spike was about 3.5% on trivial reads.
 - `serverBackup.read` opens a deferred `BEGIN`: it takes no write lock, and under WAL other connections' writers go on while its snapshot sees none of their commits.
   `serverBackup.write` is `BEGIN IMMEDIATE` again.
 - The file runs with WAL, foreign keys on and `busy_timeout`; see `client.ts`.
-- The instance lock is an exclusive transaction held open on `younotes.lock` beside the database (`instanceLock.ts`), so a second server on the same `DATA_DIR` is refused at startup, and `restore` and `migrate` take it too, so they refuse while a server runs.
+- The instance lock is an exclusive transaction held open on `yournotes.lock` beside the database (`instanceLock.ts`), so a second server on the same `DATA_DIR` is refused at startup, and `restore` and `migrate` take it too, so they refuse while a server runs.
   The kernel drops it with its process, so a crashed server never blocks the next start.
   A pid in a file could not do that: a container's server is pid 1 on every start, and the CLI runs in a container of its own.
 

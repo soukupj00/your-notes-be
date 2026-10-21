@@ -18,7 +18,7 @@ async function createBucket(): Promise<S3Settings> {
   const settings: S3Settings = {
     endpoint: s3TestEndpoint,
     region: 'us-east-1',
-    bucket: env.S3_TEST_BUCKET ?? 'younotes-test',
+    bucket: env.S3_TEST_BUCKET ?? 'yournotes-test',
     prefix: '',
     forcePathStyle: true,
     credentials:

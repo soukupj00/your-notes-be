@@ -1,5 +1,5 @@
 /**
- * The YouNotes sync contract: the Zod schemas both sides of the wire agree on.
+ * The YourNotes sync contract: the Zod schemas both sides of the wire agree on.
  *
  * This file is vendored verbatim by the frontend (`ni-dip-fe`) and runs in the browser,
  * so it imports nothing but `zod` and nothing from the server.

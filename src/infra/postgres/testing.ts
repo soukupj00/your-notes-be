@@ -55,7 +55,7 @@ export async function lockWaiters(url: string): Promise<number> {
 }
 
 export async function testDatabase(url: string): Promise<{ url: string; drop(): Promise<void> }> {
-  const name = `younotes_test_${randomUUID().replaceAll('-', '')}`;
+  const name = `yournotes_test_${randomUUID().replaceAll('-', '')}`;
   await admin(url, `create database ${name}`);
   const own = new URL(url);
   own.pathname = `/${name}`;

@@ -10,7 +10,7 @@ import { type App, buildServer } from './server.ts';
 import type { Store } from './store/Store.ts';
 import { testStore } from './test/helpers.ts';
 
-const INDEX_HTML = '<!doctype html><title>YouNotes</title>';
+const INDEX_HTML = '<!doctype html><title>YourNotes</title>';
 const BODY_LIMIT = 2048;
 
 let app: App;
@@ -18,7 +18,7 @@ let store: Store;
 let publicDir: string;
 
 beforeAll(async () => {
-  publicDir = await mkdtemp(join(tmpdir(), 'younotes-public-'));
+  publicDir = await mkdtemp(join(tmpdir(), 'yournotes-public-'));
   await writeFile(join(publicDir, 'index.html'), INDEX_HTML);
   await writeFile(join(publicDir, 'app.js'), 'console.log(1)');
   store = await testStore();
