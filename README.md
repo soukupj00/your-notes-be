@@ -1,8 +1,9 @@
 # YouNotes Self-hosted Server
 
-The sync server for the [YouNotes](https://soukupj00.github.io/your-notes-fe/) PWA.
+The sync server for the [YourNotes](https://soukupj00.github.io/your-notes-fe/) PWA.
 It keeps a household's Notes in step across their Devices and serves the app itself from the same origin.
 Fastify and SQLite in one container, with Caddy in front for TLS.
+To try the app first, [your-notes-fe.vercel.app](https://your-notes-fe.vercel.app/) runs it in the browser on one Device, without sync.
 
 Everything else is on the site, <https://soukupj00.github.io/your-notes-be/>: how it works, [setting it up at home](https://soukupj00.github.io/your-notes-be/setup.html), and [the pages for developers](https://soukupj00.github.io/your-notes-be/developers/).
 The same pages are the Markdown files under [`docs/`](./docs/).
