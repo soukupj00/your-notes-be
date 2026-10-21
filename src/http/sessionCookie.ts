@@ -1,7 +1,7 @@
 import type { FastifyReply } from 'fastify';
 import { DAY_MS } from '../shared/clock.ts';
 
-export const SESSION_COOKIE = 'younotes_session';
+export const SESSION_COOKIE = 'yournotes_session';
 
 const COOKIE_OPTIONS = { httpOnly: true, secure: true, sameSite: 'lax', path: '/' } as const;
 

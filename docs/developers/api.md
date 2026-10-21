@@ -7,7 +7,7 @@ aside: false
 Every route is under `/api` except `/health`, and any other `GET` gets the app.
 A client starts at `GET /api`, a HAL document whose `_links` name every route, and the feed pages carry their own links, `next` and `resume`.
 Every error leaves as RFC 9457 problem details, `application/problem+json`, as [HTTP](../architecture/http.md#problem-details) describes.
-Signing in with a password or a Pairing Code sets the `younotes_session` cookie (`HttpOnly`, `Secure`, `SameSite=Lax`), which the server keeps only as a SHA-256 hash, and an unsafe request from another site is refused on its `Sec-Fetch-Site` header.
+Signing in with a password or a Pairing Code sets the `yournotes_session` cookie (`HttpOnly`, `Secure`, `SameSite=Lax`), which the server keeps only as a SHA-256 hash, and an unsafe request from another site is refused on its `Sec-Fetch-Site` header.
 
 Sync is two routes and a stream.
 `POST /api/changes` pushes one batch of Notes, Tags, NoteTags and Tombstones and answers each row with `accepted`, `conflict` or `gone`.

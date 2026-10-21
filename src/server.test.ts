@@ -18,7 +18,7 @@ let store: Store;
 let publicDir: string;
 
 beforeAll(async () => {
-  publicDir = await mkdtemp(join(tmpdir(), 'younotes-public-'));
+  publicDir = await mkdtemp(join(tmpdir(), 'yournotes-public-'));
   await writeFile(join(publicDir, 'index.html'), INDEX_HTML);
   await writeFile(join(publicDir, 'app.js'), 'console.log(1)');
   store = await testStore();

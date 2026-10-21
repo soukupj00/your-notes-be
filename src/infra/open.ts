@@ -42,7 +42,7 @@ export async function openStore(config: Config, options: StoreOptions): Promise<
 }
 
 export function sqlitePath(dataDir: string): string {
-  return join(dataDir, 'younotes.db');
+  return join(dataDir, 'yournotes.db');
 }
 
 /** `warn` hears of each try while the S3 bucket is not up. */

@@ -80,22 +80,22 @@ test:unit:
     - name: chrislusf/seaweedfs:4.48
       alias: s3
       variables:
-        AWS_ACCESS_KEY_ID: younotes
-        AWS_SECRET_ACCESS_KEY: younotes-ci
+        AWS_ACCESS_KEY_ID: yournotes
+        AWS_SECRET_ACCESS_KEY: yournotes-ci
         # The image exposes many ports; the job waits for the S3 one.
         HEALTHCHECK_TCP_PORT: "8333"
     - name: postgres:17-alpine
       alias: postgres
       variables:
-        POSTGRES_USER: younotes
-        POSTGRES_PASSWORD: younotes-ci
-        POSTGRES_DB: younotes
+        POSTGRES_USER: yournotes
+        POSTGRES_PASSWORD: yournotes-ci
+        POSTGRES_DB: yournotes
   variables:
     S3_TEST_ENDPOINT: http://s3:8333
-    S3_TEST_ACCESS_KEY_ID: younotes
-    S3_TEST_SECRET_ACCESS_KEY: younotes-ci
+    S3_TEST_ACCESS_KEY_ID: yournotes
+    S3_TEST_SECRET_ACCESS_KEY: yournotes-ci
     # The tests create a database of their own per file on this server.
-    PG_TEST_URL: postgres://younotes:younotes-ci@postgres:5432/younotes
+    PG_TEST_URL: postgres://yournotes:yournotes-ci@postgres:5432/yournotes
   script:
     - pnpm test
 
@@ -132,8 +132,8 @@ test:smoke:
   allow_failure: true
   script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
-    - docker run -d --name younotes -p 3000:3000 "$IMAGE:$CI_COMMIT_SHORT_SHA"
-    - for i in $(seq 1 30); do wget -q -O - http://docker:3000/health && exit 0; sleep 1; done; docker logs younotes; exit 1
+    - docker run -d --name yournotes -p 3000:3000 "$IMAGE:$CI_COMMIT_SHORT_SHA"
+    - for i in $(seq 1 30); do wget -q -O - http://docker:3000/health && exit 0; sleep 1; done; docker logs yournotes; exit 1
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_TAG

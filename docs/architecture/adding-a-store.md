@@ -24,7 +24,7 @@ The rules every Store keeps, all documented in `Store.ts`:
   Drizzle's `DrizzleQueryError` quotes every parameter, so `guarded()` replaces it with the database's own message, kept as is because validation at the boundary keeps out the malformed values a database would quote ("invalid input syntax"); a driver that quotes values elsewhere needs the same.
 - Engine-specific SQL stays in the Store.
 - The server runs as one instance (ADR 0006).
-  A Store refuses a second server at startup, as PostgreSQL's advisory lock and SQLite's `younotes.lock` do (`holdInstanceLock` in `src/infra/postgres/client.ts` and `src/infra/sqlite/instanceLock.ts`), and `restore` and `migrate` take the same lock, so they refuse while a server runs (`StoreOptions.oneInstance` in `src/infra/open.ts`).
+  A Store refuses a second server at startup, as PostgreSQL's advisory lock and SQLite's `yournotes.lock` do (`holdInstanceLock` in `src/infra/postgres/client.ts` and `src/infra/sqlite/instanceLock.ts`), and `restore` and `migrate` take the same lock, so they refuse while a server runs (`StoreOptions.oneInstance` in `src/infra/open.ts`).
 - The `serverBackup` group is part of the Store: it reads every table whole, as stored, in one snapshot that does not block the server's writers, and writes a whole Server Backup into an empty Store in one transaction.
   The SQLite and PostgreSQL versions sit in their own `serverBackup.ts`; each maps the kinds of `BACKUP_KINDS` to its tables and reads a page in primary-key order, and `recordsOf` and `writeEach` in `src/infra/rows.ts` do the rest.
 

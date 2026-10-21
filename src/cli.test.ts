@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buffer } from 'node:stream/consumers';
@@ -24,7 +24,7 @@ const account = { createdAt: '', passwordHash: '' };
 async function dataDir(name = 'data'): Promise<string> {
   const dir = join(root, name);
   await mkdir(dir);
-  const store = openSqliteStore(join(dir, 'younotes.db'));
+  const store = openSqliteStore(join(dir, 'yournotes.db'));
   await store.accounts.add({ id: 'o', username: 'olga', role: 'owner', ...account });
   await store.blobRecords.add({
     id: 'abc',
@@ -57,7 +57,7 @@ const runningServer = (env: Record<string, string>) =>
 
 describe('backup and restore', () => {
   it('back up a running DATA_DIR and restore it into an empty one, once', async () => {
-    root = await mkdtemp(join(tmpdir(), 'younotes-cli-'));
+    root = await mkdtemp(join(tmpdir(), 'yournotes-cli-'));
     quiet();
     const backupDir = join(root, 'backup');
     const data = { DATA_DIR: await dataDir() };
@@ -76,7 +76,7 @@ describe('backup and restore', () => {
   });
 
   it('refuse to back up a data directory without a database', async () => {
-    root = await mkdtemp(join(tmpdir(), 'younotes-cli-'));
+    root = await mkdtemp(join(tmpdir(), 'yournotes-cli-'));
     const failing = backup(loadConfig({ DATA_DIR: join(root, 'data') }), join(root, 'backup'));
     await expect(failing).rejects.toThrow(/No database/);
     expect(await readdir(root)).toEqual([]);
@@ -86,7 +86,7 @@ describe('backup and restore', () => {
   it.skipIf(process.getuid?.() === 0)(
     'name the folder and the fix when the backups folder is not writable',
     async () => {
-      root = await mkdtemp(join(tmpdir(), 'younotes-cli-'));
+      root = await mkdtemp(join(tmpdir(), 'yournotes-cli-'));
       const config = loadConfig({ DATA_DIR: await dataDir() });
       const backups = join(root, 'backups');
       await mkdir(backups, { mode: 0o500 });
@@ -99,13 +99,13 @@ describe('backup and restore', () => {
   );
 
   it('refuse a backup target that already has files in it', async () => {
-    root = await mkdtemp(join(tmpdir(), 'younotes-cli-'));
+    root = await mkdtemp(join(tmpdir(), 'yournotes-cli-'));
     const config = loadConfig({ DATA_DIR: await dataDir() });
     await expect(backup(config, config.dataDir)).rejects.toThrow(/not empty/);
   });
 
   it('refuse to restore or migrate while a server runs on the DATA_DIR', async () => {
-    root = await mkdtemp(join(tmpdir(), 'younotes-cli-'));
+    root = await mkdtemp(join(tmpdir(), 'yournotes-cli-'));
     quiet();
     const backupDir = join(root, 'backup');
     const data = { DATA_DIR: await dataDir() };
@@ -131,8 +131,10 @@ describe('backup and restore', () => {
   });
 
   it('point a backup made by an earlier version at the guide', async () => {
-    root = await mkdtemp(join(tmpdir(), 'younotes-cli-'));
-    const old = await dataDir('old-backup');
+    root = await mkdtemp(join(tmpdir(), 'yournotes-cli-'));
+    const old = join(root, 'old-backup');
+    await mkdir(old);
+    await writeFile(join(old, 'younotes.db'), '');
     const failing = restore(loadConfig({ DATA_DIR: join(root, 'data') }), old);
     await expect(failing).rejects.toThrow(/earlier version.*docs\/setup\.md, section 8/);
   });
@@ -140,7 +142,7 @@ describe('backup and restore', () => {
 
 describe('migrate', () => {
   it('copies the server to where the TARGET_ variables say', async () => {
-    root = await mkdtemp(join(tmpdir(), 'younotes-cli-'));
+    root = await mkdtemp(join(tmpdir(), 'yournotes-cli-'));
     quiet();
     const target = join(root, 'moved');
     expect(await run(['migrate'], { DATA_DIR: await dataDir(), TARGET_DATA_DIR: target })).toBe(0);
@@ -148,7 +150,7 @@ describe('migrate', () => {
   });
 
   it('refuses a target that is not empty, or the same place, or no database', async () => {
-    root = await mkdtemp(join(tmpdir(), 'younotes-cli-'));
+    root = await mkdtemp(join(tmpdir(), 'yournotes-cli-'));
     quiet();
     const env = { DATA_DIR: await dataDir(), TARGET_DATA_DIR: await dataDir('other') };
     await expect(run(['migrate'], env)).rejects.toThrow(/database to fill/);
@@ -158,7 +160,10 @@ describe('migrate', () => {
   });
 
   it('names a bad TARGET_ variable as the target, without its value', async () => {
-    const env = { DATA_DIR: '/nonexistent', TARGET_DATABASE_URL: 'mysql://me:hunter2@db/younotes' };
+    const env = {
+      DATA_DIR: '/nonexistent',
+      TARGET_DATABASE_URL: 'mysql://me:hunter2@db/yournotes',
+    };
     const failing = run(['migrate'], env);
     await expect(failing).rejects.toThrow(/Invalid target \(TARGET_ variables\):\s+DATABASE_URL/);
     await expect(failing).rejects.not.toThrow(/hunter2/);
@@ -172,8 +177,8 @@ it('prints the usage for anything else', async () => {
 });
 
 it('resets the Owner password to a new random one', async () => {
-  root = await mkdtemp(join(tmpdir(), 'younotes-reset-'));
-  const path = join(root, 'younotes.db');
+  root = await mkdtemp(join(tmpdir(), 'yournotes-reset-'));
+  const path = join(root, 'yournotes.db');
   const store = openSqliteStore(path);
   const passwordHash = await hashPassword('old password');
   await store.accounts.add({ id: 'o', username: 'olga', role: 'owner', ...account, passwordHash });
@@ -191,8 +196,8 @@ it('resets the Owner password to a new random one', async () => {
 });
 
 it('refuses to reset when there is no Owner', async () => {
-  root = await mkdtemp(join(tmpdir(), 'younotes-reset-'));
-  await openSqliteStore(join(root, 'younotes.db')).close();
+  root = await mkdtemp(join(tmpdir(), 'yournotes-reset-'));
+  await openSqliteStore(join(root, 'yournotes.db')).close();
   await expect(resetOwnerPassword(loadConfig({ DATA_DIR: root }))).rejects.toThrow(/no Owner/);
 });
 
@@ -217,7 +222,7 @@ describe.skipIf(!pgUrl)('on a real PostgreSQL (PG_TEST_URL)', () => {
   });
 
   it('migrates SQLite to PostgreSQL, the bytes staying, then backs up and restores it', async () => {
-    root = await mkdtemp(join(tmpdir(), 'younotes-cli-'));
+    root = await mkdtemp(join(tmpdir(), 'yournotes-cli-'));
     quiet();
     const [first, second] = [await testDatabase(pgUrl!), await testDatabase(pgUrl!)];
     try {
@@ -238,7 +243,7 @@ describe.skipIf(!pgUrl)('on a real PostgreSQL (PG_TEST_URL)', () => {
   });
 
   it('refuses to migrate or restore while a server runs on the database', async () => {
-    root = await mkdtemp(join(tmpdir(), 'younotes-cli-'));
+    root = await mkdtemp(join(tmpdir(), 'yournotes-cli-'));
     quiet();
     const database = await testDatabase(pgUrl!);
     const running = await openPostgresStore(database.url, {

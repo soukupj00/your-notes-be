@@ -2,7 +2,7 @@
 
 This page continues the [setup guide](setup.md), for the few homes that want the records or the Attachments somewhere other than the machine itself.
 Most homes need none of it: by default YourNotes keeps everything on the machine.
-Run every command from inside the `younotes` folder, as in the guide.
+Run every command from inside the `yournotes` folder, as in the guide.
 
 ## 1. Keep Attachments in an S3 bucket
 
@@ -17,9 +17,9 @@ Only changing the settings would leave the Attachments you already have out of r
 
 At your provider:
 
-1. Create a bucket, for example `younotes`, and keep it private: never turn on public access.
+1. Create a bucket, for example `yournotes`, and keep it private: never turn on public access.
    The server hands out every Attachment itself, and that is what keeps Share Links and the safety checks on Attachments working.
-2. The server keeps its files in the folder `younotes/` of the bucket, and regularly removes anything in that folder that it does not know about.
+2. The server keeps its files in the folder `yournotes/` of the bucket, and regularly removes anything in that folder that it does not know about.
    It never touches the rest of the bucket.
 3. Create an access key that may list, read, write and delete in that bucket.
    The provider shows a key ID and a secret key; the secret is often shown only once, so copy it straight away.
@@ -33,7 +33,7 @@ Then open your settings (`nano .env`) and add these lines, with your provider's 
 BLOB_STORE=s3
 S3_ENDPOINT=https://s3.your-provider.example
 S3_REGION=us-east-1
-S3_BUCKET=younotes
+S3_BUCKET=yournotes
 S3_ACCESS_KEY_ID=your-key-id
 S3_SECRET_ACCESS_KEY=your-secret-key
 ```
@@ -45,11 +45,11 @@ To keep the files in another folder of the bucket, add `S3_PREFIX=` with the fol
 `S3_PREFIX=` with nothing after the `=` means the top of the bucket, and then the server treats the whole bucket as its own.
 The two keys open your bucket, so keep `.env` as private as the machine.
 
-A bucket that an earlier YourNotes filled holds the files at its top, not in `younotes/`.
-Keep using it with `S3_PREFIX=` with nothing after the `=`, or move the files into `younotes/` with `migrate`, as the end of section 3 shows.
+A bucket that an earlier YourNotes filled holds the files at its top, not in `yournotes/`.
+Keep using it with `S3_PREFIX=` with nothing after the `=`, or move the files into `yournotes/` with `migrate`, as the end of section 3 shows.
 
 Start YourNotes again with `docker compose up -d`.
-On every start the server waits up to half a minute for the bucket, saying "Waiting for S3 bucket" in `docker compose logs younotes`, and then stops with the reason, for example "no such bucket".
+On every start the server waits up to half a minute for the bucket, saying "Waiting for S3 bucket" in `docker compose logs yournotes`, and then stops with the reason, for example "no such bucket".
 Keys the provider refuses stop it straight away, with "access denied".
 The messages name the bucket and the address, never the keys.
 
@@ -60,7 +60,7 @@ Add these lines to `.env` instead of the ones above, with two keys you make up, 
 COMPOSE_PROFILES=s3
 BLOB_STORE=s3
 S3_ENDPOINT=http://s3:8333
-S3_BUCKET=younotes
+S3_BUCKET=yournotes
 S3_FORCE_PATH_STYLE=true
 S3_ACCESS_KEY_ID=make-up-a-key-id
 S3_SECRET_ACCESS_KEY=make-up-a-long-secret
@@ -85,7 +85,7 @@ To run PostgreSQL on the same machine, open your settings (`nano .env`) and add 
 ```bash
 COMPOSE_PROFILES=postgres
 POSTGRES_PASSWORD=make-up-a-long-password
-DATABASE_URL=postgres://younotes:make-up-a-long-password@postgres:5432/younotes
+DATABASE_URL=postgres://yournotes:make-up-a-long-password@postgres:5432/yournotes
 ```
 
 The password appears twice and must be the same in both lines.
@@ -95,7 +95,7 @@ Start YourNotes again with `docker compose up -d`.
 To use a PostgreSQL server you already run, create an empty database there with a user that owns it, and set only `DATABASE_URL`, in the form `postgres://user:password@address:5432/database`.
 The server creates its tables itself when it starts.
 
-On every start the server waits up to half a minute for the database, saying "Waiting for PostgreSQL" in `docker compose logs younotes`, and then stops with the reason, for example a wrong password.
+On every start the server waits up to half a minute for the database, saying "Waiting for PostgreSQL" in `docker compose logs yournotes`, and then stops with the reason, for example a wrong password.
 Its messages name the database's address, never the password.
 
 Only one YourNotes server may use a database.
@@ -116,7 +116,7 @@ The old copy stays where it was, unused, so you can go back by undoing the setti
 3. Stop the server, so nothing changes while it copies:
 
    ```bash
-   docker compose stop younotes
+   docker compose stop yournotes
    ```
 
    `migrate` refuses while the server is running and says so.
@@ -124,7 +124,7 @@ The old copy stays where it was, unused, so you can go back by undoing the setti
    To move the records to the PostgreSQL in `compose.yml`, with the password you made up:
 
    ```bash
-   docker compose run --rm -e TARGET_DATABASE_URL=postgres://younotes:make-up-a-long-password@postgres:5432/younotes younotes node dist/cli.js migrate
+   docker compose run --rm -e TARGET_DATABASE_URL=postgres://yournotes:make-up-a-long-password@postgres:5432/yournotes yournotes node dist/cli.js migrate
    ```
 
    To move the Attachments to a bucket, with your provider's values from section 1:
@@ -134,24 +134,24 @@ The old copy stays where it was, unused, so you can go back by undoing the setti
      -e TARGET_BLOB_STORE=s3 \
      -e TARGET_S3_ENDPOINT=https://s3.your-provider.example \
      -e TARGET_S3_REGION=us-east-1 \
-     -e TARGET_S3_BUCKET=younotes \
+     -e TARGET_S3_BUCKET=yournotes \
      -e TARGET_S3_ACCESS_KEY_ID=your-key-id \
      -e TARGET_S3_SECRET_ACCESS_KEY=your-secret-key \
-     younotes node dist/cli.js migrate
+     yournotes node dist/cli.js migrate
    ```
 
    For the SeaweedFS in `compose.yml`, use its values from section 1 and add `-e TARGET_S3_FORCE_PATH_STYLE=true`.
    To move both, put all of those `-e` lines in one command.
    A setting you leave out stays as it is, so only what you name moves.
    It prints "Copied", with how many records and Attachment files it copied.
-   To move the files of an earlier YourNotes from the top of the bucket into `younotes/`, with `S3_PREFIX=` still in `.env`, name only the new folder:
+   To move the files of an earlier YourNotes from the top of the bucket into `yournotes/`, with `S3_PREFIX=` still in `.env`, name only the new folder:
 
    ```bash
-   docker compose run --rm -e TARGET_S3_PREFIX=younotes/ younotes node dist/cli.js migrate
+   docker compose run --rm -e TARGET_S3_PREFIX=yournotes/ yournotes node dist/cli.js migrate
    ```
 
 5. Now change the settings: add the `DATABASE_URL` line of section 2, or the S3 lines of section 1, to `.env`, and start YourNotes with `docker compose up -d`.
-   After a move into `younotes/`, delete the `S3_PREFIX=` line instead.
+   After a move into `yournotes/`, delete the `S3_PREFIX=` line instead.
    The files at the top of the bucket stay there, unused, and you may delete them at your provider.
 
 `migrate` fills only an empty database and an empty bucket folder, and refuses otherwise; if it fails, it takes back what it copied, so you can run it again.
@@ -161,18 +161,18 @@ With the server stopped, remove it from the place you move back to.
 The records in the file on the machine:
 
 ```bash
-docker compose run --rm younotes rm -f /data/younotes.db /data/younotes.db-wal /data/younotes.db-shm
+docker compose run --rm yournotes rm -f /data/yournotes.db /data/yournotes.db-wal /data/yournotes.db-shm
 ```
 
 The Attachments on the machine's disk:
 
 ```bash
-docker compose run --rm younotes rm -rf /data/blobs
+docker compose run --rm yournotes rm -rf /data/blobs
 ```
 
 The PostgreSQL or the SeaweedFS in `compose.yml`: run `docker compose down` first, then the one you need of
 
 ```bash
-docker volume rm younotes_postgres-data
-docker volume rm younotes_s3-data
+docker volume rm yournotes_postgres-data
+docker volume rm yournotes_s3-data
 ```

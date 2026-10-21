@@ -11,7 +11,7 @@ x-build: &build
       FE_IMAGE: ${FE_IMAGE:-ghcr.io/soukupj00/your-notes-fe:latest}
 
 services:
-  younotes:
+  yournotes:
     <<: *build
-  younotes-local:
+  yournotes-local:
     <<: *build

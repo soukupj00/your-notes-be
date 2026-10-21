@@ -28,7 +28,7 @@ const implementations: [string, () => Promise<BlobStore>][] = [
   [
     'disk',
     async () => {
-      diskRoot ??= await mkdtemp(join(tmpdir(), 'younotes-blobs-'));
+      diskRoot ??= await mkdtemp(join(tmpdir(), 'yournotes-blobs-'));
       return diskBlobStore(await mkdtemp(join(diskRoot, 'store-')));
     },
   ],
@@ -138,7 +138,7 @@ function contract(_name: string, create: () => Promise<BlobStore>) {
 
 describe('diskBlobStore', () => {
   it('leaves no temp file behind after a rejected write', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'younotes-blobs-'));
+    const dir = await mkdtemp(join(tmpdir(), 'yournotes-blobs-'));
     try {
       const store = await diskBlobStore(dir);
       await expect(store.put(ID, BYTES, 1)).rejects.toThrow();
@@ -149,7 +149,7 @@ describe('diskBlobStore', () => {
   });
 
   it('reports a broken directory instead of calling the bytes missing', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'younotes-blobs-'));
+    const dir = await mkdtemp(join(tmpdir(), 'yournotes-blobs-'));
     try {
       const store = await diskBlobStore(dir);
       await rm(dir, { recursive: true });
@@ -201,7 +201,7 @@ describe.skipIf(!s3TestEndpoint)('s3BlobStore at startup (needs S3_TEST_ENDPOINT
 
   it.skipIf(!process.env.S3_TEST_ACCESS_KEY_ID)('fails at once on keys S3 refuses', async () => {
     const settings = await s3TestSettings();
-    const credentials = { accessKeyId: 'younotes', secretAccessKey: 'not-the-key' };
+    const credentials = { accessKeyId: 'yournotes', secretAccessKey: 'not-the-key' };
     const started = Date.now();
     await expect(s3BlobStore({ ...settings, credentials }, () => {})).rejects.toThrow(
       /^Cannot use S3 bucket .*access denied/

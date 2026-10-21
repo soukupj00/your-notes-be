@@ -40,10 +40,10 @@ The API reference is at `/api/docs`; the same document is on [The API](api.md) p
 To try the server alone on `http://localhost:3000` without Caddy:
 
 ```bash
-docker compose --profile local up younotes-local
+docker compose --profile local up yournotes-local
 ```
 
-`--profile` replaces `COMPOSE_PROFILES`, so if `.env` sets it, name those profiles too, for example `docker compose --profile local --profile postgres up younotes-local`; otherwise the server waits for a database that never starts.
+`--profile` replaces `COMPOSE_PROFILES`, so if `.env` sets it, name those profiles too, for example `docker compose --profile local --profile postgres up yournotes-local`; otherwise the server waits for a database that never starts.
 Stop it with the same flags: `docker compose --profile local down`, or `docker compose --profile local --profile postgres down`.
 A plain `docker compose down` leaves it behind without its network, and its next start fails.
 Running it for real, with Caddy, is [the setup guide](../setup.md).
@@ -77,7 +77,7 @@ Add every other Device from a signed-in one, under Settings, Devices, "Add a Dev
 
 1. Bump `version` in `package.json` and merge to `main`.
 2. Tag that commit `v0.x.y` and push the tag; CI builds, smoke-tests and publishes the image under that tag.
-3. Set `YOUNOTES_VERSION` in `.env.example` to the new tag, so new installs start on it; [the setup guide](../setup.md#4-start-it) downloads the files from the tag too, so update its three `curl` lines.
+3. Set `YOURNOTES_VERSION` in `.env.example` to the new tag, so new installs start on it; [the setup guide](../setup.md#4-start-it) downloads the files from the tag too, so update its three `curl` lines.
 
 Every push to `main` also publishes this site to GitHub Pages.
 

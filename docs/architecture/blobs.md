@@ -47,5 +47,5 @@ The daily sweep (`HousekeepingService`) releases bytes in two steps:
    The sweep at startup therefore deletes such a file on first sight: it runs before the server listens and under the instance lock, so no upload can be in flight.
 
 The files are listed before the records are read, so an upload finishing meanwhile is seen together with its record.
-On S3 the Blob Store lists only under `S3_PREFIX` (default `younotes/`), so the sweep never touches the rest of a shared bucket.
+On S3 the Blob Store lists only under `S3_PREFIX` (default `yournotes/`), so the sweep never touches the rest of a shared bucket.
 A Server Backup lists bytes from the records; a record whose bytes are gone is copied without them, with a warning.

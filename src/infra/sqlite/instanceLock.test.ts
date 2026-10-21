@@ -8,7 +8,7 @@ import { holdInstanceLock } from './instanceLock.ts';
 
 let dir = '';
 beforeEach(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'younotes-lock-'));
+  dir = await mkdtemp(join(tmpdir(), 'yournotes-lock-'));
 });
 afterEach(() => rm(dir, { recursive: true, force: true }));
 
@@ -47,16 +47,16 @@ it('refuses while another process holds it, and is free once that process is kil
 });
 
 it.skipIf(process.getuid?.() === 0)('refuses a lock file it cannot write', async () => {
-  const lockFile = join(dir, 'younotes.lock');
+  const lockFile = join(dir, 'yournotes.lock');
   await writeFile(lockFile, '');
   await chmod(lockFile, 0o444);
-  expect(() => holdInstanceLock(dir)).toThrow(/EACCES.*younotes\.lock/);
+  expect(() => holdInstanceLock(dir)).toThrow(/EACCES.*yournotes\.lock/);
 });
 
 it('adds only the lock file to the data directory', async () => {
   const release = holdInstanceLock(dir);
   try {
-    expect(await readdir(dir)).toEqual(['younotes.lock']);
+    expect(await readdir(dir)).toEqual(['yournotes.lock']);
   } finally {
     release();
   }

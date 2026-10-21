@@ -26,7 +26,7 @@ The test databases and the S3 test bucket are in `src/infra/postgres/testing.ts`
 
 - `PG_TEST_URL` names a PostgreSQL server the tests may create databases on; they create their own under random names and drop them when done.
   It adds PostgreSQL to the Store and Server Backup contracts and the CLI tests, and runs `concurrency.test.ts`.
-- `S3_TEST_ENDPOINT` adds S3 to the BlobStore contract and `serverBackup.test.ts`, with `S3_TEST_ACCESS_KEY_ID`, `S3_TEST_SECRET_ACCESS_KEY` and `S3_TEST_BUCKET` (default `younotes-test`, created when missing).
+- `S3_TEST_ENDPOINT` adds S3 to the BlobStore contract and `serverBackup.test.ts`, with `S3_TEST_ACCESS_KEY_ID`, `S3_TEST_SECRET_ACCESS_KEY` and `S3_TEST_BUCKET` (default `yournotes-test`, created when missing).
   Each S3 Blob Store gets a random key prefix, and the file deletes what it wrote, so tests and runs never collide.
 - CI starts PostgreSQL and SeaweedFS as services of the test job and points the variables at them; without them `pnpm test` skips those tests and runs the rest.
 - PGlite runs one transaction at a time, so races between requests show only on a real PostgreSQL.

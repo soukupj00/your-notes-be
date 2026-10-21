@@ -57,7 +57,7 @@ The rules that matter most:
 - `buildServer()` never calls `listen()`; tests use `app.inject()` against a real Store, never a mock, and set up and inspect state through the Store.
   How they run is in [`docs/architecture/testing.md`](./docs/architecture/testing.md); two variables add the real servers CI has, and without them those tests are skipped.
   `PG_TEST_URL` names a PostgreSQL server the tests may create databases on, such as `postgres://postgres:postgres@127.0.0.1:5432/postgres`.
-  `S3_TEST_ENDPOINT` adds S3, such as SeaweedFS at `http://127.0.0.1:8333` as in CI, with `S3_TEST_ACCESS_KEY_ID`, `S3_TEST_SECRET_ACCESS_KEY` and `S3_TEST_BUCKET` (default `younotes-test`).
+  `S3_TEST_ENDPOINT` adds S3, such as SeaweedFS at `http://127.0.0.1:8333` as in CI, with `S3_TEST_ACCESS_KEY_ID`, `S3_TEST_SECRET_ACCESS_KEY` and `S3_TEST_BUCKET` (default `yournotes-test`).
 - Records go through the `Store` interface and bytes through `BlobStore` (ADR 0006).
   Routes call services, services call the two interfaces, and only `src/infra/` imports a driver or SDK (ADR 0007); Biome enforces it.
 - Store calls are async, so reads and writes that must not interleave with another request share one `transaction(fn)`; one that decides on an Account's rows takes `accounts.lock` first, since PostgreSQL reads what others committed.

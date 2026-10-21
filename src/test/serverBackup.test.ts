@@ -53,7 +53,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), 'younotes-server-backup-'));
+  root = await mkdtemp(join(tmpdir(), 'yournotes-server-backup-'));
   source = { store: await testStore(), blobs: await diskBlobStore(join(root, 'blobs')) };
   warn.mockClear();
 });

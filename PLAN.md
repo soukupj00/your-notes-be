@@ -69,7 +69,7 @@ Only the feed and the blob routes send an `ETag` today; per-resource `PUT` with 
 - Same 401 and same cost for a wrong username and a wrong password.
 
 ### Data
-- By default `DATA_DIR` holds `younotes.db` (WAL, foreign keys on, `busy_timeout`) and `blobs/<id>`.
+- By default `DATA_DIR` holds `yournotes.db` (WAL, foreign keys on, `busy_timeout`) and `blobs/<id>`.
   `DATABASE_URL` moves the records to PostgreSQL and `BLOB_STORE=s3` moves the bytes to a bucket.
 - One Drizzle schema per database under `src/infra/`; `drizzle-kit` migrations committed under `drizzle/sqlite/` and `drizzle/postgres/`, applied at startup.
 - Timestamps are ISO 8601 text in both databases.
@@ -107,7 +107,7 @@ No mocked database: real databases with migrations applied, per test file.
 - Pipeline `quality -> test -> build -> publish` with the SAST and secret-detection templates kept.
   `quality` also fails on a stale `docs/openapi.json` or an ungenerated migration.
 - Kaniko builds the image; the Dockerfile takes the PWA from the frontend's published image, pinned by tag (ADR 0004).
-- `compose.yml`: `younotes` and `caddy`; TLS modes Tailscale (happy path), own domain over HTTP-01, internal CA; `docker compose up younotes` alone for `http://localhost`.
+- `compose.yml`: `yournotes` and `caddy`; TLS modes Tailscale (happy path), own domain over HTTP-01, internal CA; `docker compose up yournotes` alone for `http://localhost`.
 - Tags `v0.x.y`; the image tag is the git tag; the downloaded compose file pins a version, never `latest`.
   Migrations are forward-only; downgrade is "restore the backup".
 
@@ -163,7 +163,7 @@ Each slice updates `docs/architecture/structure.md` and `CLAUDE.md` for what it 
   Built in parallel with R3 and merged after it; `BlobStore.ts` moved to `src/store/`, the stores to `src/infra/blobs/`.
   MinIO left Docker Hub on 2026-09-11, so CI and Compose use SeaweedFS 4.48; versitygw 1.8 failed the contract by keeping a cut-off upload.
   `put` holds back the last chunk until the size checks out and aborts the request on failure, since S3 stores an object once it has all its bytes.
-  Until R6, `backup` with S3 copies the database only and warns; the `younotes-local` profile now inherits the shared environment.
+  Until R6, `backup` with S3 copies the database only and warns; the `yournotes-local` profile now inherits the shared environment.
 - [x] **R6 Server Backup and migrate**: `backup`, `restore`, `migrate` over the portable format, Sequences and Sessions copied exactly, `VACUUM INTO` removed, the setup guide's backup and restore section rewritten.
   Done when a SQLite and disk install moves to PostgreSQL and S3 and every Device keeps syncing without a resync.
   The format is a directory: `manifest.json` (written last, so a folder without one is incomplete), one JSON Lines file per kind, `blobs/<id>`; every line is checked with a strict schema before a restore writes anything.

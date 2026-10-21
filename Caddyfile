@@ -1,14 +1,14 @@
 # TLS in front of YourNotes. Driven by two variables from `.env`:
-#   YOUNOTES_HOST  the name devices open: a domain, a *.ts.net name, localhost,
-#                  or the machine's IP address (internal mode)
-#   YOUNOTES_TLS   auto      public certificate over HTTP-01 for a domain, the tailnet certificate
-#                            for a *.ts.net name (needs the tailscaled socket, see compose.yml),
-#                            and Caddy's own CA for localhost
-#                  internal  Caddy's own CA; each device has to trust it once
+#   YOURNOTES_HOST  the name devices open: a domain, a *.ts.net name, localhost,
+#                   or the machine's IP address (internal mode)
+#   YOURNOTES_TLS   auto      public certificate over HTTP-01 for a domain, the tailnet certificate
+#                             for a *.ts.net name (needs the tailscaled socket, see compose.yml),
+#                             and Caddy's own CA for localhost
+#                   internal  Caddy's own CA; each device has to trust it once
 
 {
 	# A browser opening an IP address sends no server name; this picks the certificate then.
-	default_sni {$YOUNOTES_HOST}
+	default_sni {$YOURNOTES_HOST}
 }
 
 (tls-auto) {
@@ -18,8 +18,8 @@
 	tls internal
 }
 
-{$YOUNOTES_HOST} {
-	import tls-{$YOUNOTES_TLS}
+{$YOURNOTES_HOST} {
+	import tls-{$YOURNOTES_TLS}
 	encode zstd gzip
-	reverse_proxy younotes:3000
+	reverse_proxy yournotes:3000
 }

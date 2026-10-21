@@ -55,7 +55,7 @@ describe('loadConfig', () => {
     const config = loadConfig({
       BLOB_STORE: 's3',
       S3_ENDPOINT: 'http://s3:8333',
-      S3_BUCKET: 'younotes',
+      S3_BUCKET: 'yournotes',
       S3_ACCESS_KEY_ID: 'key',
       S3_SECRET_ACCESS_KEY: 'secret',
       S3_FORCE_PATH_STYLE: 'true',
@@ -64,8 +64,8 @@ describe('loadConfig', () => {
       kind: 's3',
       endpoint: 'http://s3:8333',
       region: 'us-east-1',
-      bucket: 'younotes',
-      prefix: 'younotes/',
+      bucket: 'yournotes',
+      prefix: 'yournotes/',
       forcePathStyle: true,
       credentials: { accessKeyId: 'key', secretAccessKey: 'secret' },
     });
@@ -90,24 +90,24 @@ describe('loadConfig', () => {
   });
 
   it("leaves S3 credentials to the SDK's default chain when neither key is set", () => {
-    const config = loadConfig({ BLOB_STORE: 's3', S3_BUCKET: 'younotes' });
+    const config = loadConfig({ BLOB_STORE: 's3', S3_BUCKET: 'yournotes' });
     expect(config.blobStore).toEqual({
       kind: 's3',
       region: 'us-east-1',
-      bucket: 'younotes',
-      prefix: 'younotes/',
+      bucket: 'yournotes',
+      prefix: 'yournotes/',
       forcePathStyle: false,
     });
   });
 
   it('selects PostgreSQL with DATABASE_URL', () => {
-    for (const url of ['postgres://u:pw@db:5432/younotes', 'postgresql://u:pw@db/younotes']) {
+    for (const url of ['postgres://u:pw@db:5432/yournotes', 'postgresql://u:pw@db/yournotes']) {
       expect(loadConfig({ DATABASE_URL: url }).database).toEqual({ kind: 'postgres', url });
     }
   });
 
   it('refuses a DATABASE_URL of another kind without echoing it', () => {
-    const url = 'mysql://u:hunter2@db/younotes';
+    const url = 'mysql://u:hunter2@db/yournotes';
     expect(() => loadConfig({ DATABASE_URL: url })).toThrow(/DATABASE_URL/);
     expect(() => loadConfig({ DATABASE_URL: url })).not.toThrow(/hunter2/);
   });
@@ -115,7 +115,7 @@ describe('loadConfig', () => {
   it('keeps DATABASE_URL out of the log, in a Config or an environment', () => {
     const lines: string[] = [];
     const log = pino({ redact: REDACT }, { write: (line: string) => lines.push(line) });
-    const env = { DATABASE_URL: 'postgres://u:hunter2@db/younotes' };
+    const env = { DATABASE_URL: 'postgres://u:hunter2@db/yournotes' };
     log.info({ config: loadConfig(env), env }, 'starting');
     log.info(loadConfig(env), 'starting');
     expect(lines).toHaveLength(2);
@@ -127,7 +127,7 @@ describe('loadConfig', () => {
     const log = pino({ redact: REDACT }, { write: (line: string) => lines.push(line) });
     const env = {
       BLOB_STORE: 's3',
-      S3_BUCKET: 'younotes',
+      S3_BUCKET: 'yournotes',
       S3_ACCESS_KEY_ID: 'key',
       S3_SECRET_ACCESS_KEY: 'wJalrXUtnFEMI',
     };
@@ -168,7 +168,7 @@ describe('loadConfig', () => {
 describe('loadTargetConfig', () => {
   const server = {
     DATA_DIR: '/data',
-    DATABASE_URL: 'postgres://u:p@db/younotes',
+    DATABASE_URL: 'postgres://u:p@db/yournotes',
     BLOB_STORE: 'disk',
   };
 
@@ -176,18 +176,18 @@ describe('loadTargetConfig', () => {
     const target = loadTargetConfig({ ...server, TARGET_BLOB_STORE: 's3', TARGET_S3_BUCKET: 'b' });
     expect(target).toMatchObject({
       dataDir: '/data',
-      database: { kind: 'postgres', url: 'postgres://u:p@db/younotes' },
+      database: { kind: 'postgres', url: 'postgres://u:p@db/yournotes' },
       blobStore: { kind: 's3', bucket: 'b' },
     });
   });
 
   it('moves S3 objects inside one bucket with TARGET_S3_PREFIX, an empty one to the root', () => {
     const s3 = { ...server, BLOB_STORE: 's3', S3_BUCKET: 'b', S3_PREFIX: '' };
-    expect(loadTargetConfig({ ...s3, TARGET_S3_PREFIX: 'younotes/' }).blobStore).toMatchObject({
+    expect(loadTargetConfig({ ...s3, TARGET_S3_PREFIX: 'yournotes/' }).blobStore).toMatchObject({
       bucket: 'b',
-      prefix: 'younotes/',
+      prefix: 'yournotes/',
     });
-    const fromPrefix = { ...s3, S3_PREFIX: 'younotes/', TARGET_S3_PREFIX: '' };
+    const fromPrefix = { ...s3, S3_PREFIX: 'yournotes/', TARGET_S3_PREFIX: '' };
     expect(loadTargetConfig(fromPrefix).blobStore).toMatchObject({ prefix: '' });
   });
 
