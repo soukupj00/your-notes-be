@@ -47,5 +47,5 @@ Denní úklid (`HousekeepingService`) uvolňuje bajty ve dvou krocích:
    Úklid při startu proto takový soubor smaže hned při prvním pohledu: běží dřív, než server začne naslouchat, a pod zámkem instance, takže žádné nahrávání nemůže probíhat.
 
 Soubory se vypíšou dřív, než se načtou záznamy, takže nahrávání, které mezitím skončí, je vidět i se svým záznamem.
-Na S3 úložiště blobů vypisuje jen pod `S3_PREFIX` (výchozí `younotes/`), takže úklid nikdy nesáhne na zbytek sdíleného bucketu.
+Na S3 úložiště blobů vypisuje jen pod `S3_PREFIX` (výchozí `yournotes/`), takže úklid nikdy nesáhne na zbytek sdíleného bucketu.
 Záloha serveru vypisuje bajty podle záznamů; záznam, jehož bajty zmizely, se zkopíruje bez nich, s varováním.

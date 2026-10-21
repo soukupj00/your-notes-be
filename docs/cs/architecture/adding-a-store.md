@@ -24,7 +24,7 @@ Pravidla, která dodržuje každý Store, všechna zdokumentovaná v `Store.ts`:
   `DrizzleQueryError` z Drizzle cituje každý parametr, proto ho `guarded()` nahrazuje vlastní zprávou databáze, ponechanou beze změny, protože validace na hranici nepustí dovnitř chybně formátované hodnoty, které by databáze citovala ("invalid input syntax"); ovladač, který cituje hodnoty jinde, potřebuje totéž.
 - SQL specifické pro daný databázový engine zůstává ve Store.
 - Server běží jako jedna instance (ADR 0006).
-  Store odmítne druhý server při startu, jak to dělá advisory lock v PostgreSQL a `younotes.lock` u SQLite (`holdInstanceLock` v `src/infra/postgres/client.ts` a `src/infra/sqlite/instanceLock.ts`), a `restore` a `migrate` berou stejný zámek, takže odmítnou běžet, dokud běží server (`StoreOptions.oneInstance` v `src/infra/open.ts`).
+  Store odmítne druhý server při startu, jak to dělá advisory lock v PostgreSQL a `yournotes.lock` u SQLite (`holdInstanceLock` v `src/infra/postgres/client.ts` a `src/infra/sqlite/instanceLock.ts`), a `restore` a `migrate` berou stejný zámek, takže odmítnou běžet, dokud běží server (`StoreOptions.oneInstance` v `src/infra/open.ts`).
 - Skupina `serverBackup` je součástí Store: čte každou tabulku celou, tak jak je uložená, v jednom snapshotu, který neblokuje zapisovatele serveru, a zapisuje celou zálohu serveru do prázdného Store v jedné transakci.
   Verze pro SQLite a PostgreSQL leží ve vlastních `serverBackup.ts`; každá mapuje druhy z `BACKUP_KINDS` na své tabulky a čte stránku v pořadí primárního klíče a zbytek obstarají `recordsOf` a `writeEach` v `src/infra/rows.ts`.
 
@@ -46,5 +46,5 @@ Aby celá sada API testů běžela na novém Store, dostane `testStore()` v `src
 
 `src/infra/open.ts` vybírá Store a BlobStore podle konfigurace, pro `main.ts` i `cli.ts`.
 Přidá se tam větev, která nový backend načte dynamickým `import()`, takže instalace, která ho nezvolí, nikdy nenačte jeho ovladač.
-Switche v tomto souboru nemají větev `default`, takže `tsc` vyjmenuje každý, který je třeba rozšířit: `openStore` nebo `openBlobStore` a `storeLocation` nebo `blobStoreLocation`, které `migrate` říkají, zda je cíl jiné místo.
+Switche v tomto souboru nemají větev default, takže `tsc` vyjmenuje každý, který je třeba rozšířit: `openStore` nebo `openBlobStore` a `storeLocation` nebo `blobStoreLocation`, které `migrate` říkají, zda je cíl jiné místo.
 Nastavení backendu patří do `src/config.ts` (validovaná, v chybách pojmenovaná, ale nikdy nevypisovaná, a přidaná do `REDACT`, pokud nesou tajemství), `compose.yml`, `.env.example` a `docs/setup-backends.md`.

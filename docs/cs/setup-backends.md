@@ -2,7 +2,7 @@
 
 Tato stránka navazuje na [návod k nastavení](setup.md) a je pro těch pár domácností, které chtějí mít záznamy nebo přílohy jinde než přímo na počítači.
 Většina domácností nic z toho nepotřebuje: ve výchozím stavu YourNotes uchovává vše na počítači.
-Všechny příkazy spouštějte ze složky `younotes`, stejně jako v návodu.
+Všechny příkazy spouštějte ze složky `yournotes`, stejně jako v návodu.
 
 ## 1. Přílohy v S3 bucketu
 
@@ -17,9 +17,9 @@ Pouhá změna nastavení by přílohy, které už máte, učinila nedostupnými.
 
 U poskytovatele:
 
-1. Vytvořte bucket, například `younotes`, a ponechte ho soukromý: nikdy nezapínejte veřejný přístup.
+1. Vytvořte bucket, například `yournotes`, a ponechte ho soukromý: nikdy nezapínejte veřejný přístup.
    Server každou přílohu vydává sám, a právě díky tomu fungují odkazy pro sdílení i bezpečnostní kontroly příloh.
-2. Server ukládá své soubory do složky `younotes/` v bucketu a pravidelně z této složky odstraňuje vše, o čem neví.
+2. Server ukládá své soubory do složky `yournotes/` v bucketu a pravidelně z této složky odstraňuje vše, o čem neví.
    Zbytku bucketu se nikdy nedotkne.
 3. Vytvořte přístupový klíč, který smí v tomto bucketu vypisovat, číst, zapisovat a mazat.
    Poskytovatel zobrazí ID klíče a tajný klíč; tajný klíč se často zobrazí jen jednou, takže si ho hned zkopírujte.
@@ -33,7 +33,7 @@ Pak otevřete nastavení (`nano .env`) a přidejte tyto řádky s hodnotami od s
 BLOB_STORE=s3
 S3_ENDPOINT=https://s3.your-provider.example
 S3_REGION=us-east-1
-S3_BUCKET=younotes
+S3_BUCKET=yournotes
 S3_ACCESS_KEY_ID=your-key-id
 S3_SECRET_ACCESS_KEY=your-secret-key
 ```
@@ -45,11 +45,11 @@ Chcete-li soubory ukládat do jiné složky bucketu, přidejte `S3_PREFIX=` s n�
 `S3_PREFIX=` bez ničeho za `=` znamená kořen bucketu a server pak celý bucket považuje za svůj.
 Oba klíče otevírají váš bucket, proto chraňte `.env` stejně jako samotný počítač.
 
-Bucket, který naplnila starší verze YourNotes, má soubory v kořeni, ne ve složce `younotes/`.
-Používejte ho dál s `S3_PREFIX=` bez ničeho za `=`, nebo soubory přesuňte do `younotes/` příkazem `migrate`, jak ukazuje konec části 3.
+Bucket, který naplnila starší verze YourNotes, má soubory v kořeni, ne ve složce `yournotes/`.
+Používejte ho dál s `S3_PREFIX=` bez ničeho za `=`, nebo soubory přesuňte do `yournotes/` příkazem `migrate`, jak ukazuje konec části 3.
 
 Spusťte YourNotes znovu příkazem `docker compose up -d`.
-Při každém spuštění server čeká až půl minuty na bucket, v `docker compose logs younotes` hlásí „Waiting for S3 bucket“ a pak se zastaví s uvedením důvodu, například „no such bucket“.
+Při každém spuštění server čeká až půl minuty na bucket, v `docker compose logs yournotes` hlásí „Waiting for S3 bucket“ a pak se zastaví s uvedením důvodu, například „no such bucket“.
 Pokud poskytovatel klíče odmítne, server se zastaví okamžitě s hlášením „access denied“.
 Hlášení uvádějí bucket a adresu, nikdy klíče.
 
@@ -60,7 +60,7 @@ Místo řádků výše přidejte do `.env` tyto, se dvěma klíči, které si vy
 COMPOSE_PROFILES=s3
 BLOB_STORE=s3
 S3_ENDPOINT=http://s3:8333
-S3_BUCKET=younotes
+S3_BUCKET=yournotes
 S3_FORCE_PATH_STYLE=true
 S3_ACCESS_KEY_ID=make-up-a-key-id
 S3_SECRET_ACCESS_KEY=make-up-a-long-secret
@@ -85,7 +85,7 @@ Chcete-li PostgreSQL provozovat na stejném počítači, otevřete nastavení (`
 ```bash
 COMPOSE_PROFILES=postgres
 POSTGRES_PASSWORD=make-up-a-long-password
-DATABASE_URL=postgres://younotes:make-up-a-long-password@postgres:5432/younotes
+DATABASE_URL=postgres://yournotes:make-up-a-long-password@postgres:5432/yournotes
 ```
 
 Heslo se objevuje dvakrát a v obou řádcích musí být stejné.
@@ -95,7 +95,7 @@ Spusťte YourNotes znovu příkazem `docker compose up -d`.
 Chcete-li použít PostgreSQL server, který už provozujete, vytvořte na něm prázdnou databázi s uživatelem, který ji vlastní, a nastavte jen `DATABASE_URL` ve tvaru `postgres://user:password@address:5432/database`.
 Tabulky si server při spuštění vytvoří sám.
 
-Při každém spuštění server čeká až půl minuty na databázi, v `docker compose logs younotes` hlásí „Waiting for PostgreSQL“ a pak se zastaví s uvedením důvodu, například špatného hesla.
+Při každém spuštění server čeká až půl minuty na databázi, v `docker compose logs yournotes` hlásí „Waiting for PostgreSQL“ a pak se zastaví s uvedením důvodu, například špatného hesla.
 Jeho hlášení uvádějí adresu databáze, nikdy heslo.
 
 Jednu databázi smí používat jen jeden server YourNotes.
@@ -116,7 +116,7 @@ Stará kopie zůstane, kde byla, nepoužívaná, takže se můžete vrátit tím
 3. Zastavte server, aby se během kopírování nic neměnilo:
 
    ```bash
-   docker compose stop younotes
+   docker compose stop yournotes
    ```
 
    `migrate` za běhu serveru odmítne pracovat a řekne to.
@@ -124,7 +124,7 @@ Stará kopie zůstane, kde byla, nepoužívaná, takže se můžete vrátit tím
    Přesun záznamů do PostgreSQL z `compose.yml`, s heslem, které jste si vymysleli:
 
    ```bash
-   docker compose run --rm -e TARGET_DATABASE_URL=postgres://younotes:make-up-a-long-password@postgres:5432/younotes younotes node dist/cli.js migrate
+   docker compose run --rm -e TARGET_DATABASE_URL=postgres://yournotes:make-up-a-long-password@postgres:5432/yournotes yournotes node dist/cli.js migrate
    ```
 
    Přesun příloh do bucketu, s hodnotami od poskytovatele z části 1:
@@ -134,24 +134,24 @@ Stará kopie zůstane, kde byla, nepoužívaná, takže se můžete vrátit tím
      -e TARGET_BLOB_STORE=s3 \
      -e TARGET_S3_ENDPOINT=https://s3.your-provider.example \
      -e TARGET_S3_REGION=us-east-1 \
-     -e TARGET_S3_BUCKET=younotes \
+     -e TARGET_S3_BUCKET=yournotes \
      -e TARGET_S3_ACCESS_KEY_ID=your-key-id \
      -e TARGET_S3_SECRET_ACCESS_KEY=your-secret-key \
-     younotes node dist/cli.js migrate
+     yournotes node dist/cli.js migrate
    ```
 
    Pro SeaweedFS z `compose.yml` použijte jeho hodnoty z části 1 a přidejte `-e TARGET_S3_FORCE_PATH_STYLE=true`.
    Chcete-li přesunout obojí, dejte všechny tyto řádky `-e` do jednoho příkazu.
    Nastavení, které vynecháte, zůstane, jak je, takže se přesune jen to, co uvedete.
    Příkaz vypíše „Copied“ s počtem zkopírovaných záznamů a souborů příloh.
-   Chcete-li přesunout soubory starší verze YourNotes z kořene bucketu do `younotes/`, ponechte v `.env` `S3_PREFIX=` a uveďte jen novou složku:
+   Chcete-li přesunout soubory starší verze YourNotes z kořene bucketu do `yournotes/`, ponechte v `.env` `S3_PREFIX=` a uveďte jen novou složku:
 
    ```bash
-   docker compose run --rm -e TARGET_S3_PREFIX=younotes/ younotes node dist/cli.js migrate
+   docker compose run --rm -e TARGET_S3_PREFIX=yournotes/ yournotes node dist/cli.js migrate
    ```
 
 5. Teď změňte nastavení: přidejte do `.env` řádek `DATABASE_URL` z části 2, nebo řádky S3 z části 1, a spusťte YourNotes příkazem `docker compose up -d`.
-   Po přesunu do `younotes/` naopak smažte řádek `S3_PREFIX=`.
+   Po přesunu do `yournotes/` naopak smažte řádek `S3_PREFIX=`.
    Soubory v kořeni bucketu tam zůstanou nepoužívané a u poskytovatele je můžete smazat.
 
 `migrate` plní jen prázdnou databázi a prázdnou složku bucketu, jinak odmítne; pokud selže, vezme zpět, co zkopíroval, takže ho můžete spustit znovu.
@@ -161,18 +161,18 @@ Při zastaveném serveru ji odstraňte z místa, kam se vracíte.
 Záznamy v souboru na počítači:
 
 ```bash
-docker compose run --rm younotes rm -f /data/younotes.db /data/younotes.db-wal /data/younotes.db-shm
+docker compose run --rm yournotes rm -f /data/yournotes.db /data/yournotes.db-wal /data/yournotes.db-shm
 ```
 
 Přílohy na disku počítače:
 
 ```bash
-docker compose run --rm younotes rm -rf /data/blobs
+docker compose run --rm yournotes rm -rf /data/blobs
 ```
 
 PostgreSQL nebo SeaweedFS z `compose.yml`: nejdřív spusťte `docker compose down` a pak ten z příkazů, který potřebujete:
 
 ```bash
-docker volume rm younotes_postgres-data
-docker volume rm younotes_s3-data
+docker volume rm yournotes_postgres-data
+docker volume rm yournotes_s3-data
 ```

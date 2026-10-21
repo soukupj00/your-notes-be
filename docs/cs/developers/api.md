@@ -7,7 +7,7 @@ aside: false
 Všechny routy jsou pod `/api` kromě `/health` a každý jiný `GET` dostane aplikaci.
 Klient začíná na `GET /api`, HAL dokumentu, jehož `_links` pojmenovávají všechny routy, a stránky přehledu (feed) nesou vlastní odkazy, `next` a `resume`.
 Každá chyba odchází jako RFC 9457 problem details, `application/problem+json`, jak popisuje [HTTP](../architecture/http.md#problem-details).
-Přihlášení heslem nebo párovacím kódem nastaví cookie `younotes_session` (`HttpOnly`, `Secure`, `SameSite=Lax`), kterou server uchovává jen jako SHA-256 hash, a nebezpečný požadavek z jiného webu je odmítnut podle hlavičky `Sec-Fetch-Site`.
+Přihlášení heslem nebo párovacím kódem nastaví cookie `yournotes_session` (`HttpOnly`, `Secure`, `SameSite=Lax`), kterou server uchovává jen jako SHA-256 hash, a nebezpečný požadavek z jiného webu je odmítnut podle hlavičky `Sec-Fetch-Site`.
 
 Synchronizace jsou dvě routy a jeden stream.
 `POST /api/changes` odešle (push) jednu dávku poznámek, štítků, NoteTagů a tombstonů (záznamů o smazání) a na každý řádek odpoví `accepted`, `conflict` nebo `gone`.

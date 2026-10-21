@@ -26,7 +26,7 @@ Testovací databáze a testovací bucket S3 jsou v `src/infra/postgres/testing.t
 
 - `PG_TEST_URL` určuje server PostgreSQL, na kterém smějí testy vytvářet databáze; vytvářejí si vlastní pod náhodnými názvy a po skončení je smažou.
   Přidává PostgreSQL do kontraktů Store a zálohy serveru a do testů CLI a spouští `concurrency.test.ts`.
-- `S3_TEST_ENDPOINT` přidává S3 do kontraktu BlobStore a do `serverBackup.test.ts`, spolu s `S3_TEST_ACCESS_KEY_ID`, `S3_TEST_SECRET_ACCESS_KEY` a `S3_TEST_BUCKET` (výchozí `younotes-test`, vytvoří se, pokud chybí).
+- `S3_TEST_ENDPOINT` přidává S3 do kontraktu BlobStore a do `serverBackup.test.ts`, spolu s `S3_TEST_ACCESS_KEY_ID`, `S3_TEST_SECRET_ACCESS_KEY` a `S3_TEST_BUCKET` (výchozí `yournotes-test`, vytvoří se, pokud chybí).
   Každé úložiště blobů na S3 dostane náhodný prefix klíčů a soubor smaže, co zapsal, takže testy ani běhy nikdy nekolidují.
 - CI spouští PostgreSQL a SeaweedFS jako služby testovacího jobu a nasměruje na ně proměnné; bez nich `pnpm test` tyto testy přeskočí a spustí zbytek.
 - PGlite provádí vždy jen jednu transakci, takže souběhy mezi požadavky se ukážou jen na skutečném PostgreSQL.

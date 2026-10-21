@@ -66,8 +66,8 @@ Dá počítači jméno jako `homebox.tail1234.ts.net` se skutečným certifikát
 Vaše dvě nastavení:
 
 ```bash
-YOUNOTES_HOST=homebox.tail1234.ts.net
-YOUNOTES_TLS=auto
+YOURNOTES_HOST=homebox.tail1234.ts.net
+YOURNOTES_TLS=auto
 ```
 
 Použijte jméno svého počítače, ne to z příkladu.
@@ -85,8 +85,8 @@ Router přitom musí pustit internet dovnitř, a proto to není doporučená ces
 Vaše dvě nastavení:
 
 ```bash
-YOUNOTES_HOST=notes.example.com
-YOUNOTES_TLS=auto
+YOURNOTES_HOST=notes.example.com
+YOURNOTES_TLS=auto
 ```
 
 ### 3c. Jen doma, bez internetu
@@ -111,8 +111,8 @@ Server si vytvoří vlastní certifikát a každému zařízení je potřeba jed
 Vaše dvě nastavení, s vaší vlastní adresou:
 
 ```bash
-YOUNOTES_HOST=192.168.1.50
-YOUNOTES_TLS=internal
+YOURNOTES_HOST=192.168.1.50
+YOURNOTES_TLS=internal
 ```
 
 ## 4. Spuštění
@@ -120,11 +120,11 @@ YOUNOTES_TLS=internal
 Vytvořte pro YourNotes složku a stáhněte do ní tři soubory:
 
 ```bash
-mkdir younotes
-cd younotes
-curl -fsSLO https://gitlab.fit.cvut.cz/soukuj26/ni-dip-be/-/raw/v0.1.0/compose.yml
-curl -fsSLO https://gitlab.fit.cvut.cz/soukuj26/ni-dip-be/-/raw/v0.1.0/Caddyfile
-curl -fsSLO https://gitlab.fit.cvut.cz/soukuj26/ni-dip-be/-/raw/v0.1.0/.env.example
+mkdir yournotes
+cd yournotes
+curl -fsSLO https://raw.githubusercontent.com/soukupj00/your-notes-be/v0.1.0/compose.yml
+curl -fsSLO https://raw.githubusercontent.com/soukupj00/your-notes-be/v0.1.0/Caddyfile
+curl -fsSLO https://raw.githubusercontent.com/soukupj00/your-notes-be/v0.1.0/.env.example
 ```
 
 Ze vzorového souboru si vytvořte vlastní soubor s nastavením a otevřete ho v textovém editoru:
@@ -134,7 +134,7 @@ cp .env.example .env
 nano .env
 ```
 
-Řádky `YOUNOTES_HOST` a `YOUNOTES_TLS` změňte na dvě nastavení z části 3.
+Řádky `YOURNOTES_HOST` a `YOURNOTES_TLS` změňte na dvě nastavení z části 3.
 Všechno ostatní nechte, jak je.
 Uložte klávesami `Ctrl+O` a `Enter`, pak editor zavřete klávesami `Ctrl+X`.
 
@@ -160,13 +160,13 @@ První spuštění stáhne server a trvá minutu nebo dvě.
 Potom si zobrazte zprávy serveru:
 
 ```bash
-docker compose logs younotes
+docker compose logs yournotes
 ```
 
 Blízko konce uvidíte „No Owner yet“, odkaz a velký čtvercový QR kód.
 Odkaz vypadá jako `https://homebox.tail1234.ts.net/pair#…` s dlouhým kódem na konci.
 Zkontrolujte, že je v něm adresa, kterou jste zvolili v části 3.
-Pokud je v něm `localhost` nebo něco jiného, není v `.env` správně nastavené `YOUNOTES_HOST`: opravte ho a znovu spusťte `docker compose up -d`.
+Pokud je v něm `localhost` nebo něco jiného, není v `.env` správně nastavené `YOURNOTES_HOST`: opravte ho a znovu spusťte `docker compose up -d`.
 
 <!-- screenshot: the server log showing "No Owner yet", the Pairing Link and the QR code -->
 
@@ -175,8 +175,8 @@ Funguje jen jednou.
 Restart serveru vytvoří nový odkaz a starý přestane fungovat; dokud nastavení nedokončíte, nový odkaz kdykoli získáte těmito příkazy:
 
 ```bash
-docker compose restart younotes
-docker compose logs younotes
+docker compose restart yournotes
+docker compose logs yournotes
 ```
 
 ### Jen doma (3c): důvěra v certifikát
@@ -186,13 +186,13 @@ Pokud používáte Tailscale nebo vlastní doménu, tuto část přeskočte.
 Při nastavení jen doma musí každé zařízení jednou začít důvěřovat certifikátu serveru, ještě než na něm YourNotes otevřete.
 Jinak prohlížeč ukáže varování, že připojení není soukromé, a aplikace nebude fungovat offline.
 
-Ve složce `younotes` zkopírujte certifikát ze serveru:
+Ve složce `yournotes` zkopírujte certifikát ze serveru:
 
 ```bash
-docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./younotes-root.crt
+docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./yournotes-root.crt
 ```
 
-Soubor `younotes-root.crt` pošlete na každé zařízení, například e-mailem sami sobě, a pak:
+Soubor `yournotes-root.crt` pošlete na každé zařízení, například e-mailem sami sobě, a pak:
 
 - **iPhone nebo iPad**: otevřete soubor v Safari nebo v Mailu a povolte stažení.
   Jděte do Nastavení, Obecné, Správa VPN a zařízení, klepněte na profil, jehož název začíná „Caddy Local Authority“, a klepněte na Instalovat.
@@ -274,7 +274,7 @@ Pozvánka funguje jednou a deset minut.
 Všechno, co YourNotes ví, je uložené uvnitř Dockeru, v místě, kterému se říká svazek (volume).
 Záloha ho zkopíruje do složky `backups` vedle vašeho nastavení, odkud ji můžete přenést na USB disk nebo jiný počítač.
 
-Poprvé ve složce `younotes` tuto složku vytvořte a předejte ji účtu číslo 1000, pod kterým YourNotes uvnitř Dockeru běží:
+Poprvé ve složce `yournotes` tuto složku vytvořte a předejte ji účtu číslo 1000, pod kterým YourNotes uvnitř Dockeru běží:
 
 ```bash
 mkdir -p backups && sudo chown 1000:1000 backups
@@ -283,7 +283,7 @@ mkdir -p backups && sudo chown 1000:1000 backups
 Teď vytvořte zálohu:
 
 ```bash
-docker compose run -T --rm -v ./backups:/backups younotes node dist/cli.js backup /backups/$(date +%F)
+docker compose run -T --rm -v ./backups:/backups yournotes node dist/cli.js backup /backups/$(date +%F)
 ```
 
 Vytvoří se složka pojmenovaná podle dnešního data, například `backups/2026-09-28`, a vypíše se „Backed up“ s počtem zkopírovaných záznamů každého druhu.
@@ -305,10 +305,10 @@ Chcete-li zálohovat každou noc ve 3:00, otevřete seznam plánovaných úloh:
 crontab -e
 ```
 
-Na konec přidejte tento řádek a `/home/you/younotes` v něm nahraďte svou složkou (vypíše ji příkaz `pwd`):
+Na konec přidejte tento řádek a `/home/you/yournotes` v něm nahraďte svou složkou (vypíše ji příkaz `pwd`):
 
 ```bash
-0 3 * * * cd /home/you/younotes && docker compose run -T --rm -v ./backups:/backups younotes node dist/cli.js backup /backups/$(date +\%F)
+0 3 * * * cd /home/you/yournotes && docker compose run -T --rm -v ./backups:/backups yournotes node dist/cli.js backup /backups/$(date +\%F)
 ```
 
 `\%` je tam záměrně: plánovač ho potřebuje.
@@ -318,7 +318,7 @@ Zálohu obnovíte takto; nahradí všechno, co je na serveru:
 
 ```bash
 docker compose down
-docker compose run --rm -v ./backups/2026-09-28:/backup:ro younotes sh -c 'rm -rf /data/* && node dist/cli.js restore /backup'
+docker compose run --rm -v ./backups/2026-09-28:/backup:ro yournotes sh -c 'rm -rf /data/* && node dist/cli.js restore /backup'
 docker compose up -d
 ```
 
@@ -333,17 +333,17 @@ Obnova je pro případ, kdy se data počítače ztratí nebo poškodí, ne pro v
 
 Obnova naplní jen prázdný server, takže pokud používáte PostgreSQL nebo S3 bucket, vyprázdněte před druhým řádkem i je:
 
-- Pro PostgreSQL z `compose.yml` spusťte po `docker compose down` příkaz `docker volume rm younotes_postgres-data`; druhý řádek ho znovu spustí, prázdný.
-- Pro bucket SeaweedFS z `compose.yml` (část 1 [stránky o úložištích](setup-backends.md#1-prilohy-v-s3-bucketu)) spusťte po `docker compose down` příkaz `docker volume rm younotes_s3-data` a pak `docker compose up -d s3`, který bucket vytvoří znovu, prázdný; druhý řádek ho nespouští.
+- Pro PostgreSQL z `compose.yml` spusťte po `docker compose down` příkaz `docker volume rm yournotes_postgres-data`; druhý řádek ho znovu spustí, prázdný.
+- Pro bucket SeaweedFS z `compose.yml` (část 1 [stránky o úložištích](setup-backends.md#1-prilohy-v-s3-bucketu)) spusťte po `docker compose down` příkaz `docker volume rm yournotes_s3-data` a pak `docker compose up -d s3`, který bucket vytvoří znovu, prázdný; druhý řádek ho nespouští.
 - U vlastního serveru PostgreSQL databázi smažte a vytvořte znovu, prázdnou.
 - Vlastní bucket vyprázdněte nástroji svého poskytovatele.
 
 Složku zálohy se souborem `younotes.db` a bez `manifest.json` vytvořila starší verze YourNotes.
-Obnova ji neumí přečíst; vraťte ji tak, jak to dělala tehdejší verze, zkopírováním souborů:
+Obnova ji neumí přečíst; vraťte ji zkopírováním souborů pod názvem, který používá tato verze:
 
 ```bash
 docker compose down
-docker compose run --rm --user root -v ./backups/2026-09-28:/backup:ro younotes sh -c 'rm -rf /data/* && cp -a /backup/. /data/ && chown -R node:node /data'
+docker compose run --rm --user root -v ./backups/2026-09-28:/backup:ro yournotes sh -c 'rm -rf /data/* && cp -a /backup/. /data/ && for f in /data/younotes.db*; do mv "$f" "/data/yournotes${f#/data/younotes}"; done && chown -R node:node /data'
 docker compose up -d
 ```
 
@@ -354,7 +354,7 @@ Ke starší verzi se nedá vrátit jinak než obnovou zálohy, takže každá ak
 
 1. Vytvořte zálohu podle části 8, ještě než cokoli změníte.
    Ne až po úpravě `.env`: příkaz pro zálohu spouští verzi uvedenou v `.env` a novější verze by aktualizovala data pod stále běžícím serverem, takže by záloha obsahovala už nové uspořádání dat.
-2. Otevřete nastavení (`nano .env`), změňte řádek `YOUNOTES_VERSION` na nové číslo a uložte.
+2. Otevřete nastavení (`nano .env`), změňte řádek `YOURNOTES_VERSION` na nové číslo a uložte.
 3. Spusťte:
 
    ```bash
@@ -363,14 +363,14 @@ Ke starší verzi se nedá vrátit jinak než obnovou zálohy, takže každá ak
    ```
 
 Server si při spuštění aktualizuje data sám.
-Pro návrat nastavte `YOUNOTES_VERSION` zpět na staré číslo a obnovte zálohu podle části 8.
+Pro návrat nastavte `YOURNOTES_VERSION` zpět na staré číslo a obnovte zálohu podle části 8.
 
 ## 10. Zapomenuté heslo vlastníka
 
-Ve složce `younotes` spusťte:
+Ve složce `yournotes` spusťte:
 
 ```bash
-docker compose exec younotes node dist/cli.js reset-owner-password
+docker compose exec yournotes node dist/cli.js reset-owner-password
 ```
 
 Příkaz jednou vypíše nové heslo.
@@ -411,7 +411,7 @@ Zařízení se k serveru nedostane: s Tailscale zkontrolujte, že je aplikace Ta
 Každý odkaz funguje jen jednou.
 Pokud jste už vlastníka vytvořili na jiném zařízení, je to v pořádku: přidejte toto zařízení z některého přihlášeného (část 6).
 Odkaz z „Přidat zařízení“ nebo „Pozvat“ navíc po deseti minutách vyprší; klepněte na tlačítko znovu a dostanete nový.
-Pokud vlastníka ještě nikdo nevytvořil, spusťte `docker compose restart younotes` a použijte nový odkaz z `docker compose logs younotes`.
+Pokud vlastníka ještě nikdo nevytvořil, spusťte `docker compose restart yournotes` a použijte nový odkaz z `docker compose logs yournotes`.
 
 **Stránka hlásí „Tento odkaz je neúplný“.**
 Dlouhý kód za `#` se uřízl, což se stane, když se odkaz opisuje ručně nebo se zkopíruje jen zčásti.
@@ -436,7 +436,7 @@ Ten program zastavte, nebo YourNotes spusťte na jiném počítači.
 Log uchovává i zprávy z dřívějších spuštění; dívejte se jen na nejnovější řádky:
 
 ```bash
-docker compose logs --tail 40 younotes
+docker compose logs --tail 40 yournotes
 ```
 
 Pokud i nejnovější spuštění hlásí „No Owner yet“, server startuje s prázdnými daty.

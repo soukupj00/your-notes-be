@@ -31,7 +31,7 @@ Každá databáze má vlastní schéma Drizzle a migrace (`drizzle/sqlite/`, `dr
 Tato duplicita je cena za typovaná schémata pro každou databázi; sada kontraktních testů drží obě implementace v souladu a zároveň je ukázkovým příkladem, jak přidat databázi.
 
 Server běží jako **jedna instance**.
-Signály živých aktualizací, čítače rate limitů, denní úklid a kód pro první nastavení žijí v procesu a druhou instanci při startu odmítne zámek: advisory lock u PostgreSQL, zámek na `younotes.lock` v `DATA_DIR` u SQLite.
+Signály živých aktualizací, čítače rate limitů, denní úklid a kód pro první nastavení žijí v procesu a druhou instanci při startu odmítne zámek: advisory lock u PostgreSQL, zámek na `yournotes.lock` v `DATA_DIR` u SQLite.
 Běh více instancí by vyžadoval `LISTEN/NOTIFY` pro signály a sdílené úložiště pro rate limity; registr živých aktualizací stojí za malým rozhraním, aby to šlo později doplnit.
 Doplněno 2026-10-01, jen formulace: registr je jedna třída, `LiveUpdates`, bez rozhraní před ní; její tři metody (`add`, `notify`, `closeAll`) jsou šev, který by verze s `LISTEN/NOTIFY` zachovala.
 
