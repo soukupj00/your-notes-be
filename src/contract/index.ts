@@ -74,6 +74,15 @@ export const Tag = z.object({
   id: Id,
   name: z.string(),
   color: z.string().optional(),
+  /**
+   * A fractional-index key, compared by code unit.
+   * In a push, absent keeps the server's position and `null` clears it.
+   */
+  position: z
+    .string()
+    .regex(/^[0-9A-Za-z]{1,1024}$/)
+    .nullable()
+    .optional(),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });

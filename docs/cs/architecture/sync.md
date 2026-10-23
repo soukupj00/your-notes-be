@@ -35,6 +35,7 @@ Po commitu dostane každý další otevřený stream účtu signál s novým po�
 
 Řádek bez `rev`, který server už má, je konflikt, protože ho zařízení nikdy neodeslalo, takže serverový řádek je starší nebo patří někomu jinému.
 Řádek s `rev`, které server zapomněl (jeho tombstone vypršel), se přijme s rev 1; nic, co kdo napsal, se tak neztratí.
+Přijatý štítek si ponechá uloženou `position`, když ji push vynechá, takže zařízení z doby před řazením štítků pořadí nikdy nesmaže; vymaže ji jen `null`.
 
 Při `conflict` zařízení převezme serverový řádek a vlastní text si ponechá jako konfliktní kopii, novou poznámku; při `gone` řádek zahodí.
 Obojí se děje na zařízení; server jen hlásí výsledek.

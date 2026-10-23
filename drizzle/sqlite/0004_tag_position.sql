@@ -1,0 +1,1 @@
+ALTER TABLE `tags` ADD `position` text;

@@ -91,6 +91,7 @@ export const tags = sqliteTable(
     seq: integer('seq').notNull(),
     name: text('name').notNull(),
     color: text('color'),
+    position: text('position'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },

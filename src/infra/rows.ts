@@ -68,6 +68,7 @@ export function tagToRow(accountId: string, tag: StoredTag, seq: number): TagRow
     seq,
     name: tag.name,
     color: tag.color ?? null,
+    position: tag.position ?? null,
     createdAt: tag.createdAt,
     updatedAt: tag.updatedAt,
   };

@@ -7,6 +7,7 @@ import type { App } from '../server.ts';
 import type { Store } from '../store/Store.ts';
 import {
   as,
+  batch,
   cookieOf,
   inviteMember,
   link,
@@ -210,6 +211,44 @@ describe('push', () => {
     });
     expect(Problem.parse(bad.json()).status).toBe(400);
     expect((await pull(app, laptop)).seq).toBe(0);
+  });
+
+  it('refuses a pushed Tag whose position is not base-62', async () => {
+    await start();
+    const laptop = await owner();
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/changes',
+      payload: batch({
+        notes: [note(randomUUID())],
+        tags: [tag(randomUUID(), { position: 'a 0' })],
+      }),
+      ...as(laptop),
+    });
+    expect(Problem.parse(response.json()).status).toBe(400);
+    expect((await pull(app, laptop)).seq).toBe(0);
+  });
+
+  it('accepts and serves back a Tag position', async () => {
+    await start();
+    const laptop = await owner();
+    const t = randomUUID();
+    await push(app, laptop, { tags: [tag(t, { position: 'Zz' })] });
+    expect((await pull(app, laptop)).tags).toEqual([{ ...tag(t, { position: 'Zz' }), rev: 1 }]);
+  });
+
+  it.each([
+    ['keeps a Tag position when a push leaves it out', {}, { position: 'a0' }],
+    ['clears a Tag position when a push sends null', { position: null }, {}],
+  ])('%s', async (_name, sent, served) => {
+    await start();
+    const laptop = await owner();
+    const t = randomUUID();
+    await push(app, laptop, { tags: [tag(t, { position: 'a0' })] });
+    await push(app, laptop, { tags: [tag(t, { name: 'Home', rev: 1, ...sent })] });
+    expect((await pull(app, laptop)).tags).toEqual([
+      { ...tag(t, { name: 'Home', ...served }), rev: 2 },
+    ]);
   });
 });
 
