@@ -35,6 +35,7 @@ After the commit, every other open stream of the Account gets a hint with the ne
 
 A row without `rev` that the server already has is a conflict because the Device never pushed it, so the server's row is older or someone else's.
 A row with a `rev` the server has forgotten (its Tombstone expired) is accepted at rev 1; nothing anyone wrote is lost that way.
+An accepted Tag keeps its stored `position` when the push leaves the field out, so a Device from before label order never erases one; only `null` clears it.
 
 On `conflict` the Device installs the server's row and keeps its own text as a Conflicted Copy, a new Note; on `gone` it drops the row.
 Both happen on the Device; the server only reports.

@@ -31,6 +31,13 @@ eachStore((current) => {
       expect(await store.sync.noteTag('b', 'n', 't')).toBeUndefined();
     });
 
+    it("keeps a Tag's position, and an absent position stays absent", async () => {
+      await store.sync.putTag('a', { ...tag('t'), position: 'a0' }, 1);
+      await store.sync.putTag('a', tag('u'), 2);
+      expect(await store.sync.tag('a', 't')).toEqual({ ...tag('t'), position: 'a0' });
+      expect(await store.sync.tag('a', 'u')).not.toHaveProperty('position');
+    });
+
     it('removes a Note or a Tag with its links, and a single link', async () => {
       await store.sync.putNote('a', note('n'), 1);
       await store.sync.putNote('a', note('m'), 2);

@@ -83,6 +83,7 @@ const EVERYTHING: Everything = {
       rev: 1,
       name: 'Work',
       color: 'blue',
+      position: 'a0',
       createdAt: T,
       updatedAt: T,
     },

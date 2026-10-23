@@ -50,7 +50,8 @@ async function applyPush(
     const tombstoned = await sync.isTombstoned(accountId, 'tag', tag.id);
     const decision = decide({ kind: 'tag', rev }, existing, tombstoned);
     if (decision.status === 'accepted') {
-      await sync.putTag(accountId, { ...tag, rev: decision.rev }, ++seq);
+      const position = tag.position === undefined ? existing?.position : tag.position;
+      await sync.putTag(accountId, { ...tag, position, rev: decision.rev }, ++seq);
       outcomes.push({ kind: 'tag', id: tag.id, status: 'accepted', rev: decision.rev });
     } else if (decision.status === 'conflict' && existing) {
       outcomes.push({ kind: 'tag', id: tag.id, status: 'conflict', server: existing });
