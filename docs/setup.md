@@ -235,7 +235,7 @@ YourNotes syncs with the server it was opened from, so a copy installed from any
 
 Do this for each phone, tablet or laptop you want to sync.
 
-1. On a Device that is already signed in, open Settings with the gear icon at the top, scroll to Devices and tap "Add a Device".
+1. On a Device that is already signed in, open Settings with the gear icon at the top, tap your account at the top of Settings and, under Devices, tap "Add a Device".
    If the app is in Czech, these are "Nastavení", "Zařízení" and "Přidat zařízení".
    It shows a Pairing Link as a QR code.
 2. On the new Device, check it can reach the server: Tailscale switched on, or on your home Wi-Fi.
@@ -246,7 +246,7 @@ Do this for each phone, tablet or laptop you want to sync.
    The Device is signed in to your account, without typing a password, and your Notes start to arrive.
 5. Install it as an app, as in section 5.
 
-<!-- screenshot: Settings, Devices with the "Add a Device" button -->
+<!-- screenshot: Settings, Account, Devices with the "Add a Device" button -->
 <!-- screenshot: the Pairing Link QR code shown by "Add a Device" -->
 <!-- screenshot: the "Add this Device" page on the new phone -->
 
@@ -255,12 +255,12 @@ If it has run out, tap "Add a Device" again for a new one.
 
 To check that sync works, write a Note on one Device and wait a few seconds: it appears on the other.
 
-Each Device shows up in Settings, Devices.
+Each Device shows up in Settings, Account, under Devices.
 If you lose one, remove it there; it is signed out and nothing else changes.
 
 ## 7. Add a household member
 
-1. As the Owner, open Settings ("Nastavení"), scroll to Members ("Členové") and tap "Invite" ("Pozvat").
+1. As the Owner, open Settings ("Nastavení"), tap your account at the top and, under Members ("Členové"), tap "Invite a member" ("Pozvat člena").
    It shows a QR code.
 2. The other person makes sure their phone can reach the server, as in section 6.
    With Tailscale, that means you share the machine with them in Tailscale, or they sign in to the same Tailscale account.
@@ -376,7 +376,7 @@ docker compose exec yournotes node dist/cli.js reset-owner-password
 It prints a new password once.
 Sign in with it, then write it down.
 Devices that are already signed in stay signed in.
-A household member who forgot their password asks the Owner, who opens Settings, Members, taps "Set a new password" next to their name, and tells them the new one.
+A household member who forgot their password asks the Owner, who opens Settings, Account, Members, taps "Set a new password" next to their name, and tells them the new one.
 
 ## 11. Your data: who can see what
 
@@ -410,7 +410,7 @@ The Device cannot reach the server: with Tailscale, check the Tailscale app is s
 **The page says "This link has expired or was already used".**
 Every link works once.
 If you already created the Owner on another Device, this is expected: add this Device from a signed-in one instead (section 6).
-A link from "Add a Device" or "Invite" also runs out after ten minutes; tap the button again for a new one.
+A link from "Add a Device" or "Invite a member" also runs out after ten minutes; tap the button again for a new one.
 If nobody has created the Owner yet, run `docker compose restart yournotes` and use the new link from `docker compose logs yournotes`.
 
 **The page says "This link is incomplete".**
@@ -418,7 +418,7 @@ The long code after the `#` was cut off, which happens when the link is typed by
 Scan the QR code instead, or copy the whole link.
 
 **Notes do not appear on the other Device.**
-Check that both Devices are listed in Settings, Devices, and that both can reach the server.
+Check that both Devices are listed in Settings, Account, under Devices, and that both can reach the server.
 Check that the app on both was opened from the same address (section 5): a copy installed from another address syncs with nothing.
 Sync happens in the background; switching to another app and back makes it try again at once.
 

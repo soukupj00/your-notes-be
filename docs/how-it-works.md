@@ -54,7 +54,7 @@ A Device that was closed asks the server for everything it missed as soon as it 
 
 Without internet, or away from home when the server can only be reached at home, the app works as usual.
 New and changed Notes wait on the Device.
-Settings, under "Storage and sync", then says "Offline. Changes wait on this Device."
+Settings, under "Sync and backup", then says "Offline. Changes wait on this Device."
 As soon as the Device reaches the server again, it sends what waited and gets what changed elsewhere.
 
 ## Two changes to one Note
@@ -90,7 +90,7 @@ Keep it on a USB stick or another computer.
 If the machine breaks, a Server Backup puts everything back, and your Devices sync with it again.
 [Back up and restore](setup.md#8-back-up-and-restore) shows how to make one, and how to make one every night.
 
-The app can also save a backup of its own, under Settings, "Backup", "Export a backup".
+The app can also save a backup of its own, under Settings, "Backup and storage" ("Sync and backup" once signed in), "Export a backup".
 That is a different thing: one file with the Notes of one account, made on one Device.
 
 ## Next

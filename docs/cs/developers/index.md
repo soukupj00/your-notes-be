@@ -69,7 +69,7 @@ Při prvním spuštění `tailscale serve` vypíše odkaz pro povolení Serve v 
 Funnel nechte vypnutý: vystavil by vývojový server na veřejný internet.
 
 Na prvním zařízení otevřete párovací odkaz z logu, čímž vytvoříte vlastníka; funguje jednou.
-Každé další zařízení přidejte z přihlášeného zařízení v Nastavení, Zařízení, „Přidat zařízení“.
+Každé další zařízení přidejte z přihlášeného zařízení v Nastavení, Účet, Zařízení, „Přidat zařízení“.
 `./data` uchovává účty i po restartu; smažte ho, chcete-li začít znovu.
 `sudo tailscale serve --https=443 off` servírování ukončí.
 
