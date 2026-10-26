@@ -54,7 +54,7 @@ Zařízení, které bylo zavřené, si hned po opětovném otevření vyžádá 
 
 Bez internetu, nebo když jste mimo domov a server je dostupný jen z domova, aplikace funguje jako obvykle.
 Nové a upravené poznámky čekají v zařízení.
-Nastavení pak v části „Úložiště a synchronizace“ ukazuje „Offline. Změny čekají v tomto zařízení.“
+Nastavení pak v části „Synchronizace a záloha“ ukazuje „Offline. Změny čekají v tomto zařízení.“
 Jakmile se zařízení opět spojí se serverem, odešle to, co čekalo, a stáhne, co se mezitím změnilo jinde.
 
 ## Dvě změny jedné poznámky
@@ -90,7 +90,7 @@ Uložte si ji na USB flash disk nebo na jiný počítač.
 Když se počítač porouchá, záloha serveru vše vrátí zpět a vaše zařízení se s ním znovu synchronizují.
 Část [Zálohování a obnova](setup.md#8-zalohovani-a-obnova) ukazuje, jak zálohu vytvořit a jak ji nechat vytvářet každou noc.
 
-Aplikace umí uložit i vlastní zálohu, v Nastavení pod „Záloha“, „Exportovat zálohu“.
+Aplikace umí uložit i vlastní zálohu, v Nastavení pod „Záloha a úložiště“ (po přihlášení „Synchronizace a záloha“), „Exportovat zálohu“.
 To je něco jiného: jeden soubor s poznámkami jednoho účtu, vytvořený na jednom zařízení.
 
 ## Dále

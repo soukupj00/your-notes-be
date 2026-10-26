@@ -69,7 +69,7 @@ The first time, `tailscale serve` prints a link to enable Serve on the tailnet; 
 Leave Funnel off: it would put the dev server on the public internet.
 
 Open the Pairing Link from the log on the first Device to create the Owner; it works once.
-Add every other Device from a signed-in one, under Settings, Devices, "Add a Device".
+Add every other Device from a signed-in one, under Settings, Account, Devices, "Add a Device".
 `./data` keeps the accounts across restarts; delete it to start over.
 `sudo tailscale serve --https=443 off` stops serving.
 

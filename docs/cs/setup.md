@@ -235,7 +235,7 @@ Aplikace se synchronizuje se serverem, ze kterého byla otevřena, takže kopie 
 
 Tento postup zopakujte pro každý telefon, tablet nebo notebook, který chcete synchronizovat.
 
-1. Na zařízení, které už je přihlášené, otevřete Nastavení ikonou ozubeného kola nahoře, sjeďte k části Zařízení a klepněte na „Přidat zařízení“.
+1. Na zařízení, které už je přihlášené, otevřete Nastavení ikonou ozubeného kola nahoře, klepněte nahoře na svůj účet a v části Zařízení klepněte na „Přidat zařízení“.
    Pokud je aplikace v angličtině, jde o „Settings“, „Devices“ a „Add a Device“.
    Zobrazí se párovací odkaz jako QR kód.
 2. Na novém zařízení zkontrolujte, že se dostane k serveru: Tailscale je zapnutý, nebo je zařízení na domácí Wi-Fi.
@@ -246,7 +246,7 @@ Tento postup zopakujte pro každý telefon, tablet nebo notebook, který chcete 
    Zařízení se přihlásí k vašemu účtu bez zadávání hesla a začnou na něj přicházet vaše poznámky.
 5. Nainstalujte YourNotes jako aplikaci, stejně jako v části 5.
 
-<!-- screenshot: Settings, Devices with the "Add a Device" button -->
+<!-- screenshot: Settings, Account, Devices with the "Add a Device" button -->
 <!-- screenshot: the Pairing Link QR code shown by "Add a Device" -->
 <!-- screenshot: the "Add this Device" page on the new phone -->
 
@@ -255,12 +255,12 @@ Pokud vypršel, klepněte znovu na „Přidat zařízení“ a dostanete nový.
 
 Jestli synchronizace funguje, ověříte tak, že na jednom zařízení napíšete poznámku a pár sekund počkáte: objeví se na druhém.
 
-Každé zařízení se zobrazí v Nastavení v části Zařízení.
+Každé zařízení se zobrazí v Nastavení, Účet, v části Zařízení.
 Když některé ztratíte, odeberte ho tam; odhlásí se a nic jiného se nezmění.
 
 ## 7. Přidání člena domácnosti
 
-1. Jako vlastník otevřete Nastavení („Settings“), sjeďte k části Členové („Members“) a klepněte na „Pozvat“ („Invite“).
+1. Jako vlastník otevřete Nastavení („Settings“), klepněte nahoře na svůj účet a v části Členové („Members“) klepněte na „Pozvat člena“ („Invite a member“).
    Zobrazí se QR kód.
 2. Druhý člověk se ujistí, že se jeho telefon dostane k serveru, stejně jako v části 6.
    S Tailscale to znamená, že mu počítač v Tailscale nasdílíte, nebo se přihlásí ke stejnému účtu Tailscale.
@@ -376,7 +376,7 @@ docker compose exec yournotes node dist/cli.js reset-owner-password
 Příkaz jednou vypíše nové heslo.
 Přihlaste se jím a pak si ho zapište.
 Zařízení, která už jsou přihlášená, zůstanou přihlášená.
-Člen domácnosti, který zapomněl heslo, požádá vlastníka; ten otevře Nastavení, Členové, u jeho jména klepne na „Nastavit nové heslo“ a nové heslo mu sdělí.
+Člen domácnosti, který zapomněl heslo, požádá vlastníka; ten otevře Nastavení, Účet, Členové, u jeho jména klepne na „Nastavit nové heslo“ a nové heslo mu sdělí.
 
 ## 11. Vaše data: kdo co vidí
 
@@ -410,7 +410,7 @@ Zařízení se k serveru nedostane: s Tailscale zkontrolujte, že je aplikace Ta
 **Stránka hlásí „Platnost tohoto odkazu vypršela, nebo už byl použit“.**
 Každý odkaz funguje jen jednou.
 Pokud jste už vlastníka vytvořili na jiném zařízení, je to v pořádku: přidejte toto zařízení z některého přihlášeného (část 6).
-Odkaz z „Přidat zařízení“ nebo „Pozvat“ navíc po deseti minutách vyprší; klepněte na tlačítko znovu a dostanete nový.
+Odkaz z „Přidat zařízení“ nebo „Pozvat člena“ navíc po deseti minutách vyprší; klepněte na tlačítko znovu a dostanete nový.
 Pokud vlastníka ještě nikdo nevytvořil, spusťte `docker compose restart yournotes` a použijte nový odkaz z `docker compose logs yournotes`.
 
 **Stránka hlásí „Tento odkaz je neúplný“.**
@@ -418,7 +418,7 @@ Dlouhý kód za `#` se uřízl, což se stane, když se odkaz opisuje ručně ne
 Naskenujte raději QR kód, nebo zkopírujte celý odkaz.
 
 **Poznámky se na druhém zařízení neobjevují.**
-Zkontrolujte, že jsou obě zařízení uvedená v Nastavení v části Zařízení a že se obě dostanou k serveru.
+Zkontrolujte, že jsou obě zařízení uvedená v Nastavení, Účet, v části Zařízení a že se obě dostanou k serveru.
 Zkontrolujte, že aplikace byla na obou otevřena ze stejné adresy (část 5): kopie nainstalovaná z jiné adresy se nesynchronizuje s ničím.
 Synchronizace probíhá na pozadí; když přepnete do jiné aplikace a zpět, zkusí to hned znovu.
 
