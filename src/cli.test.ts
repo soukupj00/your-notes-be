@@ -1,9 +1,9 @@
-import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buffer } from 'node:stream/consumers';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { backup, resetOwnerPassword, restore, run } from './cli.ts';
+import { backup, resetOwnerPassword, run } from './cli.ts';
 import { loadConfig } from './config.ts';
 import { diskBlobStore } from './infra/blobs/disk.ts';
 import { openBlobStore, openStore } from './infra/open.ts';
@@ -128,15 +128,6 @@ describe('backup and restore', () => {
     }
     expect(await run(['restore', backupDir], restored)).toBe(0);
     expect(await contents(restored)).toEqual({ owner: 'olga', bytes: 'bytes' });
-  });
-
-  it('point a backup made by an earlier version at the guide', async () => {
-    root = await mkdtemp(join(tmpdir(), 'yournotes-cli-'));
-    const old = join(root, 'old-backup');
-    await mkdir(old);
-    await writeFile(join(old, 'younotes.db'), '');
-    const failing = restore(loadConfig({ DATA_DIR: join(root, 'data') }), old);
-    await expect(failing).rejects.toThrow(/earlier version.*docs\/setup\.md, section 8/);
   });
 });
 

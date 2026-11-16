@@ -148,16 +148,25 @@ async function requireEmpty({ store, blobs }: Partial<Server>): Promise<void> {
 
 async function verify(dir: string, manifest: Manifest): Promise<void> {
   for (const kind of BACKUP_KINDS) {
-    const count = (await collect(readLines(dir, kind))).length;
+    const records =
+      kind === 'blobRecords' ? withBytesChecked(dir, readLines(dir, kind)) : readLines(dir, kind);
+    let count = 0;
+    for await (const _ of records) count++;
     if (count !== manifest.counts[kind]) {
       throw new Error(
         `${kind}.jsonl holds ${count} records; ${MANIFEST} says ${manifest.counts[kind]}`
       );
     }
   }
-  for await (const { id, size } of readLines(dir, 'blobRecords')) {
-    const found = await stat(bytesPath(dir, id)).catch(() => undefined);
-    if (found?.size !== size) throw new Error(`${BLOBS}/${id} is missing or not ${size} bytes`);
+}
+
+async function* withBytesChecked(dir: string, records: AsyncIterable<BlobRecord>) {
+  for await (const record of records) {
+    const found = await stat(bytesPath(dir, record.id)).catch(() => undefined);
+    if (found?.size !== record.size) {
+      throw new Error(`${BLOBS}/${record.id} is missing or not ${record.size} bytes`);
+    }
+    yield record;
   }
 }
 

@@ -69,7 +69,7 @@ export async function backup(config: Config, dir: string): Promise<Counts> {
 }
 
 /** Into the server `config` names, which must be stopped and empty. */
-export async function restore(config: Config, dir: string): Promise<Counts> {
+async function restore(config: Config, dir: string): Promise<Counts> {
   const server = await open(config, alone);
   try {
     return (await serverBackup(server).restore(dir)).counts;

@@ -1,4 +1,4 @@
-import { createReadStream, createWriteStream, existsSync } from 'node:fs';
+import { createReadStream, createWriteStream } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -141,12 +141,6 @@ export async function readManifest(dir: string): Promise<Manifest> {
     text = await readFile(join(dir, MANIFEST), 'utf8');
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    if (existsSync(join(dir, 'younotes.db'))) {
-      throw new Error(
-        `${dir} is a backup made by an earlier version, a copy of the database file, which ` +
-          'restore cannot read; put it back by copying the files (docs/setup.md, section 8)'
-      );
-    }
     throw new Error(`${dir} has no ${MANIFEST}, so it is not a complete Server Backup`);
   }
   let json: { formatVersion?: unknown; serverVersion?: unknown };
