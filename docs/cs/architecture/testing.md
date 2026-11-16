@@ -2,7 +2,7 @@
 
 Jak testy běží na skutečných databázích a úložištích a které proměnné přidávají servery, které má CI.
 `vitest.config.ts` definuje dva projekty; `src/test/helpers.ts` sestavuje aplikaci, se kterou API testy mluví; `src/test/storeContract.ts` spouští kontrakt Store (úložiště záznamů) na každém Store.
-Testovací databáze a testovací bucket S3 jsou v `src/infra/postgres/testing.ts` a `src/infra/blobs/testing.ts`, které jsou vynechané z buildu.
+Testovací databáze a testovací bucket S3 jsou v `src/infra/postgres/testing.ts` a `src/infra/blobs/testing.ts`, které jsou vynechané z buildu stejně jako úložiště blobů v paměti, `src/infra/blobs/memory.ts`.
 
 | Testy | Store | Úložiště blobů | Běží, když |
 |---|---|---|---|

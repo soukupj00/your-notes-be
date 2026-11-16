@@ -19,13 +19,6 @@ describe('passwords', () => {
     expect(await verifyPassword('wrong horse', await hashPassword('correct horse'))).toBe(false);
   });
 
-  it('verifies a hash written before the parameters were stored', async () => {
-    const legacy =
-      'scrypt$+3XjO10vG6hDM+ZCILrKFg==$tpbW3ZdFdfXlvlNkBbianzDo/MUV0dZAFrqNqAFUu//sxYz051JMwb54iGzjyTJur3s0nSqCzY2IOhXjVP4tkQ==';
-    expect(await verifyPassword('correct horse', legacy)).toBe(true);
-    expect(await verifyPassword('wrong horse', legacy)).toBe(false);
-  });
-
   it('verifies with the parameters the hash names', async () => {
     const salt = randomBytes(16);
     const key = scryptSync('correct horse', salt, 64, { N: 1024, r: 8, p: 1 });

@@ -2,9 +2,9 @@ import { and, asc, eq, gt, isNotNull, isNull, lt, lte, max, notExists, or, sql }
 import { drizzle } from 'drizzle-orm/node-postgres';
 import type { PgSelect } from 'drizzle-orm/pg-core';
 import { UsernameTaken } from '../../shared/errors.ts';
-import type { Warn } from '../../shared/warn.ts';
 import type { Store, StoreTx } from '../../store/Store.ts';
 import { guarded } from '../guarded.ts';
+import type { StoreOptions } from '../open.ts';
 import {
   noteFromRow,
   noteTagFromRow,
@@ -22,17 +22,10 @@ import { serverBackupOf } from './serverBackup.ts';
 
 const { accounts, blobs, codes, notes, noteTags, sessions, shares, tags, tombstones } = schema;
 
-export type PostgresOptions = {
-  /** Told of every try while the database is not up yet, and of dropped connections. */
-  warn: Warn;
-  /** Hold the one-instance lock (ADR 0006) until `close`; `onLost` hears if it drops. */
-  oneInstance?: { onLost(error: Error): void };
-};
-
 /** Takes the one-instance lock before migrating, so a refused second server changes nothing. */
 export async function openPostgresStore(
   url: string,
-  { warn, oneInstance }: PostgresOptions
+  { warn, oneInstance }: StoreOptions
 ): Promise<Store> {
   const client = await connect(url, warn);
   client.on('error', (error) => {

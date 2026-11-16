@@ -2,6 +2,8 @@ import {
   type AllRecords,
   BACKUP_KINDS,
   type BackupKind,
+  type BackupRecords,
+  mapKinds,
   type StoredNote,
   type StoredNoteTag,
   type StoredTag,
@@ -91,11 +93,12 @@ export const PAGE = 500;
 
 /** Reads each kind a page at a time; OFFSET paging is consistent only inside one snapshot. */
 export function recordsOf(
-  page: (kind: BackupKind, offset: number) => Promise<object[]> | object[]
+  page: <K extends BackupKind>(
+    kind: K,
+    offset: number
+  ) => Promise<BackupRecords[K][]> | BackupRecords[K][]
 ): AllRecords {
-  return Object.fromEntries(
-    BACKUP_KINDS.map((kind) => [kind, () => pages((offset) => page(kind, offset))])
-  ) as AllRecords;
+  return mapKinds((kind) => () => pages((offset) => page(kind, offset)));
 }
 
 export async function writeEach(
