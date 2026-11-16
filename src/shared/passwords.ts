@@ -4,8 +4,6 @@ type Cost = { N: number; r: number; p: number };
 
 const KEY_LENGTH = 64;
 const COST: Cost = { N: 16384, r: 8, p: 1 };
-// Hashes written before the parameters were stored; Node's defaults at the time, fixed here forever.
-const LEGACY_COST: Cost = { N: 16384, r: 8, p: 1 };
 
 function derive(password: string, salt: Buffer, { N, r, p }: Cost): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -25,16 +23,9 @@ export async function hashPassword(password: string): Promise<string> {
 
 function parse(stored: string): { cost: Cost; salt: string; key: string } | undefined {
   const parts = stored.split('$');
-  if (parts[0] !== 'scrypt') return undefined;
-  if (parts.length === 3) {
-    const [, salt = '', key = ''] = parts;
-    return { cost: LEGACY_COST, salt, key };
-  }
-  if (parts.length === 6) {
-    const [, N, r, p, salt = '', key = ''] = parts;
-    return { cost: { N: Number(N), r: Number(r), p: Number(p) }, salt, key };
-  }
-  return undefined;
+  if (parts[0] !== 'scrypt' || parts.length !== 6) return undefined;
+  const [, N, r, p, salt = '', key = ''] = parts;
+  return { cost: { N: Number(N), r: Number(r), p: Number(p) }, salt, key };
 }
 
 /**
