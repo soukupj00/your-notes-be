@@ -32,7 +32,7 @@ import type { Clock } from './shared/clock.ts';
 import type { BlobStore } from './store/BlobStore.ts';
 import type { Store } from './store/Store.ts';
 
-export type Services = {
+type Services = {
   pairing: PairingService;
   accounts: AccountService;
   sessions: SessionService;

@@ -11,7 +11,7 @@ export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 const LOCKS = { instance: [0x596f754e, 1], migrations: [0x596f754e, 2] } as const;
 
 /** Where the database is, for messages: never the user or the password. */
-export function where(url: string): string {
+function where(url: string): string {
   const { hostname, port, pathname } = new URL(url);
   return `${hostname}:${port || 5432}${pathname}`;
 }
