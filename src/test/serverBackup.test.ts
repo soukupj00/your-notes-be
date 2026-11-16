@@ -229,11 +229,6 @@ describe('backup and restore', () => {
     await mkdir(dir);
     await expect(service(target).restore(dir)).rejects.toThrow(/no manifest\.json/);
 
-    await writeFile(join(dir, 'younotes.db'), '');
-    await expect(service(target).restore(dir)).rejects.toThrow(
-      /earlier version.*copying the files/
-    );
-
     await writeFile(
       join(dir, 'manifest.json'),
       JSON.stringify({ formatVersion: 2, serverVersion: '9.0.0' })

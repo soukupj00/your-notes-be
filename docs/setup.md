@@ -338,15 +338,6 @@ Restore fills only an empty server, so with PostgreSQL or an S3 bucket, empty th
 - For a PostgreSQL server of your own, delete the database and create it again, empty.
 - Empty a bucket of your own with your provider's tools.
 
-A backup folder with a `younotes.db` file in it and no `manifest.json` was made by an earlier version of YourNotes.
-Restore cannot read it; put it back by copying the files, under the name this version uses:
-
-```bash
-docker compose down
-docker compose run --rm --user root -v ./backups/2026-09-28:/backup:ro yournotes sh -c 'rm -rf /data/* && cp -a /backup/. /data/ && for f in /data/younotes.db*; do mv "$f" "/data/yournotes${f#/data/younotes}"; done && chown -R node:node /data'
-docker compose up -d
-```
-
 ## 9. Upgrade
 
 Each release has a version number such as `v0.2.0`.

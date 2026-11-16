@@ -338,15 +338,6 @@ Obnova naplní jen prázdný server, takže pokud používáte PostgreSQL nebo S
 - U vlastního serveru PostgreSQL databázi smažte a vytvořte znovu, prázdnou.
 - Vlastní bucket vyprázdněte nástroji svého poskytovatele.
 
-Složku zálohy se souborem `younotes.db` a bez `manifest.json` vytvořila starší verze YourNotes.
-Obnova ji neumí přečíst; vraťte ji zkopírováním souborů pod názvem, který používá tato verze:
-
-```bash
-docker compose down
-docker compose run --rm --user root -v ./backups/2026-09-28:/backup:ro yournotes sh -c 'rm -rf /data/* && cp -a /backup/. /data/ && for f in /data/younotes.db*; do mv "$f" "/data/yournotes${f#/data/younotes}"; done && chown -R node:node /data'
-docker compose up -d
-```
-
 ## 9. Aktualizace
 
 Každé vydání má číslo verze, například `v0.2.0`.
