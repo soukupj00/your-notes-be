@@ -10,6 +10,7 @@
     "src/**/*.test.ts",
     "src/test",
     "src/infra/postgres/testing.ts",
-    "src/infra/blobs/testing.ts"
+    "src/infra/blobs/testing.ts",
+    "src/infra/blobs/memory.ts"
   ]
 }

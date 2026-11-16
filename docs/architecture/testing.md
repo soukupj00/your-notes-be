@@ -2,7 +2,7 @@
 
 How the tests run on real databases and storage, and which variables add the servers CI has.
 `vitest.config.ts` defines the two projects; `src/test/helpers.ts` builds the app the API tests talk to; `src/test/storeContract.ts` runs the Store contract on every Store.
-The test databases and the S3 test bucket are in `src/infra/postgres/testing.ts` and `src/infra/blobs/testing.ts`, left out of the build.
+The test databases and the S3 test bucket are in `src/infra/postgres/testing.ts` and `src/infra/blobs/testing.ts`, left out of the build like the in-memory Blob Store, `src/infra/blobs/memory.ts`.
 
 | Tests | Store | Blob Store | Runs when |
 |---|---|---|---|

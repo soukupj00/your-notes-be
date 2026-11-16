@@ -23,7 +23,7 @@ src/
   infra/sqlite/       schema.ts, client.ts, migrate.ts, store.ts (the Store), lock.ts (its one async lock), serverBackup.ts (its serverBackup group), instanceLock.ts (one server per DATA_DIR)
   infra/postgres/     schema.ts, client.ts (waiting for the database, the advisory locks, the pool), migrate.ts, store.ts (the Store), serverBackup.ts; loaded only with DATABASE_URL
                       testing.ts (PGlite and throwaway databases for tests; not built)
-  infra/blobs/        disk.ts, memory.ts, s3.ts (loaded only when BLOB_STORE=s3), testing.ts (the S3 test bucket; not built)
+  infra/blobs/        disk.ts, s3.ts (loaded only when BLOB_STORE=s3), memory.ts and testing.ts (not built)
   http/               what routes share: auth and security hooks, errors, docs, static (PWA), hal, etag, session cookie, sendBlob
   shared/             crypto (secrets and their SHA-256), passwords (scrypt), clock, errors (the server's, no HTTP), warn (the warning callback's type)
   test/               helpers.ts (the test Store and server, the sign-up steps, the shared builders, must, push and pull), storeContract.ts (the Store contract's records and the Stores it runs on), pglite.setup.ts (boots a file's PGlite before its first test), the API tests, serverBackup.test.ts (across Stores and BlobStores), concurrency.test.ts (real PostgreSQL only)
