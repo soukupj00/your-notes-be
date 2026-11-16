@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import type { Clock } from '../../shared/clock.ts';
 import { NotFound, Unauthorized } from '../../shared/errors.ts';
 import { hashPassword } from '../../shared/passwords.ts';
-import type { AccountRecord, Role } from '../../store/records.ts';
-import type { Store, StoreTx } from '../../store/Store.ts';
+import type { AccountRecord, CodeKind, Role } from '../../store/records.ts';
+import type { Store } from '../../store/Store.ts';
 import type { PairingService } from '../pairing/service.ts';
 
 export type SessionAccount = Pick<AccountRecord, 'id' | 'username' | 'role'>;
@@ -20,6 +20,8 @@ export const WRONG_CREDENTIALS = 'Wrong credentials';
 
 type NewAccount = { code: string; username: string; password: string };
 
+const CODE_FOR: Record<Role, CodeKind> = { owner: 'setup', member: 'invite' };
+
 /** Local Accounts; both kinds are created by spending a Pairing Code (ADR 0001). */
 export class AccountService {
   readonly #store: Store;
@@ -32,27 +34,13 @@ export class AccountService {
     this.#pairing = pairing;
   }
 
-  async createOwner({ code, username, password }: NewAccount): Promise<SessionAccount> {
+  async createOwner(account: NewAccount): Promise<SessionAccount> {
     await this.#pairing.requireSetup();
-    const passwordHash = await hashPassword(password);
-    const owner = await this.#store.transaction(async (tx) => {
-      if (!(await this.#pairing.spend(code, 'setup', tx))) return null;
-      return this.#insert(tx, username, passwordHash, 'owner');
-    });
-    if (!owner) throw new Unauthorized(WRONG_CREDENTIALS);
-    return owner;
+    return this.#create(account, 'owner');
   }
 
-  async createMember({ code, username, password }: NewAccount): Promise<SessionAccount> {
-    const passwordHash = await hashPassword(password);
-    const member = await this.#store.transaction(async (tx) => {
-      // Code first, so only a holder of a good Invite learns whether a username is taken.
-      if (!(await this.#pairing.spend(code, 'invite', tx))) return null;
-      // A taken name throws, which rolls the spend back, so it does not cost the Invite.
-      return this.#insert(tx, username, passwordHash, 'member');
-    });
-    if (!member) throw new Unauthorized(WRONG_CREDENTIALS);
-    return member;
+  createMember(account: NewAccount): Promise<SessionAccount> {
+    return this.#create(account, 'member');
   }
 
   list(): Promise<AccountRecord[]> {
@@ -85,15 +73,18 @@ export class AccountService {
     return this.#store.accounts.findByUsername(username);
   }
 
-  async #insert(
-    store: StoreTx,
-    username: string,
-    passwordHash: string,
-    role: Role
-  ): Promise<SessionAccount> {
-    const id = randomUUID();
-    const createdAt = this.#clock().toISOString();
-    await store.accounts.add({ id, username, passwordHash, role, createdAt });
-    return { id, username, role };
+  async #create({ code, username, password }: NewAccount, role: Role): Promise<SessionAccount> {
+    const passwordHash = await hashPassword(password);
+    const created = await this.#store.transaction(async (tx) => {
+      // Code first, so only a holder of a good code learns whether a username is taken.
+      if (!(await this.#pairing.spend(code, CODE_FOR[role], tx))) return null;
+      const id = randomUUID();
+      const createdAt = this.#clock().toISOString();
+      // A taken name throws, which rolls the spend back, so it does not cost the code.
+      await tx.accounts.add({ id, username, passwordHash, role, createdAt });
+      return { id, username, role };
+    });
+    if (!created) throw new Unauthorized(WRONG_CREDENTIALS);
+    return created;
   }
 }
