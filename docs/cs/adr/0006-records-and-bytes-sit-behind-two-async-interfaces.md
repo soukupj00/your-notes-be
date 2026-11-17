@@ -40,6 +40,8 @@ Doplněno 2026-10-01, jen formulace: registr je jedna třída, `LiveUpdates`, be
 `restore <dir>` ji nahraje do prázdného Store a BlobStore a `migrate` udělá obojí v jednom kroku, například ze SQLite na disku do PostgreSQL a S3.
 Pořadové číslo a ořezané pořadové číslo každého účtu se kopírují přesně, takže kurzory zařízení zůstanou platné, a relace se kopírují, takže zařízení zůstanou přihlášená; párovací kódy ne, protože žijí jen minuty.
 `pg_dump` a verzování bucketů jsou zdokumentované jako nativní alternativy a `VACUUM INTO` odchází.
+Doplněno 2026-11-17: záloha zůstává čitelná ve své verzi formátu i poté, co pole opustí kontrakt, takže řádky poznámek ve formátu 1 stále přijmou `description` poznámky a zahodí ho.
+Zrušit takovou výjimku znamená novou verzi formátu.
 
 Zvažováno a zamítnuto:
 

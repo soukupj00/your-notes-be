@@ -40,6 +40,8 @@ Amended 2026-10-01, wording only: the registry is one class, `LiveUpdates`, with
 `restore <dir>` loads it into an empty Store and BlobStore, and `migrate` does both in one step, for example from SQLite on disk to PostgreSQL and S3.
 The Sequence and pruned Sequence of every Account are copied exactly, so Device cursors stay valid, and Sessions are copied, so Devices stay signed in; Pairing Codes are not, being minutes-lived.
 `pg_dump` and bucket versioning are documented as the native alternatives, and `VACUUM INTO` leaves.
+Amended 2026-11-17: a backup stays readable in its format version after a field leaves the contract, so the notes lines of format 1 still accept a Note's `description` and drop it.
+Retiring such an allowance means a new format version.
 
 Considered and rejected:
 

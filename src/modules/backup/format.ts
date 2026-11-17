@@ -56,7 +56,7 @@ const LINES: { [K in BackupKind]: z.ZodType<BackupRecords[K]> } = {
     lastSeenAt: z.string(),
     expiresAt: z.string(),
   }),
-  // A backup made before `description` was dropped still carries it; read on as format 1.
+  // A backup made before `description` was dropped still carries it; read on as format 1 (ADR 0006).
   notes: z
     .strictObject({ ...Note.shape, rev: Rev, ...placed, description: z.string().optional() })
     .transform(({ description: _, ...note }) => note),
