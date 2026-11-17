@@ -51,7 +51,6 @@ const EVERYTHING: Everything = {
       id: 'n',
       rev: 3,
       header: 'Hi',
-      description: 'd',
       body: 'b',
       state: 'archived',
       pinnedAt: T,

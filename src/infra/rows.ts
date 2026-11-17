@@ -48,7 +48,6 @@ export function noteToRow(accountId: string, note: StoredNote, seq: number): Not
     rev: note.rev,
     seq,
     header: note.header ?? null,
-    description: note.description ?? null,
     body: note.body ?? null,
     state: note.state,
     pinnedAt: note.pinnedAt ?? null,

@@ -56,7 +56,6 @@ export type AttachmentMeta = z.infer<typeof AttachmentMeta>;
 export const Note = z.object({
   id: Id,
   header: z.string().optional(),
-  description: z.string().optional(),
   body: z.string().optional(),
   state: NoteState,
   pinnedAt: IsoDateTime.optional(),
