@@ -229,6 +229,17 @@ describe('push', () => {
     expect((await pull(app, laptop)).seq).toBe(0);
   });
 
+  it('accepts a Note with the dropped description, as older Devices send it, and drops the field', async () => {
+    await start();
+    const laptop = await owner();
+    const n = randomUUID();
+    const fromAnOlderDevice = { ...note(n), description: '' };
+    await push(app, laptop, { notes: [fromAnOlderDevice] });
+    expect((await pull(app, laptop)).notes).toEqual([{ ...note(n), rev: 1 }]);
+    const stored = await store.sync.changesSince(await ownerId(), 0, 10);
+    expect(stored.notes).toEqual([{ seq: 1, record: { ...note(n), rev: 1 } }]);
+  });
+
   it('accepts and serves back a Tag position', async () => {
     await start();
     const laptop = await owner();

@@ -66,7 +66,6 @@ export const notes = pgTable(
     rev: integer('rev').notNull(),
     seq: integer('seq').notNull(),
     header: text('header'),
-    description: text('description'),
     body: text('body'),
     state: text('state', { enum: ['active', 'archived', 'trashed'] }).notNull(),
     pinnedAt: text('pinned_at'),

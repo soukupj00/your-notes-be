@@ -15,6 +15,13 @@
       "when": 1792702206224,
       "tag": "0001_tag_position",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794944406909,
+      "tag": "0002_drop_note_description",
+      "breakpoints": true
     }
   ]
 }

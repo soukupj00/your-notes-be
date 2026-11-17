@@ -7,6 +7,7 @@ The test databases and the S3 test bucket are in `src/infra/postgres/testing.ts`
 | Tests | Store | Blob Store | Runs when |
 |---|---|---|---|
 | unit tests, next to their code | none, or SQLite | none | always, project `sqlite` |
+| `src/infra/migrate.test.ts`, an upgrade that keeps the data | SQLite in memory, PGlite | none | always, project `sqlite` |
 | API and service tests | SQLite in memory, and PGlite | memory | always, projects `sqlite` and `pglite` |
 | Store contracts: `store`, `sync`, `serverBackup` | SQLite, PGlite, PostgreSQL | none | PostgreSQL with `PG_TEST_URL` |
 | BlobStore contract | none | memory, disk, S3 | S3 with `S3_TEST_ENDPOINT` |

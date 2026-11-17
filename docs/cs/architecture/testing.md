@@ -7,6 +7,7 @@ Testovací databáze a testovací bucket S3 jsou v `src/infra/postgres/testing.t
 | Testy | Store | Úložiště blobů | Běží, když |
 |---|---|---|---|
 | unit testy vedle svého kódu | žádný, nebo SQLite | žádné | vždy, projekt `sqlite` |
+| `src/infra/migrate.test.ts`, upgrade, který zachová data | SQLite v paměti, PGlite | žádné | vždy, projekt `sqlite` |
 | API testy a testy služeb | SQLite v paměti a PGlite | paměť | vždy, projekty `sqlite` a `pglite` |
 | kontrakty Store: `store`, `sync`, `serverBackup` | SQLite, PGlite, PostgreSQL | žádné | PostgreSQL s `PG_TEST_URL` |
 | kontrakt BlobStore | žádný | paměť, disk, S3 | S3 s `S3_TEST_ENDPOINT` |

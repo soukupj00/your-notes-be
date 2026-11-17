@@ -263,6 +263,20 @@ describe('backup and restore', () => {
     await damage(`blobs/${picture}`, 'short', /is missing or not \d+ bytes/);
   });
 
+  it('restore reads a backup whose Notes still carry the dropped description, and drops it', async () => {
+    const device = await useSource();
+    const dir = join(root, 'backup');
+    await service(source).backup(dir);
+    const notes = (await readFile(join(dir, 'notes.jsonl'), 'utf8')).trimEnd().split('\n');
+    const older = notes.map((line) => JSON.stringify({ ...JSON.parse(line), description: '' }));
+    await writeFile(join(dir, 'notes.jsonl'), `${older.join('\n')}\n`);
+
+    const target = { store: await otherStore(), blobs: memoryBlobStore() };
+    await service(target).restore(dir);
+    expect(await everything(target.store)).toEqual(await everything(source.store));
+    await expectCarriesOn(target, device);
+  });
+
   it('restore takes the bytes back out when the records fail to load', async () => {
     await useSource();
     const dir = join(root, 'backup');
