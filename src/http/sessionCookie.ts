@@ -1,7 +1,9 @@
 import type { FastifyReply } from 'fastify';
 import { DAY_MS } from '../shared/clock.ts';
 
-export const SESSION_COOKIE = 'yournotes_session';
+// `__Host-` stops a sibling subdomain from planting its own session; browsers then demand
+// `Secure`, `Path=/` and no `Domain`, so COOKIE_OPTIONS must keep exactly that.
+export const SESSION_COOKIE = '__Host-yournotes_session';
 
 const COOKIE_OPTIONS = { httpOnly: true, secure: true, sameSite: 'lax', path: '/' } as const;
 
