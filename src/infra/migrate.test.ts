@@ -5,7 +5,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { migrate as migrateSqlite } from 'drizzle-orm/better-sqlite3/migrator';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate as migratePglite } from 'drizzle-orm/pglite/migrator';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { MIGRATIONS as POSTGRES_MIGRATIONS } from './postgres/migrate.ts';
 import { openDatabase } from './sqlite/client.ts';
 import { MIGRATIONS as SQLITE_MIGRATIONS } from './sqlite/migrate.ts';
@@ -19,7 +19,7 @@ type Database = {
   close(): Promise<void>;
 };
 
-function sqlite(): Database {
+async function sqlite(): Promise<Database> {
   const db = openDatabase(':memory:');
   return {
     migrate: async (folder) => migrateSqlite(db, { migrationsFolder: folder }),
@@ -29,8 +29,8 @@ function sqlite(): Database {
   };
 }
 
-function pglite(): Database {
-  const client = new PGlite();
+async function pglite(): Promise<Database> {
+  const client = await PGlite.create();
   const db = drizzle(client);
   return {
     migrate: (folder) => migratePglite(db, { migrationsFolder: folder }),
@@ -63,25 +63,27 @@ describe.each([
   ['SQLite', sqlite, SQLITE_MIGRATIONS],
   ['PGlite', pglite, POSTGRES_MIGRATIONS],
 ])('migrating %s', (_name, open, folder) => {
+  let db: Database;
+  // PGlite boots for seconds while other files boot theirs; the test's timeout must not pay for it.
+  beforeAll(async () => {
+    db = await open();
+  });
+  afterAll(() => db.close());
+
   it('drops the Note description and keeps every Note', async () => {
-    const db = open();
-    try {
-      await db.migrate(await migrationsBefore(folder, 'drop_note_description'));
-      await db.run(
-        `insert into accounts (id, username, role, seq, pruned_seq, created_at, updated_at)
-           values ('a', 'olga', 'owner', 1, 0, '${T}', '${T}');
-         insert into notes (account_id, id, rev, seq, header, description, body, state, created_at, updated_at)
-           values ('a', 'n', 1, 1, 'Hi', 'old', 'b', 'active', '${T}', '${T}');`
-      );
+    await db.migrate(await migrationsBefore(folder, 'drop_note_description'));
+    await db.run(
+      `insert into accounts (id, username, role, seq, pruned_seq, created_at, updated_at)
+         values ('a', 'olga', 'owner', 1, 0, '${T}', '${T}');
+       insert into notes (account_id, id, rev, seq, header, description, body, state, created_at, updated_at)
+         values ('a', 'n', 1, 1, 'Hi', 'old', 'b', 'active', '${T}', '${T}');`
+    );
 
-      await db.migrate(folder);
+    await db.migrate(folder);
 
-      const [note, ...others] = await db.rows('select * from notes');
-      expect(others).toEqual([]);
-      expect(note).toMatchObject({ id: 'n', rev: 1, header: 'Hi', body: 'b', state: 'active' });
-      expect(note).not.toHaveProperty('description');
-    } finally {
-      await db.close();
-    }
+    const [note, ...others] = await db.rows('select * from notes');
+    expect(others).toEqual([]);
+    expect(note).toMatchObject({ id: 'n', rev: 1, header: 'Hi', body: 'b', state: 'active' });
+    expect(note).not.toHaveProperty('description');
   });
 });
