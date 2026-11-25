@@ -3,15 +3,17 @@
 #                   or the machine's IP address (internal mode)
 #   YOURNOTES_TLS   auto      public certificate over HTTP-01 for a domain, the tailnet certificate
 #                             for a *.ts.net name (needs the tailscaled socket, see compose.yml),
-#                             and Caddy's own CA for localhost
+#                             and Caddy's own CA for localhost, *.local, *.internal and *.home.arpa
 #                   internal  Caddy's own CA; each device has to trust it once
-
 {
 	# A browser opening an IP address sends no server name; this picks the certificate then.
 	default_sni {$YOURNOTES_HOST}
 }
 
 (tls-auto) {
+	# HSTS only behind a public certificate: with Caddy's own CA a lapsed or untrusted one would lock a Device out.
+	@public not vars_regexp {host} (^|\.)(localhost|local|internal|home\.arpa)$
+	header @public Strict-Transport-Security "max-age=604800"
 }
 
 (tls-internal) {

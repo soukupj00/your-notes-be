@@ -394,6 +394,7 @@ Some things to know plainly:
 **The browser warns that the connection is not private.**
 With the at-home setup (3c), this Device does not trust the certificate yet; repeat the steps in 3c for it, and on an iPhone make sure the switch in Certificate Trust Settings is on.
 With Tailscale, check that HTTPS Certificates is on in the admin console and that you removed the `# ` in `compose.yml`; `docker compose logs caddy` shows what went wrong.
+With Tailscale or your own domain the warning has no way to continue: the server tells browsers to accept only a valid certificate for a week, so the fix is the server's certificate, not the Device.
 
 **The QR link does not open, or the app says "Could not reach your server".**
 The Device cannot reach the server: with Tailscale, check the Tailscale app is switched on and says "Connected"; at home, check the Device is on the home Wi-Fi, not mobile data.

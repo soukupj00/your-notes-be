@@ -394,6 +394,7 @@ Několik věcí na rovinu:
 **Prohlížeč varuje, že připojení není soukromé.**
 Při nastavení jen doma (3c) toto zařízení ještě nedůvěřuje certifikátu; zopakujte pro něj kroky z 3c a na iPhonu zkontrolujte, že je zapnutý přepínač v Nastavení důvěryhodnosti certifikátů.
 S Tailscale zkontrolujte, že je v administraci zapnuté HTTPS Certificates a že jste v `compose.yml` odstranili `# `; co se pokazilo, ukáže `docker compose logs caddy`.
+S Tailscale nebo vlastní doménou varování nenabídne pokračovat: server prohlížečům na týden ukládá přijímat jen platný certifikát, takže opravit je třeba certifikát na serveru, ne zařízení.
 
 **Odkaz z QR kódu se neotevře, nebo aplikace hlásí „Server se nepodařilo zastihnout“.**
 Zařízení se k serveru nedostane: s Tailscale zkontrolujte, že je aplikace Tailscale zapnutá a ukazuje „Connected“; doma zkontrolujte, že je zařízení na domácí Wi-Fi, a ne na mobilních datech.
