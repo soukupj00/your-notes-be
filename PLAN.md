@@ -57,7 +57,7 @@ Single-resource `GET`s exist as HAL link targets.
 Only the feed and the blob routes send an `ETag` today; per-resource `PUT` with `If-Match` is additive later work.
 
 ### Security
-- Session: 32 random bytes, SHA-256 in `sessions`, `HttpOnly; Secure; SameSite=Lax` cookie, one row per Device.
+- Session: 32 random bytes, SHA-256 in `sessions`, `HttpOnly; Secure; SameSite=Lax` cookie with the `__Host-` prefix, so a sibling subdomain cannot plant a session; one row per Device.
   JSON Web Tokens rejected (ADR 0001).
 - Passwords: `scrypt` from `node:crypto`.
 - Pairing Codes hashed, ten-minute expiry, single use; the Owner is created only through the code printed at first start (ADR 0001).

@@ -80,12 +80,14 @@ describe('first run', () => {
     const body = SessionResponse.parse(response.json());
     expect(body.account).toMatchObject({ username: 'olga', role: 'owner' });
     expect(sessionCookie(response)).toMatchObject({
+      name: '__Host-yournotes_session',
       httpOnly: true,
       secure: true,
       sameSite: 'Lax',
       path: '/',
       maxAge: 365 * 24 * 60 * 60,
     });
+    expect(sessionCookie(response)).not.toHaveProperty('domain');
 
     const session = await app.inject({
       url: '/api/session',
