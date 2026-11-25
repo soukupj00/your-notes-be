@@ -122,6 +122,11 @@ describe('Share Links', () => {
     expect(bytes.rawPayload).toEqual(BYTES);
     expect(bytes.headers['content-security-policy']).toBe("default-src 'none'; sandbox");
     expect(bytes.headers.etag).toBe(`"${picture}"`);
+    const asScript = await app.inject({
+      url: `/api/public/shares/${token}/blobs/${picture}`,
+      headers: { 'sec-fetch-dest': 'script' },
+    });
+    expect(Problem.parse(asScript.json()).status).toBe(403);
 
     const notListed = await app.inject({
       url: `/api/public/shares/${token}/blobs/${other.picture}`,

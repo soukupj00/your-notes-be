@@ -80,6 +80,28 @@ describe('blobs', () => {
     expect(cached.body).toBe('');
   });
 
+  it('never serves bytes as a script, worker or stylesheet', async () => {
+    const id = randomUUID();
+    await put(id, BYTES, olga, { 'content-type': 'text/javascript' });
+    const get = (headers: Record<string, string>) =>
+      app.inject({ url: `/api/blobs/${id}`, headers, ...as(olga) });
+
+    for (const dest of ['script', 'worker', 'sharedworker', 'serviceworker', 'style', 'xslt']) {
+      const refused = await get({ 'sec-fetch-dest': dest });
+      expect(problem(refused), dest).toBe(403);
+      expect(refused.headers['cache-control'], dest).toBeUndefined();
+    }
+    for (const dest of ['empty', 'document', 'image', 'audio', 'video']) {
+      const served = await get({ 'sec-fetch-dest': dest });
+      expect(served.statusCode, dest).toBe(200);
+      expect(served.headers.vary, dest).toBe('Sec-Fetch-Dest');
+    }
+    expect((await get({})).statusCode).toBe(200);
+    // A browser revalidates a copy cached for another destination; a 304 would hand it the bytes.
+    const revalidated = await get({ 'sec-fetch-dest': 'script', 'if-none-match': `"${id}"` });
+    expect(problem(revalidated)).toBe(403);
+  });
+
   it('answers a repeat with 204 and keeps the first bytes', async () => {
     const id = randomUUID();
     await put(id, BYTES);
