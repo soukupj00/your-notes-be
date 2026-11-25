@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest, RawRequestDefaultExpression } from 'fastify';
 import { sendEarlyProblem } from './errors.ts';
 
-/** No CSP for the PWA yet, a later task (PLAN.md "Security"); blob responses send their own. */
+/** The PWA's CSP is a `<meta>` in the frontend's built `index.html`; blob responses send their own. */
 const SECURITY_HEADERS = {
   'x-content-type-options': 'nosniff',
   'x-frame-options': 'DENY',

@@ -28,6 +28,8 @@ Bytes before record means a crash between the two leaves a file without a record
 `GET` and `HEAD /api/blobs/:id` answer only for the Account that owns the id; another Account's id is as unknown as one that does not exist (`404`).
 Bytes are immutable by id, so the id is the `ETag`, the response is cacheable for a year, and `If-None-Match` answers `304`.
 Every blob response carries `Content-Security-Policy: default-src 'none'; sandbox`, so uploaded bytes never run as a page of this origin, whatever their type.
+Nor do they load as a script, worker or stylesheet, which the PWA's `script-src 'self'` would admit: a request whose `Sec-Fetch-Dest` is present and not `empty`, `document`, `image`, `audio` or `video` gets `403`; curl sends no `Sec-Fetch-Dest`, and every browser the app supports does.
+The response sends `Vary: Sec-Fetch-Dest`, so a copy cached for a `fetch` is never reused for a `<script>`.
 A record whose bytes are gone answers `404` to `HEAD` and `GET`, even with a matching `If-None-Match`, without caching headers, and logs an error.
 The Device then uploads again, and the next `PUT` takes the bytes, as under "Upload".
 

@@ -28,6 +28,8 @@ Pořadí bajty před záznamem znamená, že pád mezi oběma kroky zanechá sou
 `GET` a `HEAD /api/blobs/:id` odpovídají jen účtu, který dané id vlastní; id jiného účtu je stejně neznámé jako id, které neexistuje (`404`).
 Bajty jsou pod daným id neměnné, takže id je `ETag`, odpověď je cacheovatelná na rok a `If-None-Match` odpoví `304`.
 Každá odpověď s blobem nese `Content-Security-Policy: default-src 'none'; sandbox`, takže nahrané bajty se nikdy nespustí jako stránka tohoto originu, ať mají jakýkoli typ.
+Ani se nenačtou jako skript, worker nebo styl, což by `script-src 'self'` v PWA propustilo: požadavek, jehož `Sec-Fetch-Dest` je přítomná a není `empty`, `document`, `image`, `audio` ani `video`, dostane `403`; curl `Sec-Fetch-Dest` neposílá, každý prohlížeč, který aplikace podporuje, ano.
+Odpověď posílá `Vary: Sec-Fetch-Dest`, takže kopie uložená v cache pro `fetch` se nikdy nepoužije pro `<script>`.
 Záznam, jehož bajty zmizely, odpoví na `HEAD` i `GET` stavem `404`, i při shodném `If-None-Match`, bez cachovacích hlaviček, a zapíše chybu do logu.
 Zařízení pak nahraje bajty znovu a další `PUT` je přijme, jak popisuje část „Nahrání“.
 

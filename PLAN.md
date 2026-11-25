@@ -63,8 +63,10 @@ Only the feed and the blob routes send an `ETag` today; per-resource `PUT` with 
 - Pairing Codes hashed, ten-minute expiry, single use; the Owner is created only through the code printed at first start (ADR 0001).
 - CSRF: `SameSite=Lax` plus refusing unsafe methods unless `Sec-Fetch-Site` is absent, `same-origin` or `none`.
 - Rate limits per IP on setup, sign-in and code redemption; body limits on JSON and blobs; one SSE connection per Device.
-- Six static security headers in one `onSend` hook; a real CSP is its own later task tested against the built PWA.
+- Six static security headers in one `onSend` hook; the PWA's CSP is a `<meta>` the frontend's build writes, since the policy follows its dependencies.
   `@fastify/helmet` not used.
+- A blob never loads as a script, worker or stylesheet: `Sec-Fetch-Dest` must be absent, `empty`, `document`, `image`, `audio` or `video`, and `Vary: Sec-Fetch-Dest` keeps a cached copy from bypassing that.
+  A browser without Fetch Metadata is older than the frontend supports.
 - HSTS from Caddy, one week, no `includeSubDomains`, only in the `auto` TLS mode on a name with a public certificate (not localhost, `*.local`, `*.internal` or `*.home.arpa`): with Caddy's own CA a lapsed or untrusted certificate would lock a Device out with no click-through.
 - Container: non-root, read-only except `/data`, no published port; only Caddy is reachable.
 - Same 401 and same cost for a wrong username and a wrong password.
