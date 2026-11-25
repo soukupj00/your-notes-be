@@ -63,7 +63,7 @@ Only the feed and the blob routes send an `ETag` today; per-resource `PUT` with 
 - Pairing Codes hashed, ten-minute expiry, single use; the Owner is created only through the code printed at first start (ADR 0001).
 - CSRF: `SameSite=Lax` plus refusing unsafe methods unless `Sec-Fetch-Site` is absent, `same-origin` or `none`.
 - Rate limits per IP on setup, sign-in and code redemption; body limits on JSON and blobs; one SSE connection per Device.
-- Four static security headers in one `onSend` hook; a real CSP is its own later task tested against the built PWA.
+- Six static security headers in one `onSend` hook; a real CSP is its own later task tested against the built PWA.
   `@fastify/helmet` not used.
 - Container: non-root, read-only except `/data`, no published port; only Caddy is reachable.
 - Same 401 and same cost for a wrong username and a wrong password.

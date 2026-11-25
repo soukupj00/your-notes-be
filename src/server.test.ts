@@ -118,13 +118,17 @@ describe('the PWA and the fallback', () => {
 });
 
 describe('security', () => {
-  it('sets the four security headers and a request id on every response', async () => {
+  it('sets the security headers and a request id on every response', async () => {
     for (const url of ['/health', '/', '/api/x']) {
       const { headers } = await app.inject(url);
       expect(headers['x-content-type-options'], url).toBe('nosniff');
       expect(headers['x-frame-options'], url).toBe('DENY');
       expect(headers['referrer-policy'], url).toBe('no-referrer');
       expect(headers['cross-origin-opener-policy'], url).toBe('same-origin');
+      expect(headers['cross-origin-resource-policy'], url).toBe('same-origin');
+      expect(headers['permissions-policy'], url).toBe(
+        'camera=(), geolocation=(), microphone=(self)'
+      );
       expect(headers['x-request-id'], url).toMatch(/^[0-9a-f-]{36}$/);
     }
   });

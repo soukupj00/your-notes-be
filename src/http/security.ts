@@ -8,6 +8,9 @@ const SECURITY_HEADERS = {
   'x-frame-options': 'DENY',
   'referrer-policy': 'no-referrer',
   'cross-origin-opener-policy': 'same-origin',
+  'cross-origin-resource-policy': 'same-origin',
+  // Voice notes record from the microphone; Camera Start is an `<input capture>`, which the policy does not govern.
+  'permissions-policy': 'camera=(), geolocation=(), microphone=(self)',
 } as const;
 
 export function securityHeaders(requestId: string): Record<string, string> {
